@@ -1,6 +1,7 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { HeaderComponent } from './components/header/header.component';
+import { ThemeService } from './services/theme.service';
 
 @Component({
   selector: 'app-root',
@@ -11,6 +12,9 @@ import { HeaderComponent } from './components/header/header.component';
 })
 export class App {
   isBarraOpen = false;
+  
+  // Inyectar el servicio de tema para que se inicialice al cargar la app
+  private themeService = inject(ThemeService);
 
   onBarraToggle(isOpen: boolean) {
     this.isBarraOpen = isOpen;

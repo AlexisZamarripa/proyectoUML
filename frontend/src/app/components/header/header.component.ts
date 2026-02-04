@@ -1,6 +1,7 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { BarraComponent } from '../barra/barra.component';
+import { ThemeService } from '../../services/theme.service';
 
 @Component({
     selector: 'app-header',
@@ -11,6 +12,7 @@ import { BarraComponent } from '../barra/barra.component';
 })
 export class HeaderComponent {
     isBarraOpen = false;
+    themeService = inject(ThemeService);
 
     toggleBarra() {
         this.isBarraOpen = !this.isBarraOpen;
@@ -26,5 +28,9 @@ export class HeaderComponent {
     closeBarra() {
         this.isBarraOpen = false;
         document.body.classList.remove('barra-open');
+    }
+
+    toggleTheme() {
+        this.themeService.toggleTheme();
     }
 }

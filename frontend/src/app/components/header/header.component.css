@@ -2,11 +2,12 @@
     position: sticky;
     top: 0;
     z-index: 1000;
-    background-color: #0d1b2e;
-    border-bottom: 1px solid rgba(30, 58, 95, 0.3);
+    background-color: var(--header-bg, #0d1b2e);
+    border-bottom: 1px solid var(--header-border, rgba(30, 58, 95, 0.3));
     width: 100%;
     margin: 0;
     padding: 0;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .header-container {
@@ -30,7 +31,7 @@
     height: 40px;
     background: transparent;
     border: none;
-    color: #00b8d4;
+    color: var(--accent-primary, #00b8d4);
     cursor: pointer;
     transition: all 0.15s ease;
     border-radius: 8px;
@@ -38,8 +39,8 @@
 }
 
 .menu-btn:hover {
-    background-color: rgba(0, 184, 212, 0.1);
-    color: #00d4ff;
+    background-color: var(--btn-hover-bg, rgba(0, 184, 212, 0.1));
+    color: var(--accent-hover, #00d4ff);
 }
 
 .menu-btn svg {
@@ -59,10 +60,10 @@
 .logo-text {
     font-size: 1.375rem;
     font-weight: 600;
-    color: #00d4ff;
+    color: var(--accent-hover, #00d4ff);
     margin: 0;
     cursor: pointer;
-    transition: transform 0.15s ease;
+    transition: transform 0.15s ease, color 0.3s ease;
     white-space: nowrap;
     line-height: 1;
 }
@@ -73,9 +74,49 @@
 
 /* Spacer para balance visual */
 .header-spacer {
+    flex: 1;
+}
+
+/* Theme Toggle Button */
+.theme-toggle-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     width: 40px;
     height: 40px;
+    background: transparent;
+    border: 2px solid var(--accent-primary, #00b8d4);
+    color: var(--accent-primary, #00b8d4);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border-radius: 50%;
     flex-shrink: 0;
+}
+
+.theme-toggle-btn:hover {
+    background-color: var(--accent-primary, #00b8d4);
+    color: var(--header-bg, #0d1b2e);
+    transform: rotate(15deg);
+}
+
+.theme-icon {
+    transition: transform 0.3s ease;
+}
+
+.theme-toggle-btn:hover .theme-icon {
+    transform: scale(1.1);
+}
+
+.sun-icon {
+    color: #fbbf24;
+}
+
+.theme-toggle-btn:hover .sun-icon {
+    color: #0d1b2e;
+}
+
+.moon-icon {
+    color: var(--accent-primary, #00b8d4);
 }
 
 /* Responsive */
@@ -86,6 +127,11 @@
 
     .logo-text {
         font-size: 1.25rem;
+    }
+    
+    .theme-toggle-btn {
+        width: 36px;
+        height: 36px;
     }
 }
 
@@ -106,5 +152,15 @@
     .menu-btn svg {
         width: 20px;
         height: 20px;
+    }
+    
+    .theme-toggle-btn {
+        width: 32px;
+        height: 32px;
+    }
+    
+    .theme-icon {
+        width: 18px;
+        height: 18px;
     }
 }

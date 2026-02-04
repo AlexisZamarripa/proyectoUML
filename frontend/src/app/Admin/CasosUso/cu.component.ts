@@ -2,22 +2,16 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
-interface FlujoAlterno {
-    codigo: string;
-    pasos: string[];
-}
-
-interface CasoDeUso {
-    id?: number;
-    nombre: string;
-    descripcion: string;
-    actores: string[];
-    precondiciones: string[];
-    flujoBasico: string[];
-    flujosAlternos: FlujoAlterno[];
-    postcondiciones: string[];
-    puntosExtension: string[];
-    prioridad: string;
+interface HistoriaUsuario {
+    id: string;
+    date: string;
+    titulo: string;
+    como: string;
+    quiero: string;
+    paraque: string;
+    prioridad: 'alta' | 'media' | 'baja';
+    estimacion?: string;
+    criteriosAceptacion: string[];
 }
 
 @Component({
@@ -28,104 +22,116 @@ interface CasoDeUso {
     styleUrls: ['./cu.component.css']
 })
 export class CasosUsoComponent {
-    isModalOpen = false;
-    isEditing = false;
-    casosDeUso: CasoDeUso[] = [];
+    showForm = false;
+    selectedHistoria: HistoriaUsuario | null = null;
+    historias: HistoriaUsuario[] = [];
 
-    casoActual: CasoDeUso = this.getEmptyCaso();
+    // Campos del formulario
+    titulo = '';
+    como = '';
+    quiero = '';
+    paraque = '';
+    prioridad: 'alta' | 'media' | 'baja' = 'media';
+    estimacion = '';
+    criteriosAceptacion: string[] = [''];
 
-    getEmptyCaso(): CasoDeUso {
-        return {
-            nombre: '',
-            descripcion: '',
-            actores: [''],
-            precondiciones: [''],
-            flujoBasico: [''],
-            flujosAlternos: [],
-            postcondiciones: [''],
-            puntosExtension: [''],
-            prioridad: 'Media'
-        };
+    toggleForm() {
+        this.showForm = !this.showForm;
+        if (this.showForm) {
+            this.resetForm();
+        }
     }
 
-    openModal() {
-        this.isModalOpen = true;
-        this.isEditing = false;
-        this.casoActual = this.getEmptyCaso();
+    resetForm() {
+        this.titulo = '';
+        this.como = '';
+        this.quiero = '';
+        this.paraque = '';
+        this.prioridad = 'media';
+        this.estimacion = '';
+        this.criteriosAceptacion = [''];
+    }
+
+    addCriterio() {
+        this.criteriosAceptacion.push('');
+    }
+
+    removeCriterio(index: number) {
+        this.criteriosAceptacion = this.criteriosAceptacion.filter((_, i) => i !== index);
+    }
+
+    updateCriterio(index: number, value: string) {
+        this.criteriosAceptacion[index] = value;
+    }
+
+    handleSubmit() {
+        const historia: HistoriaUsuario = {
+            id: this.generateUUID(),
+            date: new Date().toISOString(),
+            titulo: this.titulo,
+            como: this.como,
+            quiero: this.quiero,
+            paraque: this.paraque,
+            prioridad: this.prioridad,
+            estimacion: this.estimacion || undefined,
+            criteriosAceptacion: this.criteriosAceptacion.filter(c => c.trim() !== '')
+        };
+
+        this.historias.push(historia);
+        this.resetForm();
+        this.showForm = false;
+    }
+
+    verHistoria(historia: HistoriaUsuario) {
+        this.selectedHistoria = historia;
     }
 
     closeModal() {
-        this.isModalOpen = false;
-        this.casoActual = this.getEmptyCaso();
+        this.selectedHistoria = null;
     }
 
-    guardarCaso() {
-        // Limpiar campos vacíos antes de guardar
-        this.casoActual.actores = this.casoActual.actores.filter(a => a.trim() !== '');
-        this.casoActual.precondiciones = this.casoActual.precondiciones.filter(p => p.trim() !== '');
-        this.casoActual.flujoBasico = this.casoActual.flujoBasico.filter(f => f.trim() !== '');
-        this.casoActual.postcondiciones = this.casoActual.postcondiciones.filter(p => p.trim() !== '');
-        this.casoActual.puntosExtension = this.casoActual.puntosExtension.filter(p => p.trim() !== '');
-
-        // Limpiar flujos alternos vacíos
-        this.casoActual.flujosAlternos = this.casoActual.flujosAlternos.filter(fa => {
-            fa.pasos = fa.pasos.filter(p => p.trim() !== '');
-            return fa.codigo.trim() !== '' && fa.pasos.length > 0;
-        });
-
-        if (this.isEditing) {
-            const index = this.casosDeUso.findIndex(c => c.id === this.casoActual.id);
-            if (index !== -1) {
-                this.casosDeUso[index] = JSON.parse(JSON.stringify(this.casoActual));
-            }
-        } else {
-            this.casoActual.id = Date.now();
-            this.casosDeUso.push(JSON.parse(JSON.stringify(this.casoActual)));
-        }
-        this.closeModal();
-    }
-
-    editarCaso(caso: CasoDeUso) {
-        this.isModalOpen = true;
-        this.isEditing = true;
-        // Deep copy para evitar problemas de referencia
-        this.casoActual = JSON.parse(JSON.stringify(caso));
-    }
-
-    eliminarCaso(caso: CasoDeUso) {
-        if (confirm('¿Estás seguro de eliminar este caso de uso?')) {
-            const index = this.casosDeUso.findIndex(c => c.id === caso.id);
-            if (index !== -1) {
-                this.casosDeUso.splice(index, 1);
-            }
+    eliminarHistoria(id: string) {
+        if (confirm('¿Estás seguro de eliminar esta historia de usuario?')) {
+            this.historias = this.historias.filter(h => h.id !== id);
         }
     }
 
-    addItem(array: string[], defaultValue: string) {
-        array.push(defaultValue);
+    getPrioridadColor(prioridad: string): string {
+        switch (prioridad) {
+            case 'alta': return 'prioridad-alta';
+            case 'media': return 'prioridad-media';
+            case 'baja': return 'prioridad-baja';
+            default: return 'prioridad-default';
+        }
     }
 
-    removeItem(array: any[], index: number) {
-        array.splice(index, 1);
+    formatDate(dateString: string): string {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('es-ES');
     }
 
-    addFlujoAlterno() {
-        this.casoActual.flujosAlternos.push({
-            codigo: `FA0${this.casoActual.flujosAlternos.length + 1}`,
-            pasos: ['']
+    formatDateLong(dateString: string): string {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('es-ES', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
         });
     }
 
-    // TrackBy functions para optimizar el rendimiento de *ngFor
+    private generateUUID(): string {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+            const r = Math.random() * 16 | 0;
+            const v = c === 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
+    }
+
     trackByIndex(index: number): number {
         return index;
     }
 
-    trackByFlujoAlterno(index: number, item: FlujoAlterno): string {
-        return item.codigo + '-' + index;
-    }
-
-    trackByCaso(index: number, item: CasoDeUso): number {
-        return item.id || index;
+    trackByHistoria(index: number, item: HistoriaUsuario): string {
+        return item.id;
     }
 }
