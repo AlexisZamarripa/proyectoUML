@@ -1,0 +1,309 @@
+<div class="page-container">
+    <!-- Header de la página -->
+    <div class="page-header">
+        <div class="header-text">
+            <h1 class="page-title">Casos de Uso</h1>
+            <p class="page-subtitle">Define los casos de uso del sistema</p>
+        </div>
+        <button class="btn btn-primary" (click)="openModal()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            Nuevo Caso de Uso
+        </button>
+    </div>
+
+    <!-- Lista de casos de uso -->
+    <div class="casos-list">
+        <div class="caso-card" *ngFor="let caso of casosDeUso; trackBy: trackByCaso">
+            <div class="caso-header">
+                <div class="caso-info">
+                    <h3 class="caso-nombre">{{ caso.nombre }}</h3>
+                    <span class="caso-badge">{{ caso.prioridad }}</span>
+                </div>
+                <div class="caso-actions">
+                    <button class="btn-icon" (click)="editarCaso(caso)">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                        </svg>
+                    </button>
+                    <button class="btn-icon" (click)="eliminarCaso(caso)">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2">
+                            </path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <div class="caso-body">
+                <p class="caso-descripcion">{{ caso.descripcion }}</p>
+
+                <div class="caso-detail">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                    <span>Actor: {{ caso.actores.join(', ') }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" [class.active]="isModalOpen" (click)="closeModal()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+            <h2 class="modal-title">{{ isEditing ? 'Editar Caso de Uso' : 'Nuevo Caso de Uso' }}</h2>
+            <button class="modal-close" (click)="closeModal()">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+
+        <form class="modal-body" (ngSubmit)="guardarCaso()">
+            <!-- Nombre del CU -->
+            <div class="form-row">
+                <div class="form-group full-width">
+                    <label class="form-label required">Nombre del CU</label>
+                    <input type="text" class="form-input" [(ngModel)]="casoActual.nombre" name="nombre"
+                        placeholder="CU001" required>
+                </div>
+            </div>
+
+            <!-- Descripción -->
+            <div class="form-row">
+                <div class="form-group full-width">
+                    <label class="form-label required">Descripción</label>
+                    <textarea class="form-textarea" [(ngModel)]="casoActual.descripcion" name="descripcion"
+                        placeholder="Describe el caso de uso..." rows="3" required></textarea>
+                </div>
+            </div>
+
+            <!-- Actores -->
+            <div class="form-row">
+                <div class="form-group full-width">
+                    <label class="form-label required">Actores</label>
+                    <div class="dynamic-list">
+                        <div class="dynamic-item"
+                            *ngFor="let actor of casoActual.actores; let i = index; trackBy: trackByIndex">
+                            <input type="text" class="form-input" [(ngModel)]="casoActual.actores[i]"
+                                [name]="'actor-' + i" placeholder="Nombre del actor">
+                            <button type="button" class="btn-remove" (click)="removeItem(casoActual.actores, i)"
+                                *ngIf="casoActual.actores.length > 1">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
+                            </button>
+                        </div>
+                        <button type="button" class="btn-add" (click)="addItem(casoActual.actores, '')">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            Agregar actor
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Precondiciones -->
+            <div class="form-row">
+                <div class="form-group full-width">
+                    <label class="form-label">Precondiciones</label>
+                    <div class="dynamic-list">
+                        <div class="dynamic-item"
+                            *ngFor="let precond of casoActual.precondiciones; let i = index; trackBy: trackByIndex">
+                            <input type="text" class="form-input" [(ngModel)]="casoActual.precondiciones[i]"
+                                [name]="'precond-' + i" placeholder="El usuario debe estar registrado">
+                            <button type="button" class="btn-remove" (click)="removeItem(casoActual.precondiciones, i)"
+                                *ngIf="casoActual.precondiciones.length > 1">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
+                            </button>
+                        </div>
+                        <button type="button" class="btn-add" (click)="addItem(casoActual.precondiciones, '')">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            Agregar precondición
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Flujo Básico -->
+            <div class="form-row">
+                <div class="form-group full-width">
+                    <label class="form-label required">Flujo Básico</label>
+                    <div class="dynamic-list">
+                        <div class="dynamic-item"
+                            *ngFor="let paso of casoActual.flujoBasico; let i = index; trackBy: trackByIndex">
+                            <span class="step-number">{{ i + 1 }}</span>
+                            <input type="text" class="form-input" [(ngModel)]="casoActual.flujoBasico[i]"
+                                [name]="'flujo-' + i" placeholder="Acción del paso">
+                            <button type="button" class="btn-remove" (click)="removeItem(casoActual.flujoBasico, i)"
+                                *ngIf="casoActual.flujoBasico.length > 1">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
+                            </button>
+                        </div>
+                        <button type="button" class="btn-add" (click)="addItem(casoActual.flujoBasico, '')">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            Agregar paso
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Flujos Alternos -->
+            <div class="form-row">
+                <div class="form-group full-width">
+                    <label class="form-label">Flujos Alternos</label>
+                    <div class="flujo-alterno-list">
+                        <div class="flujo-alterno-group"
+                            *ngFor="let flujo of casoActual.flujosAlternos; let i = index; trackBy: trackByFlujoAlterno">
+                            <div class="flujo-alterno-header">
+                                <input type="text" class="form-input small" [(ngModel)]="flujo.codigo"
+                                    [name]="'fa-codigo-' + i" placeholder="FA01">
+                                <button type="button" class="btn-remove"
+                                    (click)="removeItem(casoActual.flujosAlternos, i)">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2">
+                                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div class="dynamic-list nested">
+                                <div class="dynamic-item"
+                                    *ngFor="let paso of flujo.pasos; let j = index; trackBy: trackByIndex">
+                                    <span class="step-number">{{ j + 1 }}</span>
+                                    <input type="text" class="form-input" [(ngModel)]="flujo.pasos[j]"
+                                        [name]="'fa-' + i + '-paso-' + j" placeholder="Acción del paso alterno">
+                                    <button type="button" class="btn-remove" (click)="removeItem(flujo.pasos, j)"
+                                        *ngIf="flujo.pasos.length > 1">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="2">
+                                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                                        </svg>
+                                    </button>
+                                </div>
+                                <button type="button" class="btn-add small" (click)="addItem(flujo.pasos, '')">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2">
+                                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                                    </svg>
+                                    Agregar paso
+                                </button>
+                            </div>
+                        </div>
+                        <button type="button" class="btn-add" (click)="addFlujoAlterno()">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            Agregar flujo alterno
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Postcondiciones -->
+            <div class="form-row">
+                <div class="form-group full-width">
+                    <label class="form-label">Postcondiciones</label>
+                    <div class="dynamic-list">
+                        <div class="dynamic-item"
+                            *ngFor="let postcond of casoActual.postcondiciones; let i = index; trackBy: trackByIndex">
+                            <input type="text" class="form-input" [(ngModel)]="casoActual.postcondiciones[i]"
+                                [name]="'postcond-' + i" placeholder="El usuario queda autenticado">
+                            <button type="button" class="btn-remove" (click)="removeItem(casoActual.postcondiciones, i)"
+                                *ngIf="casoActual.postcondiciones.length > 1">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
+                            </button>
+                        </div>
+                        <button type="button" class="btn-add" (click)="addItem(casoActual.postcondiciones, '')">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            Agregar postcondición
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Puntos de Extensión -->
+            <div class="form-row">
+                <div class="form-group full-width">
+                    <label class="form-label">Puntos de Extensión</label>
+                    <div class="dynamic-list">
+                        <div class="dynamic-item"
+                            *ngFor="let punto of casoActual.puntosExtension; let i = index; trackBy: trackByIndex">
+                            <input type="text" class="form-input" [(ngModel)]="casoActual.puntosExtension[i]"
+                                [name]="'punto-' + i" placeholder="Punto de extensión">
+                            <button type="button" class="btn-remove" (click)="removeItem(casoActual.puntosExtension, i)"
+                                *ngIf="casoActual.puntosExtension.length > 1">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
+                            </button>
+                        </div>
+                        <button type="button" class="btn-add" (click)="addItem(casoActual.puntosExtension, '')">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            Agregar punto de extensión
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Botones del Modal -->
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" (click)="closeModal()">
+                    Cancelar
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    {{ isEditing ? 'Guardar Cambios' : 'Crear' }}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

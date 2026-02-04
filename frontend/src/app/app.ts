@@ -1,12 +1,18 @@
-import { Component, signal } from '@angular/core';
+import { Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
+import { HeaderComponent } from './components/header/header.component';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet],
+  standalone: true,
+  imports: [RouterOutlet, HeaderComponent],
   templateUrl: './app.html',
   styleUrl: './app.css'
 })
 export class App {
-  protected readonly title = signal('frontend');
+  isBarraOpen = false;
+
+  onBarraToggle(isOpen: boolean) {
+    this.isBarraOpen = isOpen;
+  }
 }
