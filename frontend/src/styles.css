@@ -1,38 +1,29 @@
-/* styles.css*/
+/* styles.css */
 
-/* ============================================
-   TEMA OSCURO (Default)
-   ============================================ */
 :root {
-    /* Colores del tema oscuro */
     --bg-primary: #0d1b2e;
     --bg-secondary: #1a2942;
     --bg-card: #162238;
     --bg-gradient-start: #ff6b6b;
     --bg-gradient-end: #ff8c42;
 
-    /* Colores de acento */
     --accent-primary: #00d4ff;
     --accent-secondary: #0099cc;
     --accent-hover: #00b8e6;
 
-    /* Textos */
     --text-primary: #ffffff;
     --text-secondary: #94a3b8;
     --text-muted: #64748b;
 
-    /* Bordes y sombras */
     --border-color: #1e3a5f;
     --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
     --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
     --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
 
-    /* Header específico */
     --header-bg: #0d1b2e;
     --header-border: rgba(30, 58, 95, 0.3);
     --btn-hover-bg: rgba(0, 184, 212, 0.1);
 
-    /* Sidebar específico */
     --sidebar-bg: #ffffff;
     --sidebar-border: #e5e7eb;
     --sidebar-text: #374151;
@@ -40,61 +31,49 @@
     --sidebar-hover-bg: #f3f4f6;
     --sidebar-active-bg: linear-gradient(135deg, #6366f1, #8b5cf6);
 
-    /* Espaciado */
     --spacing-xs: 0.5rem;
     --spacing-sm: 1rem;
     --spacing-md: 1.5rem;
     --spacing-lg: 2rem;
     --spacing-xl: 3rem;
 
-    /* Bordes redondeados */
     --radius-sm: 0.5rem;
     --radius-md: 0.75rem;
     --radius-lg: 1rem;
     --radius-xl: 1.5rem;
 
-    /* Transiciones */
     --transition-fast: 0.15s ease;
     --transition-normal: 0.3s ease;
     --transition-slow: 0.5s ease;
 
-    /* Sidebar */
-    --sidebar-width: 290px;
+    --sidebar-width: 280px;
+    --sidebar-collapsed-width: 70px;
 }
 
-/* ============================================
-   TEMA CLARO
-   ============================================ */
 html.light-theme {
-    /* Colores del tema claro */
     --bg-primary: #f8fafc;
     --bg-secondary: #ffffff;
     --bg-card: #ffffff;
     --bg-gradient-start: #ff6b6b;
     --bg-gradient-end: #ff8c42;
 
-    /* Colores de acento */
     --accent-primary: #3b82f6;
     --accent-secondary: #2563eb;
     --accent-hover: #1d4ed8;
 
-    /* Textos */
     --text-primary: #1e293b;
     --text-secondary: #475569;
     --text-muted: #94a3b8;
 
-    /* Bordes y sombras */
     --border-color: #e2e8f0;
     --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
     --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.12);
     --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.16);
 
-    /* Header específico */
     --header-bg: #ffffff;
     --header-border: #e2e8f0;
     --btn-hover-bg: rgba(59, 130, 246, 0.1);
 
-    /* Sidebar específico */
     --sidebar-bg: #ffffff;
     --sidebar-border: #e5e7eb;
     --sidebar-text: #374151;
@@ -102,7 +81,6 @@ html.light-theme {
     --sidebar-hover-bg: #f3f4f6;
 }
 
-/* Transición suave al cambiar de tema */
 html {
     transition: background-color 0.3s ease;
 }
@@ -111,7 +89,6 @@ html.light-theme body {
     transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* Reset básico */
 * {
     margin: 0;
     padding: 0;
@@ -141,15 +118,8 @@ body {
     color: var(--text-primary);
     line-height: 1.6;
     min-height: 100vh;
-    transition: margin-left var(--transition-normal);
 }
 
-/* Comportamiento de empuje de contenido por la barra lateral */
-body.barra-open {
-    margin-left: var(--sidebar-width);
-}
-
-/* Contenedor principal */
 .app-container {
     width: 100%;
     min-height: 100vh;
@@ -160,30 +130,24 @@ body.barra-open {
     transition: all var(--transition-normal);
 }
 
-.main-content {
-    flex: 1;
-    width: 100%;
-    max-width: 1400px;
-    margin: 0 auto;
-    padding: var(--spacing-lg);
-    transition: all var(--transition-normal);
+/* Desktop: ajustes para sidebar */
+@media (min-width: 1024px) {
+    .app-header {
+        margin-left: var(--sidebar-collapsed-width);
+        width: calc(100% - var(--sidebar-collapsed-width));
+        transition: all var(--transition-normal);
+    }
+
+    body.barra-expanded .app-header {
+        margin-left: var(--sidebar-width);
+        width: calc(100% - var(--sidebar-width));
+    }
 }
 
-/* Ajustar el contenido cuando la barra está abierta */
-body.barra-open .main-content {
-    /* Restar el ancho de la sidebar del ancho máximo */
-    max-width: calc(100vw - var(--sidebar-width));
-}
-
-body.barra-open .app-container {
-    width: calc(100% - var(--sidebar-width));
-}
-
-/* Sistema de Grid Responsive */
 .container {
     width: 100%;
     padding-right: var(--spacing-md);
-    padding-left: var(--spacing-md);
+    padding-left: 0;
     margin-right: auto;
     margin-left: auto;
     transition: all var(--transition-normal);
@@ -202,7 +166,6 @@ body.barra-open .app-container {
     padding-left: var(--spacing-sm);
 }
 
-/* Columnas responsivas */
 .col-12 {
     width: 100%;
 }
@@ -251,7 +214,6 @@ body.barra-open .app-container {
     width: 8.33%;
 }
 
-/* Botones base */
 .btn {
     display: inline-flex;
     align-items: center;
@@ -309,7 +271,6 @@ body.barra-open .app-container {
     color: var(--accent-primary);
 }
 
-/* Cards */
 .card {
     background-color: var(--bg-card);
     border-radius: var(--radius-lg);
@@ -323,7 +284,6 @@ body.barra-open .app-container {
     transform: translateY(-4px);
 }
 
-/* Utilidades de texto */
 .text-center {
     text-align: center;
 }
@@ -352,7 +312,6 @@ body.barra-open .app-container {
     color: var(--accent-primary);
 }
 
-/* Espaciado */
 .mt-1 {
     margin-top: var(--spacing-xs);
 }
@@ -401,7 +360,6 @@ body.barra-open .app-container {
     padding: var(--spacing-lg);
 }
 
-/* Scrollbar personalizada */
 ::-webkit-scrollbar {
     width: 10px;
     height: 10px;
@@ -420,7 +378,6 @@ body.barra-open .app-container {
     background: var(--accent-primary);
 }
 
-/* Animaciones */
 @keyframes fadeIn {
     from {
         opacity: 0;
@@ -437,7 +394,6 @@ body.barra-open .app-container {
     animation: fadeIn var(--transition-slow) ease-out;
 }
 
-/* Flex utilities */
 .d-flex {
     display: flex;
 }
@@ -490,11 +446,6 @@ body.barra-open .app-container {
     gap: var(--spacing-lg);
 }
 
-/* ============================================
-   BREAKPOINTS RESPONSIVE
-   ============================================ */
-
-/* Desktop Grande (1200px - ∞) */
 @media (max-width: 1200px) {
     :root {
         font-size: 15px;
@@ -503,13 +454,8 @@ body.barra-open .app-container {
     .container {
         max-width: 960px;
     }
-
-    body.barra-open .main-content {
-        max-width: calc(100vw - var(--sidebar-width) - 2rem);
-    }
 }
 
-/* Tablets y Desktop Pequeño (992px - 1199px) */
 @media (max-width: 992px) {
     :root {
         font-size: 14px;
@@ -535,22 +481,12 @@ body.barra-open .app-container {
         width: 25%;
     }
 
-    /* En tablets y móviles, la barra NO empuja el contenido */
-    body.barra-open {
+    .app-header {
         margin-left: 0 !important;
+        width: 100% !important;
     }
 
-    /* El contenido vuelve a su ancho completo */
-    body.barra-open .main-content {
-        max-width: 1400px;
-    }
-
-    body.barra-open .app-container {
-        width: 100%;
-    }
-
-    /* Overlay oscuro en móviles */
-    body.barra-open::after {
+    body.barra-expanded::after {
         content: '';
         position: fixed;
         top: 0;
@@ -559,19 +495,14 @@ body.barra-open .app-container {
         height: 100%;
         background-color: rgba(0, 0, 0, 0.6);
         backdrop-filter: blur(2px);
-        z-index: 1500;
+        z-index: 999;
         animation: fadeIn 0.3s ease;
     }
 }
 
-/* Tablets Pequeñas (768px - 991px) */
 @media (max-width: 768px) {
     .container {
         max-width: 540px;
-    }
-
-    .main-content {
-        padding: var(--spacing-md);
     }
 
     .col-sm-12 {
@@ -583,14 +514,9 @@ body.barra-open .app-container {
     }
 }
 
-/* Móviles (576px - 767px) */
 @media (max-width: 576px) {
     .container {
         max-width: 100%;
-    }
-
-    .main-content {
-        padding: var(--spacing-sm);
     }
 
     .col-xs-12 {
@@ -603,13 +529,8 @@ body.barra-open .app-container {
     }
 }
 
-/* Móviles Pequeños (< 576px) */
 @media (max-width: 480px) {
     :root {
         font-size: 13px;
-    }
-
-    .main-content {
-        padding: 0.75rem;
     }
 }

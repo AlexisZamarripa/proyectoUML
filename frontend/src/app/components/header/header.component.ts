@@ -1,36 +1,66 @@
-import { Component, inject } from '@angular/core';
+import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { BarraComponent } from '../barra/barra.component';
-import { ThemeService } from '../../services/theme.service';
 
 @Component({
     selector: 'app-header',
     standalone: true,
-    imports: [CommonModule, BarraComponent],
+    imports: [CommonModule],
     templateUrl: './header.component.html',
     styleUrls: ['./header.component.css']
 })
 export class HeaderComponent {
     isBarraOpen = false;
-    themeService = inject(ThemeService);
+
+    constructor(public themeService: ThemeService) { }
+
+    toggleTheme() {
+        this.themeService.toggleTheme();
+    }
 
     toggleBarra() {
         this.isBarraOpen = !this.isBarraOpen;
-
-        // Agregar/quitar clase al body para empujar el contenido
-        if (this.isBarraOpen) {
-            document.body.classList.add('barra-open');
-        } else {
-            document.body.classList.remove('barra-open');
-        }
     }
 
     closeBarra() {
         this.isBarraOpen = false;
-        document.body.classList.remove('barra-open');
+    }
+}
+
+// Servicio de tema (asegúrate de tenerlo en tu aplicación)
+import { Injectable, signal } from '@angular/core';
+
+@Injectable({
+    providedIn: 'root'
+})
+export class ThemeService {
+    private darkMode = signal(false);
+
+    constructor() {
+        // Cargar preferencia guardada
+        const savedTheme = localStorage.getItem('theme');
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const isDark = savedTheme === 'dark' || (!savedTheme && prefersDark);
+
+        this.darkMode.set(isDark);
+        this.applyTheme(isDark);
+    }
+
+    isDarkMode() {
+        return this.darkMode();
     }
 
     toggleTheme() {
-        this.themeService.toggleTheme();
+        const newValue = !this.darkMode();
+        this.darkMode.set(newValue);
+        this.applyTheme(newValue);
+        localStorage.setItem('theme', newValue ? 'dark' : 'light');
+    }
+
+    private applyTheme(isDark: boolean) {
+        if (isDark) {
+            document.documentElement.setAttribute('data-theme', 'dark');
+        } else {
+            document.documentElement.removeAttribute('data-theme');
+        }
     }
 }

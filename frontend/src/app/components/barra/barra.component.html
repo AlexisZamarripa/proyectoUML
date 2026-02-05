@@ -1,87 +1,124 @@
-<!-- Mobile overlay -->
-<div *ngIf="isOpen" class="mobile-overlay" (click)="closeBarra()"></div>
-
-<!-- Sidebar -->
-<aside class="barra" [class.active]="isOpen" [class.collapsed]="isCollapsed">
+<aside class="barra" [class.expanded]="isExpanded">
     <div class="barra-container">
-        <!-- Header -->
-        <div class="barra-header">
-            <div class="header-content">
-                <div *ngIf="!isCollapsed" class="brand-text">
-                    <h2>Recopilación</h2>
-                    <p>Desarrollo de Software</p>
-                </div>
-                <button class="collapse-btn" (click)="toggleCollapse()" aria-label="Toggle sidebar">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polyline *ngIf="isCollapsed" points="9 18 15 12 9 6"></polyline>
-                        <polyline *ngIf="!isCollapsed" points="15 18 9 12 15 6"></polyline>
-                    </svg>
-                </button>
+
+        <div class="project-header">
+            <div class="project-icon">DC</div>
+            <div class="project-info" (click)="onProjectHeaderClick()">
+                <p class="project-name">DataCollect</p>
+                <p class="project-type">Professional</p>
             </div>
+            <button class="sidebar-toggle-btn" (click)="toggleSidebar(); $event.stopPropagation()">
+                <svg class="toggle-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2">
+                    <path d="M3 12h18M3 6h18M3 18h18" />
+                </svg>
+            </button>
         </div>
 
-        <!-- Navigation -->
         <nav class="barra-nav">
-            <a *ngFor="let item of items" 
-               [routerLink]="item.route" 
-               class="nav-item" 
-               [class]="'hover-' + item.bgHover"
-               [class.active]="isActiveRoute(item.route)"
-               (click)="closeBarra()"
-               [title]="isCollapsed ? item.label : ''">
-                
-                <!-- Icon -->
-                <svg class="nav-icon" [class]="item.color" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <!-- Proyectos -->
-                    <g *ngIf="item.id === 'proyectos'">
-                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-                        <polyline points="9 22 9 12 15 12 15 22"></polyline>
-                    </g>
-                    <!-- Entrevistas -->
-                    <g *ngIf="item.id === 'entrevistas'">
-                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                    </g>
-                    <!-- Encuestas -->
-                    <g *ngIf="item.id === 'encuestas'">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                        <polyline points="14 2 14 8 20 8"></polyline>
-                    </g>
-                    <!-- Observaciones -->
-                    <g *ngIf="item.id === 'observaciones'">
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                        <circle cx="12" cy="12" r="3"></circle>
-                    </g>
-                    <!-- Focus Groups -->
-                    <g *ngIf="item.id === 'focus-group'">
-                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                        <circle cx="9" cy="7" r="4"></circle>
-                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-                    </g>
-                    <!-- Historias de Usuario -->
-                    <g *ngIf="item.id === 'historia-usuario'">
-                        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
-                        <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
-                    </g>
-                    <!-- Documentos -->
-                    <g *ngIf="item.id === 'documentos'">
-                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
-                    </g>
-                    <!-- Seguimiento -->
-                    <g *ngIf="item.id === 'seguimiento'">
-                        <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
-                        <polyline points="17 6 23 6 23 12"></polyline>
-                    </g>
-                </svg>
 
-                <!-- Label -->
-                <span *ngIf="!isCollapsed" class="nav-label">{{ item.label }}</span>
-
-                <!-- Count Badge -->
-                <span *ngIf="!isCollapsed && item.count !== null" class="nav-count">
-                    {{ item.count }}
-                </span>
+            <a class="nav-item hover-blue" [class.active]="isActive('proyectos')" (click)="navigateToProyectos()">
+                <div class="nav-icon-wrapper">
+                    <svg class="nav-icon text-blue" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                    </svg>
+                </div>
+                <span class="nav-label">Proyectos</span>
             </a>
+
+            <a class="nav-item hover-green" [class.active]="isActive('entrevistas')" (click)="navigateToEntrevistas()">
+                <div class="nav-icon-wrapper">
+                    <svg class="nav-icon text-green" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                    </svg>
+                </div>
+                <span class="nav-label">Entrevistas</span>
+            </a>
+
+            <a class="nav-item hover-purple disabled">
+                <div class="nav-icon-wrapper">
+                    <svg class="nav-icon text-purple" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                        <path d="M14 2v6h6" />
+                    </svg>
+                </div>
+                <span class="nav-label">Encuestas</span>
+                <span class="nav-count" *ngIf="encuestasCount > 0">{{ encuestasCount }}</span>
+            </a>
+
+            <a class="nav-item hover-orange disabled">
+                <div class="nav-icon-wrapper">
+                    <svg class="nav-icon text-orange" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10" />
+                        <path d="M12 16v-4M12 8h.01" />
+                    </svg>
+                </div>
+                <span class="nav-label">Observaciones</span>
+            </a>
+
+            <a class="nav-item hover-pink disabled">
+                <div class="nav-icon-wrapper">
+                    <svg class="nav-icon text-pink" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                        <circle cx="9" cy="7" r="4" />
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                    </svg>
+                </div>
+                <span class="nav-label">Focus Groups</span>
+                <span class="nav-count" *ngIf="focusGroupsCount > 0">{{ focusGroupsCount }}</span>
+            </a>
+
+            <a class="nav-item hover-indigo" [class.active]="isActive('cu')" (click)="navigateToCU()">
+                <div class="nav-icon-wrapper">
+                    <svg class="nav-icon text-indigo" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2">
+                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+                    </svg>
+                </div>
+                <span class="nav-label">Historia de Usuario</span>
+                <span class="nav-count" *ngIf="historiasCount > 0">{{ historiasCount }}</span>
+            </a>
+
+            <a class="nav-item hover-yellow disabled">
+                <div class="nav-icon-wrapper">
+                    <svg class="nav-icon text-yellow" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2">
+                        <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" />
+                        <path d="M13 2v7h7" />
+                    </svg>
+                </div>
+                <span class="nav-label">Documentos</span>
+            </a>
+
+            <a class="nav-item hover-blue disabled">
+                <div class="nav-icon-wrapper">
+                    <svg class="nav-icon text-blue" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2">
+                        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+                        <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+                    </svg>
+                </div>
+                <span class="nav-label">Catálogo de Documentos</span>
+                <span class="nav-count" *ngIf="catalogoCount > 0">{{ catalogoCount }}</span>
+            </a>
+
+            <a class="nav-item hover-red disabled">
+                <div class="nav-icon-wrapper">
+                    <svg class="nav-icon text-red" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2">
+                        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+                    </svg>
+                </div>
+                <span class="nav-label">Seguimiento</span>
+            </a>
+
         </nav>
     </div>
 </aside>

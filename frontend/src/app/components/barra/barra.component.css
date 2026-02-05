@@ -1,267 +1,352 @@
-/* Mobile Overlay */
-.mobile-overlay {
-    position: fixed;
-    inset: 0;
-    background-color: rgba(0, 0, 0, 0.5);
-    z-index: 999;
-}
-
-/* Sidebar */
 .barra {
     position: fixed;
     top: 0;
     left: 0;
+    width: 70px;
     height: 100vh;
-    width: 288px;
-    background-color: #ffffff;
-    border-right: 1px solid #e5e7eb;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    z-index: 1000;
-    transform: translateX(-100%);
-    transition: all 0.3s ease;
+    background-color: var(--sidebar-bg, #ffffff);
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+    transition: width 0.3s ease;
+    z-index: 999;
+    overflow: hidden;
 }
 
-.dark-theme .barra {
-    background-color: #0f172a;
-    border-right: 1px solid rgba(30, 58, 95, 0.4);
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
-}
-
-.barra.active {
-    transform: translateX(0);
-}
-
-.barra.collapsed {
-    width: 80px;
+/* Sidebar expandida */
+.barra.expanded {
+    width: 280px;
 }
 
 .barra-container {
+    height: 100%;
     display: flex;
     flex-direction: column;
-    height: 100%;
+    padding: 1rem 0;
 }
 
-/* Header */
-.barra-header {
-    padding: 1.5rem;
-    border-bottom: 1px solid #e5e7eb;
-}
-
-.dark-theme .barra-header {
-    border-bottom: 1px solid rgba(30, 58, 95, 0.4);
-}
-
-.header-content {
+/* Header del proyecto actual - SIEMPRE VISIBLE */
+.project-header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    margin: 0 0.5rem 1.5rem;
+    background-color: var(--sidebar-hover-bg, #f3f4f6);
+    border-radius: 0.5rem;
+    transition: all 0.2s ease;
+    min-height: 52px;
 }
 
-.brand-text {
-    flex: 1;
-    min-width: 0;
+.project-header:hover {
+    background-color: var(--hover-bg, #e5e7eb);
 }
 
-.brand-text h2 {
-    font-size: 1.25rem;
-    font-weight: 700;
-    color: #111827;
-    margin: 0;
-    line-height: 1.3;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+/* Cuando está colapsada - centrar completamente */
+.barra:not(.expanded) .project-header {
+    padding: 0;
+    justify-content: center;
+    margin: 0 0 1.5rem 0;
+    background-color: transparent;
+    gap: 0;
 }
 
-.dark-theme .brand-text h2 {
-    color: #00d4ff;
+.barra:not(.expanded) .project-header:hover {
+    background-color: transparent;
 }
 
-.brand-text p {
-    font-size: 0.875rem;
-    color: #6b7280;
-    margin: 0;
-    margin-top: 2px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.dark-theme .brand-text p {
-    color: #8b949e;
-}
-
-.collapse-btn {
-    width: 32px;
-    height: 32px;
+.project-icon {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
     display: flex;
     align-items: center;
     justify-content: center;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    border-radius: 0.5rem;
+    color: white;
+    font-weight: 600;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+}
+
+/* Ocultar icono cuando está colapsada */
+.barra:not(.expanded) .project-icon {
+    display: none;
+}
+
+.project-info {
+    flex: 1;
+    min-width: 0;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+/* Ocultar info cuando está colapsada */
+.barra:not(.expanded) .project-info {
+    display: none;
+}
+
+.project-name {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-primary, #1f2937);
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.project-type {
+    font-size: 0.75rem;
+    color: var(--text-secondary, #9ca3af);
+    margin: 0;
+}
+
+/* Botón Toggle dentro del header */
+.project-header .sidebar-toggle-btn {
     background: transparent;
     border: none;
-    color: #4b5563;
     cursor: pointer;
-    border-radius: 8px;
-    transition: all 0.2s;
+    padding: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.5rem;
+    color: var(--text-secondary, #6b7280);
+    transition: all 0.2s ease;
+    width: 36px;
+    height: 36px;
     flex-shrink: 0;
+    margin: 0;
 }
 
-.collapse-btn:hover {
-    background-color: #f3f4f6;
+.project-header .sidebar-toggle-btn:hover {
+    background-color: var(--hover-bg, #f3f4f6);
+    color: var(--text-primary, #1f2937);
 }
 
-.dark-theme .collapse-btn {
-    color: #8b949e;
+.project-header .sidebar-toggle-btn:active {
+    transform: scale(0.95);
 }
 
-.dark-theme .collapse-btn:hover {
-    background-color: rgba(139, 148, 158, 0.1);
-    color: #00d4ff;
+.project-header .toggle-icon {
+    transition: transform 0.3s ease;
 }
 
+/* ELIMINAR el botón toggle standalone anterior */
 /* Navigation */
 .barra-nav {
     flex: 1;
     overflow-y: auto;
-    padding: 1rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
+    overflow-x: hidden;
+    padding: 0;
 }
 
 .nav-item {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-    padding: 0.75rem 1rem;
-    color: #374151;
+    padding: 0.875rem 0;
+    color: var(--text-secondary, #6b7280);
     text-decoration: none;
-    border-radius: 8px;
-    transition: all 0.2s;
-    font-weight: 500;
-    font-size: 0.875rem;
+    transition: all 0.2s ease;
+    position: relative;
+    gap: 1rem;
     cursor: pointer;
-}
-
-.dark-theme .nav-item {
-    color: #c9d1d9;
-}
-
-.barra.collapsed .nav-item {
-    justify-content: center;
-    padding: 0.75rem;
-}
-
-.nav-icon {
-    flex-shrink: 0;
-    width: 20px;
-    height: 20px;
-}
-
-.nav-label {
-    flex: 1;
+    margin-bottom: 0.5rem;
     white-space: nowrap;
 }
 
+.nav-item::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: currentColor;
+    transform: scaleY(0);
+    transition: transform 0.2s ease;
+}
+
+.nav-item:hover {
+    background-color: var(--hover-bg, #f3f4f6);
+}
+
+.nav-item.active::before {
+    transform: scaleY(1);
+}
+
+/* Wrapper del icono - siempre centrado */
+.nav-icon-wrapper {
+    min-width: 70px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.nav-icon {
+    transition: transform 0.2s ease;
+}
+
+.nav-item:hover .nav-icon {
+    transform: scale(1.1);
+}
+
+/* Label - oculto cuando está colapsado */
+.nav-label {
+    font-size: 0.9375rem;
+    font-weight: 500;
+    flex: 1;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+
+.barra.expanded .nav-label {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Count Badge */
 .nav-count {
-    padding: 0.125rem 0.5rem;
-    border-radius: 9999px;
     font-size: 0.75rem;
-    font-weight: 700;
-    background-color: #f3f4f6;
-    color: #4b5563;
+    font-weight: 600;
+    padding: 0.25rem 0.5rem;
+    background-color: var(--count-bg, #e5e7eb);
+    color: var(--count-text, #374151);
+    border-radius: 9999px;
+    min-width: 1.75rem;
+    height: 1.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    margin-right: 1rem;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
 }
 
-/* Active State */
-.nav-item.active {
-    background: linear-gradient(to right, #6366f1, #4f46e5);
-    color: white;
-    box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.3);
-}
-
-.nav-item.active .nav-icon {
-    color: white !important;
+.barra.expanded .nav-count {
+    opacity: 1;
+    visibility: visible;
 }
 
 .nav-item.active .nav-count {
-    background-color: rgba(255, 255, 255, 0.2);
+    background-color: currentColor;
     color: white;
 }
 
-/* Hover States for Different Colors */
-.nav-item.hover-bg-gray-100:hover:not(.active) {
-    background-color: #f3f4f6;
+/* Color classes for icons */
+.text-blue {
+    color: #3b82f6;
 }
 
-.dark-theme .nav-item.hover-bg-gray-100:hover:not(.active) {
-    background-color: rgba(139, 148, 158, 0.1);
+.text-green {
+    color: #10b981;
 }
 
-.nav-item.hover-bg-blue-50:hover:not(.active) {
+.text-purple {
+    color: #8b5cf6;
+}
+
+.text-orange {
+    color: #f97316;
+}
+
+.text-pink {
+    color: #ec4899;
+}
+
+.text-indigo {
+    color: #6366f1;
+}
+
+.text-yellow {
+    color: #eab308;
+}
+
+.text-red {
+    color: #ef4444;
+}
+
+/* Hover backgrounds */
+.nav-item.hover-blue:hover {
     background-color: #eff6ff;
 }
 
-.dark-theme .nav-item.hover-bg-blue-50:hover:not(.active) {
-    background-color: rgba(37, 99, 235, 0.1);
-}
-
-.nav-item.hover-bg-green-50:hover:not(.active) {
+.nav-item.hover-green:hover {
     background-color: #f0fdf4;
 }
 
-.dark-theme .nav-item.hover-bg-green-50:hover:not(.active) {
-    background-color: rgba(22, 163, 74, 0.1);
-}
-
-.nav-item.hover-bg-purple-50:hover:not(.active) {
+.nav-item.hover-purple:hover {
     background-color: #faf5ff;
 }
 
-.dark-theme .nav-item.hover-bg-purple-50:hover:not(.active) {
-    background-color: rgba(147, 51, 234, 0.1);
-}
-
-.nav-item.hover-bg-orange-50:hover:not(.active) {
+.nav-item.hover-orange:hover {
     background-color: #fff7ed;
 }
 
-.dark-theme .nav-item.hover-bg-orange-50:hover:not(.active) {
-    background-color: rgba(234, 88, 12, 0.1);
-}
-
-.nav-item.hover-bg-pink-50:hover:not(.active) {
+.nav-item.hover-pink:hover {
     background-color: #fdf2f8;
 }
 
-.dark-theme .nav-item.hover-bg-pink-50:hover:not(.active) {
-    background-color: rgba(219, 39, 119, 0.1);
-}
-
-.nav-item.hover-bg-yellow-50:hover:not(.active) {
-    background-color: #fefce8;
-}
-
-.dark-theme .nav-item.hover-bg-yellow-50:hover:not(.active) {
-    background-color: rgba(202, 138, 4, 0.1);
-}
-
-.nav-item.hover-bg-indigo-50:hover:not(.active) {
+.nav-item.hover-indigo:hover {
     background-color: #eef2ff;
 }
 
-.dark-theme .nav-item.hover-bg-indigo-50:hover:not(.active) {
-    background-color: rgba(79, 70, 229, 0.1);
+.nav-item.hover-yellow:hover {
+    background-color: #fefce8;
 }
 
-/* Icon Colors */
-.text-gray-600 { color: #4b5563; }
-.text-blue-600 { color: #2563eb; }
-.text-green-600 { color: #16a34a; }
-.text-purple-600 { color: #9333ea; }
-.text-orange-600 { color: #ea580c; }
-.text-pink-600 { color: #db2777; }
-.text-yellow-600 { color: #ca8a04; }
-.text-indigo-600 { color: #4f46e5; }
+.nav-item.hover-red:hover {
+    background-color: #fef2f2;
+}
+
+/* Active states */
+.nav-item.active.hover-blue {
+    background-color: #eff6ff;
+    color: #3b82f6;
+}
+
+.nav-item.active.hover-green {
+    background-color: #f0fdf4;
+    color: #10b981;
+}
+
+.nav-item.active.hover-purple {
+    background-color: #faf5ff;
+    color: #8b5cf6;
+}
+
+.nav-item.active.hover-orange {
+    background-color: #fff7ed;
+    color: #f97316;
+}
+
+.nav-item.active.hover-pink {
+    background-color: #fdf2f8;
+    color: #ec4899;
+}
+
+.nav-item.active.hover-indigo {
+    background-color: #eef2ff;
+    color: #6366f1;
+}
+
+.nav-item.active.hover-yellow {
+    background-color: #fefce8;
+    color: #eab308;
+}
+
+.nav-item.active.hover-red {
+    background-color: #fef2f2;
+    color: #ef4444;
+}
+
+.nav-item.active {
+    font-weight: 600;
+}
 
 /* Scrollbar */
 .barra-nav::-webkit-scrollbar {
@@ -273,47 +358,100 @@
 }
 
 .barra-nav::-webkit-scrollbar-thumb {
-    background: #d1d5db;
+    background: var(--scrollbar-thumb, #d1d5db);
     border-radius: 3px;
 }
 
 .barra-nav::-webkit-scrollbar-thumb:hover {
-    background: #9ca3af;
+    background: var(--scrollbar-thumb-hover, #9ca3af);
 }
 
-/* Responsive */
-@media (min-width: 1024px) {
+/* Dark mode variables */
+:root[data-theme="dark"] {
+    --sidebar-bg: #1f2937;
+    --border-color: #374151;
+    --text-primary: #f9fafb;
+    --text-secondary: #9ca3af;
+    --hover-bg: #374151;
+    --count-bg: #374151;
+    --count-text: #d1d5db;
+    --scrollbar-thumb: #4b5563;
+    --scrollbar-thumb-hover: #6b7280;
+}
+
+/* Dark mode hover backgrounds */
+:root[data-theme="dark"] .nav-item.hover-blue:hover {
+    background-color: rgba(59, 130, 246, 0.1);
+}
+
+:root[data-theme="dark"] .nav-item.hover-green:hover {
+    background-color: rgba(16, 185, 129, 0.1);
+}
+
+:root[data-theme="dark"] .nav-item.hover-purple:hover {
+    background-color: rgba(139, 92, 246, 0.1);
+}
+
+:root[data-theme="dark"] .nav-item.hover-orange:hover {
+    background-color: rgba(249, 115, 22, 0.1);
+}
+
+:root[data-theme="dark"] .nav-item.hover-pink:hover {
+    background-color: rgba(236, 72, 153, 0.1);
+}
+
+:root[data-theme="dark"] .nav-item.hover-indigo:hover {
+    background-color: rgba(99, 102, 241, 0.1);
+}
+
+:root[data-theme="dark"] .nav-item.hover-yellow:hover {
+    background-color: rgba(234, 179, 8, 0.1);
+}
+
+:root[data-theme="dark"] .nav-item.hover-red:hover {
+    background-color: rgba(239, 68, 68, 0.1);
+}
+
+:root[data-theme="dark"] .nav-item.active.hover-blue {
+    background-color: rgba(59, 130, 246, 0.15);
+}
+
+:root[data-theme="dark"] .nav-item.active.hover-green {
+    background-color: rgba(16, 185, 129, 0.15);
+}
+
+:root[data-theme="dark"] .nav-item.active.hover-purple {
+    background-color: rgba(139, 92, 246, 0.15);
+}
+
+:root[data-theme="dark"] .nav-item.active.hover-orange {
+    background-color: rgba(249, 115, 22, 0.15);
+}
+
+:root[data-theme="dark"] .nav-item.active.hover-pink {
+    background-color: rgba(236, 72, 153, 0.15);
+}
+
+:root[data-theme="dark"] .nav-item.active.hover-indigo {
+    background-color: rgba(99, 102, 241, 0.15);
+}
+
+:root[data-theme="dark"] .nav-item.active.hover-yellow {
+    background-color: rgba(234, 179, 8, 0.15);
+}
+
+:root[data-theme="dark"] .nav-item.active.hover-red {
+    background-color: rgba(239, 68, 68, 0.15);
+}
+
+/* Responsive - En móvil la barra se oculta completamente */
+@media (max-width: 768px) {
     .barra {
-        transform: translateX(0);
+        left: -280px;
+        width: 280px;
     }
-    
-    .mobile-overlay {
-        display: none;
-    }
-}
 
-@media (max-width: 1023px) {
-    .barra {
-        z-index: 2000;
-    }
-}
-
-@media (max-width: 576px) {
-    .barra {
-        width: 100%;
-        max-width: 320px;
-    }
-}
-
-/* Ajuste del contenido principal cuando el sidebar está expandido o colapsado */
-@media (min-width: 1024px) {
-    body.barra-expanded {
-        padding-left: 288px;
-        transition: padding-left 0.3s ease;
-    }
-    
-    body.barra-collapsed {
-        padding-left: 80px;
-        transition: padding-left 0.3s ease;
+    .barra.expanded {
+        left: 0;
     }
 }

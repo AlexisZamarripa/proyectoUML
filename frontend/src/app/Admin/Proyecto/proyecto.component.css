@@ -1,8 +1,7 @@
-/* proyectos.component.css */
-
 /* Contenedor de la página */
 .page-container {
-    padding: 2rem;
+    padding: 2rem 2rem 2rem 0;
+    /* ELIMINADO el padding izquierdo */
     max-width: 1400px;
     margin: 0 auto;
     width: 100%;
