@@ -9,10 +9,16 @@
 
   <!-- Project Header Card -->
   <div class="project-header-card" [style.background]="getProyectoGradient()">
-    <div class="project-header-content">
-      <h1 class="project-title">{{ proyecto.nombre }}</h1>
-      <p class="project-desc">{{ proyecto.descripcion }}</p>
+    <div class="project-header-watermark">
+      <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="0.5">
+        <rect x="3" y="3" width="7" height="7"/>
+        <rect x="14" y="3" width="7" height="7"/>
+        <rect x="14" y="14" width="7" height="7"/>
+        <rect x="3" y="14" width="7" height="7"/>
+      </svg>
     </div>
+    <h1 class="project-header-title">{{ proyecto.nombre }}</h1>
+    <p class="project-header-desc">{{ proyecto.descripcion }}</p>
   </div>
 
   <!-- Main Layout: Sidebar + Content -->
@@ -24,7 +30,10 @@
     <div class="content-area">
       <!-- Header -->
       <div class="content-header">
-        <h2 class="content-title">Gestionar Procesos</h2>
+        <div class="content-header-text">
+          <h2 class="content-title">Procesos</h2>
+          <p class="content-subtitle">Gestiona los procesos y subprocesos del proyecto</p>
+        </div>
         <button class="btn-agregar" (click)="showForm = !showForm">
           <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
             <line x1="12" y1="5" x2="12" y2="19"/>

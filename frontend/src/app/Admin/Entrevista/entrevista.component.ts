@@ -1,181 +1,242 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router, ActivatedRoute } from '@angular/router';
+import { BarraComponent } from '../../components/barra/barra.component';
+import { ProyectoService } from '../../services/proyecto.service';
 
-interface PreguntaRespuesta {
-  pregunta: string;
+interface Pregunta {
+  id: string;
+  texto: string;
   respuesta: string;
+}
+
+interface ArchivoAdjunto {
+  id: string;
+  nombre: string;
+  tipo: string;
 }
 
 interface Entrevista {
   id: string;
-  date: string;
   titulo: string;
   entrevistador: string;
   entrevistado: string;
-  preguntas: PreguntaRespuesta[];
-  notas?: string;
-  realizada: boolean;
-  fechaRealizacion?: string;
-  archivoUrl?: string;
-  archivoTipo?: 'link' | 'pdf' | 'audio' | 'video';
-  archivoNombre?: string;
+  fecha: string;
+  notas: string;
+  proceso: string;
+  subproceso: string;
+  preguntas: Pregunta[];
+  archivos: ArchivoAdjunto[];
+  estado: 'pendiente' | 'realizada';
+  conRespuestas: boolean;
 }
 
 @Component({
   selector: 'app-entrevista',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, BarraComponent],
   templateUrl: './entrevista.component.html',
   styleUrls: ['./entrevista.component.css']
 })
-export class EntrevistaComponent {
-  entrevistas: Entrevista[] = [];
-  showForm = false;
-  selectedEntrevista: Entrevista | null = null;
-  showUploadModal = false;
-  uploadModalEntrevistaId: string | null = null;
+export class EntrevistaComponent implements OnInit {
 
-  // Form state
+  proyecto = {
+    id: '',
+    nombre: '',
+    descripcion: '',
+    color: 'blue'
+  };
+
+  entrevistas: Entrevista[] = [];
+
+  showForm = false;
+
+  // Form fields
   titulo = '';
   entrevistador = '';
   entrevistado = '';
   notas = '';
-  preguntas: PreguntaRespuesta[] = [{ pregunta: '', respuesta: '' }];
+  proceso = '';
+  subproceso = '';
+  preguntas: { texto: string }[] = [{ texto: '' }];
 
-  // Upload modal state
-  uploadTipo: 'link' | 'pdf' | 'audio' | 'video' = 'link';
-  uploadUrl = '';
-  uploadNombre = '';
-  selectedFile: File | null = null;
+  // Anotar respuestas
+  anotandoId: string | null = null;
 
-  addPregunta() {
-    this.preguntas.push({ pregunta: '', respuesta: '' });
+  activeTab = 'entrevistas';
+
+  readonly COLORES_PROYECTO: { valor: string; gradient: string }[] = [
+    { valor: 'blue', gradient: 'linear-gradient(135deg, #3b82f6, #06b6d4)' },
+    { valor: 'emerald', gradient: 'linear-gradient(135deg, #10b981, #34d399)' },
+    { valor: 'purple', gradient: 'linear-gradient(135deg, #8b5cf6, #a78bfa)' },
+    { valor: 'orange', gradient: 'linear-gradient(135deg, #f97316, #fb923c)' },
+    { valor: 'pink', gradient: 'linear-gradient(135deg, #ec4899, #f472b6)' },
+    { valor: 'indigo', gradient: 'linear-gradient(135deg, #6366f1, #818cf8)' },
+  ];
+
+  constructor(
+    private router: Router,
+    private route: ActivatedRoute,
+    private proyectoService: ProyectoService
+  ) {}
+
+  ngOnInit(): void {
+    const id = this.route.snapshot.paramMap.get('id');
+    if (id) {
+      this.proyecto.id = id;
+      const p = this.proyectoService.getProyectoById(id);
+      if (p) {
+        this.proyecto.nombre = p.nombre;
+        this.proyecto.descripcion = p.descripcion;
+        this.proyecto.color = p.color;
+      }
+    }
   }
 
-  removePregunta(index: number) {
-    this.preguntas = this.preguntas.filter((_, i) => i !== index);
+  goBack(): void {
+    this.router.navigate(['/proyectos']);
   }
 
-  handleSubmit() {
-    const entrevista: Entrevista = {
-      id: crypto.randomUUID(),
-      date: new Date().toISOString(),
+  getProyectoGradient(): string {
+    const c = this.COLORES_PROYECTO.find(x => x.valor === this.proyecto.color);
+    return c ? c.gradient : this.COLORES_PROYECTO[0].gradient;
+  }
+
+  // ===== STATS =====
+
+  get totalEntrevistas(): number {
+    return this.entrevistas.length;
+  }
+
+  get realizadas(): number {
+    return this.entrevistas.filter(e => e.estado === 'realizada').length;
+  }
+
+  get pendientes(): number {
+    return this.entrevistas.filter(e => e.estado === 'pendiente').length;
+  }
+
+  get entrevistasRealizadas(): Entrevista[] {
+    return this.entrevistas.filter(e => e.estado === 'realizada');
+  }
+
+  get entrevistasPendientes(): Entrevista[] {
+    return this.entrevistas.filter(e => e.estado === 'pendiente');
+  }
+
+  // ===== FORM =====
+
+  handleSubmit(): void {
+    if (!this.titulo || !this.entrevistador || !this.entrevistado) return;
+
+    const nueva: Entrevista = {
+      id: this.generateUUID(),
       titulo: this.titulo,
       entrevistador: this.entrevistador,
       entrevistado: this.entrevistado,
-      preguntas: this.preguntas.filter(p => p.pregunta.trim() !== ''),
-      notas: this.notas || undefined,
-      realizada: false,
+      fecha: new Date().toISOString().split('T')[0],
+      notas: this.notas,
+      proceso: this.proceso,
+      subproceso: this.subproceso,
+      preguntas: this.preguntas
+        .filter(p => p.texto.trim())
+        .map(p => ({ id: this.generateUUID(), texto: p.texto, respuesta: '' })),
+      archivos: [],
+      estado: 'pendiente',
+      conRespuestas: false,
     };
 
-    this.entrevistas.push(entrevista);
+    this.entrevistas.push(nueva);
+    this.resetForm();
+  }
 
-    // Reset
+  resetForm(): void {
     this.titulo = '';
     this.entrevistador = '';
     this.entrevistado = '';
     this.notas = '';
-    this.preguntas = [{ pregunta: '', respuesta: '' }];
+    this.proceso = '';
+    this.subproceso = '';
+    this.preguntas = [{ texto: '' }];
     this.showForm = false;
   }
 
-  toggleRealizada(id: string) {
-    const entrevista = this.entrevistas.find(e => e.id === id);
-    if (entrevista) {
-      entrevista.realizada = !entrevista.realizada;
-      entrevista.fechaRealizacion = entrevista.realizada ? new Date().toISOString() : undefined;
+  addPregunta(): void {
+    this.preguntas.push({ texto: '' });
+  }
+
+  removePregunta(index: number): void {
+    if (this.preguntas.length > 1) {
+      this.preguntas.splice(index, 1);
     }
   }
 
-  deleteEntrevista(id: string) {
-    this.entrevistas = this.entrevistas.filter(e => e.id !== id);
+  // ===== ANOTAR RESPUESTAS =====
+
+  startAnotar(entrevistaId: string): void {
+    this.anotandoId = entrevistaId;
   }
 
-  openUploadModal(id: string) {
-    this.uploadModalEntrevistaId = id;
-    this.showUploadModal = true;
+  cancelAnotar(): void {
+    this.anotandoId = null;
   }
 
-  closeUploadModal() {
-    this.showUploadModal = false;
-    this.uploadModalEntrevistaId = null;
-    this.uploadUrl = '';
-    this.uploadNombre = '';
-    this.selectedFile = null;
+  guardarRespuestas(entrevista: Entrevista): void {
+    const tieneRespuestas = entrevista.preguntas.some(p => p.respuesta.trim());
+    entrevista.conRespuestas = tieneRespuestas;
+    if (tieneRespuestas) {
+      entrevista.estado = 'realizada';
+    }
+    this.anotandoId = null;
   }
 
-  onFileSelected(event: Event) {
+  // ===== FILES =====
+
+  onFileSelect(event: Event, entrevistaId: string): void {
     const input = event.target as HTMLInputElement;
-    if (input.files && input.files[0]) {
-      this.selectedFile = input.files[0];
-      
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64String = reader.result as string;
-        this.handleFileUpload(base64String, this.selectedFile!);
-      };
-      reader.readAsDataURL(this.selectedFile);
+    if (input.files && input.files.length > 0) {
+      const entrevista = this.entrevistas.find(e => e.id === entrevistaId);
+      if (entrevista) {
+        for (let i = 0; i < input.files.length; i++) {
+          const file = input.files[i];
+          entrevista.archivos.push({
+            id: this.generateUUID(),
+            nombre: file.name,
+            tipo: file.type,
+          });
+        }
+      }
     }
   }
 
-  handleFileUpload(base64String: string, file: File) {
-    if (!this.uploadModalEntrevistaId) return;
-
-    const entrevista = this.entrevistas.find(e => e.id === this.uploadModalEntrevistaId);
+  removeArchivo(entrevistaId: string, archivoId: string): void {
+    const entrevista = this.entrevistas.find(e => e.id === entrevistaId);
     if (entrevista) {
-      let tipo: 'pdf' | 'audio' | 'video' = 'pdf';
-      
-      if (file.type.startsWith('audio/')) tipo = 'audio';
-      else if (file.type.startsWith('video/')) tipo = 'video';
-      
-      entrevista.archivoUrl = base64String;
-      entrevista.archivoTipo = tipo;
-      entrevista.archivoNombre = file.name;
-      
-      this.closeUploadModal();
+      entrevista.archivos = entrevista.archivos.filter(a => a.id !== archivoId);
     }
   }
 
-  handleLinkUpload() {
-    if (!this.uploadModalEntrevistaId || !this.uploadUrl) return;
-
-    const entrevista = this.entrevistas.find(e => e.id === this.uploadModalEntrevistaId);
-    if (entrevista) {
-      entrevista.archivoUrl = this.uploadUrl;
-      entrevista.archivoTipo = this.uploadTipo;
-      entrevista.archivoNombre = this.uploadNombre || this.uploadUrl;
-      
-      this.closeUploadModal();
+  deleteEntrevista(id: string, event: Event): void {
+    event.stopPropagation();
+    if (confirm('¿Eliminar esta entrevista?')) {
+      this.entrevistas = this.entrevistas.filter(e => e.id !== id);
     }
   }
 
-  removeArchivo(id: string) {
-    const entrevista = this.entrevistas.find(e => e.id === id);
-    if (entrevista) {
-      entrevista.archivoUrl = undefined;
-      entrevista.archivoTipo = undefined;
-      entrevista.archivoNombre = undefined;
-    }
-  }
-
-  get entrevistasPendientes() {
-    return this.entrevistas.filter(e => !e.realizada);
-  }
-
-  get entrevistasRealizadas() {
-    return this.entrevistas.filter(e => e.realizada);
-  }
-
-  formatDate(date: string): string {
-    return new Date(date).toLocaleDateString('es-ES', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
+  formatDate(dateString: string): string {
+    return new Date(dateString).toLocaleDateString('es-ES', {
+      day: 'numeric',
+      month: 'numeric',
+      year: 'numeric'
     });
   }
 
-  formatShortDate(date: string): string {
-    return new Date(date).toLocaleDateString('es-ES');
+  private generateUUID(): string {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+      const r = Math.random() * 16 | 0;
+      const v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
   }
 }
