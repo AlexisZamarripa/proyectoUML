@@ -1,173 +1,180 @@
-import { Component, OnInit } from '@angular/core';
+import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
+
+type EstadoProyecto = 'planificacion' | 'en-progreso' | 'completado' | 'pausado';
 
 interface Proyecto {
-    id: number;
-    nombre: string;
-    descripcion: string;
-    creador: string;
-    gradient: string;
-    fechaCreacion: Date;
-    stats: {
-        casos: number;
-        entrevistas: number;
-        documentos: number;
-        diagramas: number;
-    };
+  id: string;
+  nombre: string;
+  descripcion: string;
+  fechaInicio: string;
+  estado: EstadoProyecto;
+  stakeholders: string[];
+  procesos: string[];
+  color: string;
+}
+
+interface ColorProyecto {
+  valor: string;
+  gradient: string;
+  label: string;
+}
+
+interface EstadoInfo {
+  iconPath: string;
+  colorClass: string;
+  bgClass: string;
+  label: string;
 }
 
 @Component({
-    selector: 'app-proyectos',
-    standalone: true,
-    imports: [CommonModule, FormsModule],
-    templateUrl: './proyecto.component.html',
-    styleUrls: ['./proyecto.component.css']
+  selector: 'app-proyectos',
+  standalone: true,
+  imports: [CommonModule, FormsModule],
+  templateUrl: './proyecto.component.html',
+  styleUrls: ['./proyecto.component.css']
 })
-export class ProyectosComponent implements OnInit {
+export class ProyectosComponent {
 
-    proyectos: Proyecto[] = [
-        {
-            id: 1,
-            nombre: 'dfas',
-            descripcion: 'asdas',
-            creador: 'Usuario Demo',
-            gradient: 'gradient-1',
-            fechaCreacion: new Date(),
-            stats: {
-                casos: 0,
-                entrevistas: 0,
-                documentos: 0,
-                diagramas: 0
-            }
-        }
-    ];
+  proyectos: Proyecto[] = [];
 
-    modalNuevoProyectoAbierto = false;
-    modalEditarProyectoAbierto = false;
-    modalConfirmacionAbierto = false;
-    menuAbierto: number | null = null;
+  entrevistas: { proyectoId: string }[] = [];
+  encuestas: { proyectoId: string }[] = [];
+  observaciones: { proyectoId: string }[] = [];
 
-    nuevoProyecto: Proyecto = this.inicializarNuevoProyecto();
-    proyectoEditando: Proyecto | null = null;
-    proyectoAEliminar: Proyecto | null = null;
+  showForm = false;
+  selectedProyecto: Proyecto | null = null;
 
-    gradientesDisponibles = [
-        { value: 'gradient-1', label: 'Rojo - Naranja' },
-        { value: 'gradient-2', label: 'Azul - Cyan' },
-        { value: 'gradient-3', label: 'Púrpura - Rosa' },
-        { value: 'gradient-4', label: 'Verde - Cyan' },
-        { value: 'gradient-5', label: 'Naranja - Amarillo' }
-    ];
+  // Form state
+  nombre = '';
+  descripcion = '';
+  fechaInicio = new Date().toISOString().split('T')[0];
+  estado: EstadoProyecto = 'en-progreso';
+  color = 'blue';
 
-    constructor() { }
+  readonly COLORES_PROYECTO: ColorProyecto[] = [
+    { valor: 'blue', gradient: 'linear-gradient(135deg, #3b82f6, #06b6d4)', label: 'Azul' },
+    { valor: 'emerald', gradient: 'linear-gradient(135deg, #10b981, #34d399)', label: 'Verde' },
+    { valor: 'purple', gradient: 'linear-gradient(135deg, #8b5cf6, #a78bfa)', label: 'Púrpura' },
+    { valor: 'orange', gradient: 'linear-gradient(135deg, #f97316, #fb923c)', label: 'Naranja' },
+    { valor: 'pink', gradient: 'linear-gradient(135deg, #ec4899, #f472b6)', label: 'Rosa' },
+    { valor: 'indigo', gradient: 'linear-gradient(135deg, #6366f1, #818cf8)', label: 'Índigo' },
+  ];
 
-    ngOnInit(): void { }
+  handleSubmit(): void {
+    if (!this.nombre || !this.descripcion) return;
 
-    private inicializarNuevoProyecto(): Proyecto {
-        return {
-            id: 0,
-            nombre: '',
-            descripcion: '',
-            creador: '',
-            gradient: 'gradient-1',
-            fechaCreacion: new Date(),
-            stats: {
-                casos: 0,
-                entrevistas: 0,
-                documentos: 0,
-                diagramas: 0
-            }
-        };
+    const nuevoProyecto: Proyecto = {
+      id: this.generateUUID(),
+      nombre: this.nombre,
+      descripcion: this.descripcion,
+      fechaInicio: this.fechaInicio,
+      estado: this.estado,
+      stakeholders: [],
+      procesos: [],
+      color: this.color,
+    };
+
+    this.proyectos.push(nuevoProyecto);
+    this.resetForm();
+  }
+
+  resetForm(): void {
+    this.nombre = '';
+    this.descripcion = '';
+    this.fechaInicio = new Date().toISOString().split('T')[0];
+    this.estado = 'en-progreso';
+    this.color = 'blue';
+    this.showForm = false;
+  }
+
+  getEstadoInfo(estado: string): EstadoInfo {
+    switch (estado) {
+      case 'planificacion':
+        return { iconPath: 'clock', colorClass: 'estado-planificacion', bgClass: 'estado-bg-planificacion', label: 'Planificación' };
+      case 'en-progreso':
+        return { iconPath: 'play', colorClass: 'estado-progreso', bgClass: 'estado-bg-progreso', label: 'En Progreso' };
+      case 'completado':
+        return { iconPath: 'check', colorClass: 'estado-completado', bgClass: 'estado-bg-completado', label: 'Completado' };
+      case 'pausado':
+        return { iconPath: 'pause', colorClass: 'estado-pausado', bgClass: 'estado-bg-pausado', label: 'Pausado' };
+      default:
+        return { iconPath: 'clock', colorClass: 'estado-planificacion', bgClass: 'estado-bg-planificacion', label: 'Desconocido' };
     }
+  }
 
-    abrirModalNuevoProyecto(): void {
-        this.modalNuevoProyectoAbierto = true;
-        this.nuevoProyecto = this.inicializarNuevoProyecto();
+  getProyectoAnalisis(proyecto: Proyecto): number {
+    return this.entrevistas.filter(e => e.proyectoId === proyecto.id).length
+      + this.encuestas.filter(e => e.proyectoId === proyecto.id).length
+      + this.observaciones.filter(o => o.proyectoId === proyecto.id).length;
+  }
+
+  getGradient(colorValor: string): string {
+    const c = this.COLORES_PROYECTO.find(x => x.valor === colorValor);
+    return c ? c.gradient : this.COLORES_PROYECTO[0].gradient;
+  }
+
+  deleteProyecto(id: string, event: Event): void {
+    event.stopPropagation();
+    if (confirm('¿Eliminar este proyecto y todos sus datos?')) {
+      this.proyectos = this.proyectos.filter(p => p.id !== id);
     }
+  }
 
-    cerrarModalNuevoProyecto(): void {
-        this.modalNuevoProyectoAbierto = false;
-        this.nuevoProyecto = this.inicializarNuevoProyecto();
+  openPreview(proyecto: Proyecto, event: Event): void {
+    event.stopPropagation();
+    this.selectedProyecto = proyecto;
+  }
+
+  constructor(private router: Router) {}
+
+  selectProyecto(proyectoId: string): void {
+    this.router.navigate(['/proyecto', proyectoId, 'stakeholders']);
+  }
+
+  closeModal(): void {
+    this.selectedProyecto = null;
+  }
+
+  openAndClose(): void {
+    if (this.selectedProyecto) {
+      const id = this.selectedProyecto.id;
+      this.selectedProyecto = null;
+      this.selectProyecto(id);
     }
+  }
 
-    crearProyecto(): void {
-        if (!this.nuevoProyecto.nombre || !this.nuevoProyecto.descripcion || !this.nuevoProyecto.creador) {
-            alert('Por favor completa todos los campos requeridos');
-            return;
-        }
+  formatDate(dateString: string): string {
+    return new Date(dateString).toLocaleDateString('es-ES');
+  }
 
-        this.nuevoProyecto.id = this.proyectos.length > 0
-            ? Math.max(...this.proyectos.map(p => p.id)) + 1
-            : 1;
+  formatDateLong(dateString: string): string {
+    return new Date(dateString).toLocaleDateString('es-ES', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  }
 
-        this.proyectos.push({ ...this.nuevoProyecto });
-        this.cerrarModalNuevoProyecto();
-    }
+  private generateUUID(): string {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+      const r = Math.random() * 16 | 0;
+      const v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  }
 
-    toggleMenu(proyectoId: number, event: Event): void {
-        event.stopPropagation();
-        this.menuAbierto = this.menuAbierto === proyectoId ? null : proyectoId;
-    }
+  get totalAnalisis(): number {
+    return this.entrevistas.length + this.encuestas.length + this.observaciones.length;
+  }
 
-    cerrarMenu(): void {
-        this.menuAbierto = null;
-    }
+  get proyectosEnProgreso(): number {
+    return this.proyectos.filter(p => p.estado === 'en-progreso').length;
+  }
 
-    abrirModalEditar(proyectoId: number): void {
-        const proyecto = this.proyectos.find(p => p.id === proyectoId);
-        if (proyecto) {
-            this.proyectoEditando = { ...proyecto };
-            this.modalEditarProyectoAbierto = true;
-            this.cerrarMenu();
-        }
-    }
-
-    cerrarModalEditar(): void {
-        this.modalEditarProyectoAbierto = false;
-        this.proyectoEditando = null;
-    }
-
-    guardarEdicion(): void {
-        if (!this.proyectoEditando) return;
-
-        if (!this.proyectoEditando.nombre || !this.proyectoEditando.descripcion || !this.proyectoEditando.creador) {
-            alert('Por favor completa todos los campos requeridos');
-            return;
-        }
-
-        const index = this.proyectos.findIndex(p => p.id === this.proyectoEditando!.id);
-        if (index !== -1) {
-            this.proyectos[index] = { ...this.proyectoEditando };
-        }
-
-        this.cerrarModalEditar();
-    }
-
-    abrirModalConfirmacion(proyectoId: number): void {
-        const proyecto = this.proyectos.find(p => p.id === proyectoId);
-        if (proyecto) {
-            this.proyectoAEliminar = proyecto;
-            this.modalConfirmacionAbierto = true;
-            this.cerrarMenu();
-        }
-    }
-
-    cerrarModalConfirmacion(): void {
-        this.modalConfirmacionAbierto = false;
-        this.proyectoAEliminar = null;
-    }
-
-    confirmarEliminacion(): void {
-        if (this.proyectoAEliminar) {
-            this.proyectos = this.proyectos.filter(p => p.id !== this.proyectoAEliminar!.id);
-            this.cerrarModalConfirmacion();
-        }
-    }
-
-    abrirProyecto(proyectoId: number): void {
-        const proyecto = this.proyectos.find(p => p.id === proyectoId);
-        console.log('Abriendo proyecto:', proyecto);
-    }
-
+  get proyectosCompletados(): number {
+    return this.proyectos.filter(p => p.estado === 'completado').length;
+  }
 }

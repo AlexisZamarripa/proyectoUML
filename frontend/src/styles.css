@@ -141,12 +141,6 @@ body {
     color: var(--text-primary);
     line-height: 1.6;
     min-height: 100vh;
-    transition: margin-left var(--transition-normal);
-}
-
-/* Comportamiento de empuje de contenido por la barra lateral */
-body.barra-open {
-    margin-left: var(--sidebar-width);
 }
 
 /* Contenedor principal */
@@ -167,16 +161,6 @@ body.barra-open {
     margin: 0 auto;
     padding: var(--spacing-lg);
     transition: all var(--transition-normal);
-}
-
-/* Ajustar el contenido cuando la barra está abierta */
-body.barra-open .main-content {
-    /* Restar el ancho de la sidebar del ancho máximo */
-    max-width: calc(100vw - var(--sidebar-width));
-}
-
-body.barra-open .app-container {
-    width: calc(100% - var(--sidebar-width));
 }
 
 /* Sistema de Grid Responsive */
@@ -503,10 +487,6 @@ body.barra-open .app-container {
     .container {
         max-width: 960px;
     }
-
-    body.barra-open .main-content {
-        max-width: calc(100vw - var(--sidebar-width) - 2rem);
-    }
 }
 
 /* Tablets y Desktop Pequeño (992px - 1199px) */
@@ -533,34 +513,6 @@ body.barra-open .app-container {
 
     .col-md-3 {
         width: 25%;
-    }
-
-    /* En tablets y móviles, la barra NO empuja el contenido */
-    body.barra-open {
-        margin-left: 0 !important;
-    }
-
-    /* El contenido vuelve a su ancho completo */
-    body.barra-open .main-content {
-        max-width: 1400px;
-    }
-
-    body.barra-open .app-container {
-        width: 100%;
-    }
-
-    /* Overlay oscuro en móviles */
-    body.barra-open::after {
-        content: '';
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0, 0, 0, 0.6);
-        backdrop-filter: blur(2px);
-        z-index: 1500;
-        animation: fadeIn 0.3s ease;
     }
 }
 

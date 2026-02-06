@@ -1,87 +1,69 @@
-<!-- Mobile overlay -->
-<div *ngIf="isOpen" class="mobile-overlay" (click)="closeBarra()"></div>
+<aside class="barra">
+  <nav class="barra-nav">
+    <ng-container *ngFor="let item of NAV_ITEMS">
+      <!-- Section label -->
+      <span *ngIf="item.section" class="nav-section-label">{{ item.section }}</span>
 
-<!-- Sidebar -->
-<aside class="barra" [class.active]="isOpen" [class.collapsed]="isCollapsed">
-    <div class="barra-container">
-        <!-- Header -->
-        <div class="barra-header">
-            <div class="header-content">
-                <div *ngIf="!isCollapsed" class="brand-text">
-                    <h2>Recopilación</h2>
-                    <p>Desarrollo de Software</p>
-                </div>
-                <button class="collapse-btn" (click)="toggleCollapse()" aria-label="Toggle sidebar">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polyline *ngIf="isCollapsed" points="9 18 15 12 9 6"></polyline>
-                        <polyline *ngIf="!isCollapsed" points="15 18 9 12 15 6"></polyline>
-                    </svg>
-                </button>
-            </div>
-        </div>
+      <a
+        class="nav-item"
+        [class.active]="activeTab === item.id"
+        [routerLink]="item.route"
+      >
+        <!-- Stakeholders / Users -->
+        <svg *ngIf="item.icon === 'users'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+          <circle cx="9" cy="7" r="4"></circle>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+        </svg>
+        <!-- Grid / Procesos -->
+        <svg *ngIf="item.icon === 'grid'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="7"></rect>
+          <rect x="14" y="3" width="7" height="7"></rect>
+          <rect x="14" y="14" width="7" height="7"></rect>
+          <rect x="3" y="14" width="7" height="7"></rect>
+        </svg>
+        <!-- File / Entrevistas -->
+        <svg *ngIf="item.icon === 'file'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+          <line x1="16" y1="13" x2="8" y2="13"></line>
+          <line x1="16" y1="17" x2="8" y2="17"></line>
+        </svg>
+        <!-- Clipboard / Encuestas -->
+        <svg *ngIf="item.icon === 'clipboard'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+          <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+        </svg>
+        <!-- Eye / Observaciones -->
+        <svg *ngIf="item.icon === 'eye'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+          <circle cx="12" cy="12" r="3"></circle>
+        </svg>
+        <!-- Users Group / Focus Groups -->
+        <svg *ngIf="item.icon === 'users-group'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+          <circle cx="9" cy="7" r="4"></circle>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+        </svg>
+        <!-- Book / Historias -->
+        <svg *ngIf="item.icon === 'book'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+          <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+        </svg>
+        <!-- Folder / Documentos -->
+        <svg *ngIf="item.icon === 'folder'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+        </svg>
+        <!-- Trending / Seguimiento -->
+        <svg *ngIf="item.icon === 'trending'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+          <polyline points="17 6 23 6 23 12"></polyline>
+        </svg>
 
-        <!-- Navigation -->
-        <nav class="barra-nav">
-            <a *ngFor="let item of items" 
-               [routerLink]="item.route" 
-               class="nav-item" 
-               [class]="'hover-' + item.bgHover"
-               [class.active]="isActiveRoute(item.route)"
-               (click)="closeBarra()"
-               [title]="isCollapsed ? item.label : ''">
-                
-                <!-- Icon -->
-                <svg class="nav-icon" [class]="item.color" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <!-- Proyectos -->
-                    <g *ngIf="item.id === 'proyectos'">
-                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-                        <polyline points="9 22 9 12 15 12 15 22"></polyline>
-                    </g>
-                    <!-- Entrevistas -->
-                    <g *ngIf="item.id === 'entrevistas'">
-                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                    </g>
-                    <!-- Encuestas -->
-                    <g *ngIf="item.id === 'encuestas'">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                        <polyline points="14 2 14 8 20 8"></polyline>
-                    </g>
-                    <!-- Observaciones -->
-                    <g *ngIf="item.id === 'observaciones'">
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                        <circle cx="12" cy="12" r="3"></circle>
-                    </g>
-                    <!-- Focus Groups -->
-                    <g *ngIf="item.id === 'focus-group'">
-                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                        <circle cx="9" cy="7" r="4"></circle>
-                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-                    </g>
-                    <!-- Historias de Usuario -->
-                    <g *ngIf="item.id === 'historia-usuario'">
-                        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
-                        <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
-                    </g>
-                    <!-- Documentos -->
-                    <g *ngIf="item.id === 'documentos'">
-                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
-                    </g>
-                    <!-- Seguimiento -->
-                    <g *ngIf="item.id === 'seguimiento'">
-                        <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
-                        <polyline points="17 6 23 6 23 12"></polyline>
-                    </g>
-                </svg>
-
-                <!-- Label -->
-                <span *ngIf="!isCollapsed" class="nav-label">{{ item.label }}</span>
-
-                <!-- Count Badge -->
-                <span *ngIf="!isCollapsed && item.count !== null" class="nav-count">
-                    {{ item.count }}
-                </span>
-            </a>
-        </nav>
-    </div>
+        <span class="nav-label">{{ item.label }}</span>
+      </a>
+    </ng-container>
+  </nav>
 </aside>
