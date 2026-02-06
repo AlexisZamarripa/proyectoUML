@@ -14,7 +14,7 @@ interface NavItem {
 @Component({
     selector: 'app-barra',
     standalone: true,
-    imports: [CommonModule, RouterLink, RouterLinkActive],
+    imports: [CommonModule, RouterLink ],
     templateUrl: './barra.component.html',
     styleUrls: ['./barra.component.css']
 })
