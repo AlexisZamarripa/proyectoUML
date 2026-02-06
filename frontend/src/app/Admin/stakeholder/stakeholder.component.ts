@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { BarraComponent } from '../../components/barra/barra.component';
+import { ProyectoService } from '../../services/proyecto.service';
 
 interface Stakeholder {
   id: string;
@@ -28,11 +29,11 @@ interface ColorOption {
 })
 export class StakeholderComponent implements OnInit {
 
-  // Proyecto actual (simulado)
+  // Proyecto actual
   proyecto = {
     id: '',
-    nombre: 'Sistema de Ventas 2025',
-    descripcion: 'Rediseño completo del sistema de ventas para mejorar la eficiencia y experiencia del usuario',
+    nombre: '',
+    descripcion: '',
     color: 'blue'
   };
 
@@ -69,12 +70,18 @@ export class StakeholderComponent implements OnInit {
     { valor: 'indigo', gradient: 'linear-gradient(135deg, #6366f1, #818cf8)' },
   ];
 
-  constructor(private router: Router, private route: ActivatedRoute) {}
+  constructor(private router: Router, private route: ActivatedRoute, private proyectoService: ProyectoService) {}
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
       this.proyecto.id = id;
+      const p = this.proyectoService.getProyectoById(id);
+      if (p) {
+        this.proyecto.nombre = p.nombre;
+        this.proyecto.descripcion = p.descripcion;
+        this.proyecto.color = p.color;
+      }
     }
   }
 

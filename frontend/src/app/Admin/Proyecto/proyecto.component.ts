@@ -2,19 +2,7 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-
-type EstadoProyecto = 'planificacion' | 'en-progreso' | 'completado' | 'pausado';
-
-interface Proyecto {
-  id: string;
-  nombre: string;
-  descripcion: string;
-  fechaInicio: string;
-  estado: EstadoProyecto;
-  stakeholders: string[];
-  procesos: string[];
-  color: string;
-}
+import { ProyectoService, Proyecto, EstadoProyecto } from '../../services/proyecto.service';
 
 interface ColorProyecto {
   valor: string;
@@ -38,7 +26,9 @@ interface EstadoInfo {
 })
 export class ProyectosComponent {
 
-  proyectos: Proyecto[] = [];
+  get proyectos(): Proyecto[] {
+    return this.proyectoService.getProyectos();
+  }
 
   entrevistas: { proyectoId: string }[] = [];
   encuestas: { proyectoId: string }[] = [];
@@ -77,7 +67,7 @@ export class ProyectosComponent {
       color: this.color,
     };
 
-    this.proyectos.push(nuevoProyecto);
+    this.proyectoService.addProyecto(nuevoProyecto);
     this.resetForm();
   }
 
@@ -119,7 +109,7 @@ export class ProyectosComponent {
   deleteProyecto(id: string, event: Event): void {
     event.stopPropagation();
     if (confirm('¿Eliminar este proyecto y todos sus datos?')) {
-      this.proyectos = this.proyectos.filter(p => p.id !== id);
+      this.proyectoService.deleteProyecto(id);
     }
   }
 
@@ -128,7 +118,7 @@ export class ProyectosComponent {
     this.selectedProyecto = proyecto;
   }
 
-  constructor(private router: Router) {}
+  constructor(private router: Router, private proyectoService: ProyectoService) {}
 
   selectProyecto(proyectoId: string): void {
     this.router.navigate(['/proyecto', proyectoId, 'stakeholders']);
