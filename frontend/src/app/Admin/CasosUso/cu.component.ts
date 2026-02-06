@@ -4,13 +4,14 @@ import { FormsModule } from '@angular/forms';
 
 interface HistoriaUsuario {
     id: string;
-    date: string;
     titulo: string;
+    proyecto: string;
+    subproyecto: string;
     como: string;
     quiero: string;
     paraque: string;
-    prioridad: 'alta' | 'media' | 'baja';
-    estimacion?: string;
+    prioridad: 'Alta' | 'Media' | 'Baja';
+    estimacion: string;
     criteriosAceptacion: string[];
 }
 
@@ -22,101 +23,76 @@ interface HistoriaUsuario {
     styleUrls: ['./cu.component.css']
 })
 export class CasosUsoComponent {
-    showForm = false;
-    selectedHistoria: HistoriaUsuario | null = null;
+    showModal = false;
+    isEditing = false;
     historias: HistoriaUsuario[] = [];
 
     // Campos del formulario
-    titulo = '';
-    como = '';
-    quiero = '';
-    paraque = '';
-    prioridad: 'alta' | 'media' | 'baja' = 'media';
-    estimacion = '';
-    criteriosAceptacion: string[] = [''];
+    currentHistoria: HistoriaUsuario = this.getEmptyHistoria();
 
-    toggleForm() {
-        this.showForm = !this.showForm;
-        if (this.showForm) {
-            this.resetForm();
-        }
-    }
-
-    resetForm() {
-        this.titulo = '';
-        this.como = '';
-        this.quiero = '';
-        this.paraque = '';
-        this.prioridad = 'media';
-        this.estimacion = '';
-        this.criteriosAceptacion = [''];
-    }
-
-    addCriterio() {
-        this.criteriosAceptacion.push('');
-    }
-
-    removeCriterio(index: number) {
-        this.criteriosAceptacion = this.criteriosAceptacion.filter((_, i) => i !== index);
-    }
-
-    updateCriterio(index: number, value: string) {
-        this.criteriosAceptacion[index] = value;
-    }
-
-    handleSubmit() {
-        const historia: HistoriaUsuario = {
-            id: this.generateUUID(),
-            date: new Date().toISOString(),
-            titulo: this.titulo,
-            como: this.como,
-            quiero: this.quiero,
-            paraque: this.paraque,
-            prioridad: this.prioridad,
-            estimacion: this.estimacion || undefined,
-            criteriosAceptacion: this.criteriosAceptacion.filter(c => c.trim() !== '')
+    getEmptyHistoria(): HistoriaUsuario {
+        return {
+            id: '',
+            titulo: '',
+            proyecto: '',
+            subproyecto: '',
+            como: '',
+            quiero: '',
+            paraque: '',
+            prioridad: 'Media',
+            estimacion: '',
+            criteriosAceptacion: ['']
         };
-
-        this.historias.push(historia);
-        this.resetForm();
-        this.showForm = false;
     }
 
-    verHistoria(historia: HistoriaUsuario) {
-        this.selectedHistoria = historia;
+    openNewModal() {
+        this.isEditing = false;
+        this.currentHistoria = this.getEmptyHistoria();
+        this.showModal = true;
+    }
+
+    openEditModal(historia: HistoriaUsuario) {
+        this.isEditing = true;
+        this.currentHistoria = JSON.parse(JSON.stringify(historia));
+        this.showModal = true;
     }
 
     closeModal() {
-        this.selectedHistoria = null;
+        this.showModal = false;
+        this.currentHistoria = this.getEmptyHistoria();
+    }
+
+    addCriterio() {
+        this.currentHistoria.criteriosAceptacion.push('');
+    }
+
+    removeCriterio(index: number) {
+        if (this.currentHistoria.criteriosAceptacion.length > 1) {
+            this.currentHistoria.criteriosAceptacion.splice(index, 1);
+        }
+    }
+
+    guardarHistoria() {
+        // Limpiar criterios vacíos
+        this.currentHistoria.criteriosAceptacion = this.currentHistoria.criteriosAceptacion.filter(c => c.trim() !== '');
+
+        if (this.isEditing) {
+            const index = this.historias.findIndex(h => h.id === this.currentHistoria.id);
+            if (index !== -1) {
+                this.historias[index] = JSON.parse(JSON.stringify(this.currentHistoria));
+            }
+        } else {
+            this.currentHistoria.id = this.generateUUID();
+            this.historias.push(JSON.parse(JSON.stringify(this.currentHistoria)));
+        }
+
+        this.closeModal();
     }
 
     eliminarHistoria(id: string) {
-        if (confirm('¿Estás seguro de eliminar esta historia de usuario?')) {
+        if (confirm('¿Está seguro de eliminar esta historia?')) {
             this.historias = this.historias.filter(h => h.id !== id);
         }
-    }
-
-    getPrioridadColor(prioridad: string): string {
-        switch (prioridad) {
-            case 'alta': return 'prioridad-alta';
-            case 'media': return 'prioridad-media';
-            case 'baja': return 'prioridad-baja';
-            default: return 'prioridad-default';
-        }
-    }
-
-    formatDate(dateString: string): string {
-        const date = new Date(dateString);
-        return date.toLocaleDateString('es-ES');
-    }
-
-    formatDateLong(dateString: string): string {
-        const date = new Date(dateString);
-        return date.toLocaleDateString('es-ES', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-        });
     }
 
     private generateUUID(): string {

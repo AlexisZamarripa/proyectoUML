@@ -10,12 +10,12 @@ import { ProcesosComponent } from './Admin/procesos/procesos.component';
 
 export const routes: Routes = [
     { path: 'auth', loadChildren: () => import('./auth/auth.routes').then(m => m.AUTH_ROUTES) },
-    { path: 'cu', component: CasosUsoComponent },
     { path: 'proyectos', component: ProyectosComponent },
     { path: 'proyecto/:id/stakeholders', component: StakeholderComponent },
     { path: 'proyecto/:id/procesos', component: ProcesosComponent },
     { path: 'proyecto/:id/entrevistas', component: EntrevistaComponent },
     { path: 'proyecto/:id/encuestas', component: EncuestaComponent },
     { path: 'proyecto/:id/observaciones', component: ObservacionComponent },
+    { path: 'proyecto/:id/historias', component: CasosUsoComponent },
     { path: '**', redirectTo: '/proyectos' },
 ];
