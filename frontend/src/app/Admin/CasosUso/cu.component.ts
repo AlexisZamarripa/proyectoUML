@@ -1,6 +1,9 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router, ActivatedRoute } from '@angular/router';
+import { BarraComponent } from '../../components/barra/barra.component';
+import { ProyectoService } from '../../services/proyecto.service';
 
 interface HistoriaUsuario {
     id: string;
@@ -18,17 +21,61 @@ interface HistoriaUsuario {
 @Component({
     selector: 'app-casos-uso',
     standalone: true,
-    imports: [CommonModule, FormsModule],
+    imports: [CommonModule, FormsModule, BarraComponent],
     templateUrl: './cu.component.html',
     styleUrls: ['./cu.component.css']
 })
-export class CasosUsoComponent {
+export class CasosUsoComponent implements OnInit {
     showModal = false;
     isEditing = false;
     historias: HistoriaUsuario[] = [];
 
+    // Proyecto actual
+    proyecto = {
+        id: '',
+        nombre: '',
+        descripcion: '',
+        color: 'blue'
+    };
+
+    // Active tab in project sidebar
+    activeTab = 'historias';
+
     // Campos del formulario
     currentHistoria: HistoriaUsuario = this.getEmptyHistoria();
+
+    readonly COLORES_PROYECTO: { valor: string; gradient: string }[] = [
+        { valor: 'blue', gradient: 'linear-gradient(135deg, #3b82f6, #06b6d4)' },
+        { valor: 'emerald', gradient: 'linear-gradient(135deg, #10b981, #34d399)' },
+        { valor: 'purple', gradient: 'linear-gradient(135deg, #8b5cf6, #a78bfa)' },
+        { valor: 'orange', gradient: 'linear-gradient(135deg, #f97316, #fb923c)' },
+        { valor: 'pink', gradient: 'linear-gradient(135deg, #ec4899, #f472b6)' },
+        { valor: 'indigo', gradient: 'linear-gradient(135deg, #6366f1, #818cf8)' },
+    ];
+
+    constructor(private router: Router, private route: ActivatedRoute, private proyectoService: ProyectoService) {}
+
+    ngOnInit(): void {
+        const id = this.route.snapshot.paramMap.get('id');
+        if (id) {
+            this.proyecto.id = id;
+            const p = this.proyectoService.getProyectoById(id);
+            if (p) {
+                this.proyecto.nombre = p.nombre;
+                this.proyecto.descripcion = p.descripcion;
+                this.proyecto.color = p.color;
+            }
+        }
+    }
+
+    goBack(): void {
+        this.router.navigate(['/proyectos']);
+    }
+
+    getProyectoGradient(): string {
+        const c = this.COLORES_PROYECTO.find(x => x.valor === this.proyecto.color);
+        return c ? c.gradient : this.COLORES_PROYECTO[0].gradient;
+    }
 
     getEmptyHistoria(): HistoriaUsuario {
         return {
