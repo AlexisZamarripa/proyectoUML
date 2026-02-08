@@ -8,6 +8,8 @@ import { ProyectoService } from '../../services/proyecto.service';
 interface HistoriaUsuario {
     id: string;
     titulo: string;
+    fecha?: string;
+    proyecto_nombre?: string;
     proyecto: string;
     subproyecto: string;
     como: string;
@@ -26,8 +28,7 @@ interface HistoriaUsuario {
     styleUrls: ['./cu.component.css']
 })
 export class CasosUsoComponent implements OnInit {
-    showModal = false;
-    isEditing = false;
+    showForm = false;
     historias: HistoriaUsuario[] = [];
 
     // Proyecto actual
@@ -42,7 +43,15 @@ export class CasosUsoComponent implements OnInit {
     activeTab = 'historias';
 
     // Campos del formulario
-    currentHistoria: HistoriaUsuario = this.getEmptyHistoria();
+    titulo = '';
+    proyecto_nombre = '';
+    subproyecto = '';
+    como = '';
+    quiero = '';
+    paraque = '';
+    prioridad: 'Alta' | 'Media' | 'Baja' = 'Media';
+    estimacion = '';
+    criteriosAceptacion: string[] = [''];
 
     readonly COLORES_PROYECTO: { valor: string; gradient: string }[] = [
         { valor: 'blue', gradient: 'linear-gradient(135deg, #3b82f6, #06b6d4)' },
@@ -92,48 +101,56 @@ export class CasosUsoComponent implements OnInit {
         };
     }
 
-    openNewModal() {
-        this.isEditing = false;
-        this.currentHistoria = this.getEmptyHistoria();
-        this.showModal = true;
+    isFormValid(): boolean {
+        return !!(this.titulo && this.titulo.trim().length > 0 &&
+                  this.como && this.como.trim().length > 0 &&
+                  this.quiero && this.quiero.trim().length > 0 &&
+                  this.paraque && this.paraque.trim().length > 0);
     }
 
-    openEditModal(historia: HistoriaUsuario) {
-        this.isEditing = true;
-        this.currentHistoria = JSON.parse(JSON.stringify(historia));
-        this.showModal = true;
+    resetForm() {
+        this.titulo = '';
+        this.proyecto_nombre = '';
+        this.subproyecto = '';
+        this.como = '';
+        this.quiero = '';
+        this.paraque = '';
+        this.prioridad = 'Media';
+        this.estimacion = '';
+        this.criteriosAceptacion = [''];
     }
 
-    closeModal() {
-        this.showModal = false;
-        this.currentHistoria = this.getEmptyHistoria();
-    }
-
-    addCriterio() {
-        this.currentHistoria.criteriosAceptacion.push('');
-    }
-
-    removeCriterio(index: number) {
-        if (this.currentHistoria.criteriosAceptacion.length > 1) {
-            this.currentHistoria.criteriosAceptacion.splice(index, 1);
+    handleSubmit() {
+        if (!this.titulo.trim() || !this.como.trim() || !this.quiero.trim() || !this.paraque.trim()) {
+            return;
         }
-    }
 
-    guardarHistoria() {
         // Limpiar criterios vacíos
-        this.currentHistoria.criteriosAceptacion = this.currentHistoria.criteriosAceptacion.filter(c => c.trim() !== '');
+        const criterios = this.criteriosAceptacion.filter(c => c.trim() !== '');
 
-        if (this.isEditing) {
-            const index = this.historias.findIndex(h => h.id === this.currentHistoria.id);
-            if (index !== -1) {
-                this.historias[index] = JSON.parse(JSON.stringify(this.currentHistoria));
-            }
-        } else {
-            this.currentHistoria.id = this.generateUUID();
-            this.historias.push(JSON.parse(JSON.stringify(this.currentHistoria)));
-        }
+        // Generar fecha actual
+        const now = new Date();
+        const fecha = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
 
-        this.closeModal();
+        const nueva: HistoriaUsuario = {
+            id: this.generateUUID(),
+            titulo: this.titulo.trim(),
+            fecha: fecha,
+            proyecto_nombre: this.proyecto_nombre.trim(),
+            proyecto: this.proyecto_nombre.trim(),
+            subproyecto: this.subproyecto.trim(),
+            como: this.como.trim(),
+            quiero: this.quiero.trim(),
+            paraque: this.paraque.trim(),
+            prioridad: this.prioridad,
+            estimacion: this.estimacion.trim(),
+            criteriosAceptacion: criterios.length > 0 ? criterios : []
+        };
+
+        this.historias.push(nueva);
+        console.log('Historia creada. Total historias:', this.historias.length, this.historias);
+        this.resetForm();
+        this.showForm = false;
     }
 
     eliminarHistoria(id: string) {
