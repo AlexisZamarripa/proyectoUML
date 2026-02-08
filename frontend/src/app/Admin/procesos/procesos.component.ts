@@ -20,6 +20,7 @@ interface Proceso {
   nombre: string;
   descripcion: string;
   color: string;
+  stakeholder: string;
   departamentos: Departamento[];
   plazoClave: string[];
   peso: number;
@@ -57,6 +58,7 @@ export class ProcesosComponent implements OnInit {
   nombre = '';
   descripcion = '';
   color = 'blue';
+  stakeholder = '';
   peso: number = 1;
   departamentos: Departamento[] = [];
   plazoClave: string[] = [];
@@ -65,8 +67,12 @@ export class ProcesosComponent implements OnInit {
 
   // Subproceso inline form
   addingSubprocesoToId: string | null = null;
+  addingSubprocesoModal = false;
   subNombre = '';
   subDescripcion = '';
+
+  // Modal
+  selectedProceso: Proceso | null = null;
 
   activeTab = 'procesos';
 
@@ -130,6 +136,7 @@ export class ProcesosComponent implements OnInit {
       nombre: this.nombre,
       descripcion: this.descripcion,
       color: this.color,
+      stakeholder: this.stakeholder,
       departamentos: [...this.departamentos],
       plazoClave: [...this.plazoClave],
       peso: this.peso,
@@ -144,6 +151,7 @@ export class ProcesosComponent implements OnInit {
     this.nombre = '';
     this.descripcion = '';
     this.color = 'blue';
+    this.stakeholder = '';
     this.peso = 1;
     this.departamentos = [];
     this.plazoClave = [];
@@ -212,6 +220,48 @@ export class ProcesosComponent implements OnInit {
     const proceso = this.procesos.find(p => p.id === procesoId);
     if (proceso) {
       proceso.subprocesos = proceso.subprocesos.filter(s => s.id !== subId);
+    }
+  }
+
+  // ===== MODAL =====
+
+  viewProceso(proceso: Proceso): void {
+    this.selectedProceso = proceso;
+    this.addingSubprocesoModal = false;
+  }
+
+  closeModal(): void {
+    this.selectedProceso = null;
+    this.addingSubprocesoModal = false;
+    this.subNombre = '';
+    this.subDescripcion = '';
+  }
+
+  startAddSubprocesoModal(): void {
+    this.addingSubprocesoModal = true;
+    this.subNombre = '';
+    this.subDescripcion = '';
+  }
+
+  cancelAddSubprocesoModal(): void {
+    this.addingSubprocesoModal = false;
+    this.subNombre = '';
+    this.subDescripcion = '';
+  }
+
+  addSubprocesoFromModal(): void {
+    if (!this.subNombre || !this.selectedProceso) return;
+    this.selectedProceso.subprocesos.push({
+      id: this.generateUUID(),
+      nombre: this.subNombre,
+      descripcion: this.subDescripcion,
+    });
+    this.cancelAddSubprocesoModal();
+  }
+
+  deleteSubprocesoFromModal(subId: string): void {
+    if (this.selectedProceso) {
+      this.selectedProceso.subprocesos = this.selectedProceso.subprocesos.filter(s => s.id !== subId);
     }
   }
 

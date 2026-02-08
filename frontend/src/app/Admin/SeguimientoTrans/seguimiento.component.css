@@ -38,6 +38,7 @@
   color: #ffffff;
   position: relative;
   overflow: hidden;
+  width: 100%;
 }
 
 .project-header-watermark {
@@ -93,6 +94,12 @@
   gap: 1rem;
 }
 
+.content-header-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
 .content-title {
   font-size: 1.3rem;
   font-weight: 700;
@@ -100,7 +107,13 @@
   margin: 0;
 }
 
-.btn-nueva {
+.content-subtitle {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.btn-agregar {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
@@ -116,7 +129,7 @@
   box-shadow: 0 2px 8px rgba(239, 68, 68, 0.2);
 }
 
-.btn-nueva:hover {
+.btn-agregar:hover {
   background: #dc2626;
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
@@ -750,7 +763,7 @@
     align-items: stretch;
   }
 
-  .btn-nueva {
+  .btn-agregar {
     width: 100%;
     justify-content: center;
   }

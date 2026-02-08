@@ -38,6 +38,7 @@
   color: #ffffff;
   position: relative;
   overflow: hidden;
+  width: 100%;
 }
 
 .project-header-watermark {
@@ -444,7 +445,7 @@
   }
 }
 
-@media (max-width: 600px) {
+@media (max-width: 768px) {
   .observaciones-grid {
     grid-template-columns: 1fr;
   }

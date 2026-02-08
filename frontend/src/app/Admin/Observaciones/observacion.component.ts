@@ -36,6 +36,15 @@ export class ObservacionComponent implements OnInit {
   observaciones: Observacion[] = [];
   showForm = false;
 
+  readonly COLORES_PROYECTO: { valor: string; gradient: string }[] = [
+    { valor: 'blue', gradient: 'linear-gradient(135deg, #3b82f6, #06b6d4)' },
+    { valor: 'emerald', gradient: 'linear-gradient(135deg, #10b981, #34d399)' },
+    { valor: 'purple', gradient: 'linear-gradient(135deg, #8b5cf6, #a78bfa)' },
+    { valor: 'orange', gradient: 'linear-gradient(135deg, #f97316, #fb923c)' },
+    { valor: 'pink', gradient: 'linear-gradient(135deg, #ec4899, #f472b6)' },
+    { valor: 'indigo', gradient: 'linear-gradient(135deg, #6366f1, #818cf8)' },
+  ];
+
   // Form fields
   titulo = '';
   textoObservaciones = '';
@@ -112,15 +121,8 @@ export class ObservacionComponent implements OnInit {
   }
 
   getProyectoGradient(): string {
-    const gradients: Record<string, string> = {
-      blue: 'linear-gradient(135deg, #3b82f6, #6366f1)',
-      purple: 'linear-gradient(135deg, #8b5cf6, #a855f7)',
-      green: 'linear-gradient(135deg, #10b981, #059669)',
-      orange: 'linear-gradient(135deg, #f97316, #ef4444)',
-      cyan: 'linear-gradient(135deg, #06b6d4, #3b82f6)',
-      pink: 'linear-gradient(135deg, #ec4899, #8b5cf6)'
-    };
-    return gradients[this.proyecto.color] || gradients['blue'];
+    const c = this.COLORES_PROYECTO.find(x => x.valor === this.proyecto.color);
+    return c ? c.gradient : this.COLORES_PROYECTO[0].gradient;
   }
 
   formatDate(dateStr: string): string {

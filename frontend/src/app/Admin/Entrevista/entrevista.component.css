@@ -38,6 +38,7 @@
   color: #ffffff;
   position: relative;
   overflow: hidden;
+  width: 100%;
 }
 
 .project-header-watermark {
