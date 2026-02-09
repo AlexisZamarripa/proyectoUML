@@ -1,526 +1,385 @@
-<div class="entrevista-container">
-  <!-- Header -->
-  <div class="header">
-    <div>
-      <h2>Entrevistas</h2>
-      <p>Gestiona las entrevistas realizadas</p>
-    </div>
-    <button (click)="showForm = !showForm" class="btn-primary">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <line x1="12" y1="5" x2="12" y2="19"></line>
-        <line x1="5" y1="12" x2="19" y2="12"></line>
+<div class="entrevista-page">
+
+  <!-- Back link -->
+  <button class="back-link" (click)="goBack()">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="19" y1="12" x2="5" y2="12"></line>
+      <polyline points="12 19 5 12 12 5"></polyline>
+    </svg>
+    Volver a Proyectos
+  </button>
+
+  <!-- Project Header Card -->
+  <div class="project-header-card" [style.background]="getProyectoGradient()">
+    <div class="project-header-watermark">
+      <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="0.5">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
       </svg>
-      {{ showForm ? 'Cancelar' : 'Nueva Entrevista' }}
-    </button>
+    </div>
+    <h1 class="project-header-title">{{ proyecto.nombre }}</h1>
+    <p class="project-header-desc">{{ proyecto.descripcion }}</p>
   </div>
 
-  <!-- Estadísticas -->
-  <div class="stats-grid">
-    <div class="stat-card">
-      <div class="stat-content">
-        <div>
-          <p class="stat-label">Total</p>
-          <p class="stat-value">{{ entrevistas.length }}</p>
+  <!-- Main Layout: Sidebar + Content -->
+  <div class="main-layout">
+
+    <!-- Sidebar -->
+    <app-barra [projectId]="proyecto.id" [activeTab]="activeTab"></app-barra>
+
+    <!-- Content Area -->
+    <div class="content-area">
+
+      <!-- Content Header -->
+      <div class="content-header">
+        <div class="content-header-text">
+          <h2 class="content-title">Entrevistas</h2>
+          <p class="content-subtitle">Gestiona las entrevistas y sus respuestas</p>
         </div>
-        <div class="stat-icon bg-blue">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-            <line x1="16" y1="2" x2="16" y2="6"></line>
-            <line x1="8" y1="2" x2="8" y2="6"></line>
-            <line x1="3" y1="10" x2="21" y2="10"></line>
+        <button class="btn-agregar" (click)="showForm = !showForm">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <line *ngIf="!showForm" x1="12" y1="5" x2="12" y2="19"></line>
+            <line *ngIf="!showForm" x1="5" y1="12" x2="19" y2="12"></line>
+            <line *ngIf="showForm" x1="18" y1="6" x2="6" y2="18"></line>
+            <line *ngIf="showForm" x1="6" y1="6" x2="18" y2="18"></line>
           </svg>
-        </div>
-      </div>
-    </div>
-
-    <div class="stat-card">
-      <div class="stat-content">
-        <div>
-          <p class="stat-label">Realizadas</p>
-          <p class="stat-value green">{{ entrevistasRealizadas.length }}</p>
-        </div>
-        <div class="stat-icon bg-green">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-            <polyline points="22 4 12 14.01 9 11.01"></polyline>
-          </svg>
-        </div>
-      </div>
-    </div>
-
-    <div class="stat-card">
-      <div class="stat-content">
-        <div>
-          <p class="stat-label">Pendientes</p>
-          <p class="stat-value orange">{{ entrevistasPendientes.length }}</p>
-        </div>
-        <div class="stat-icon bg-orange">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"></circle>
-            <polyline points="12 6 12 12 16 14"></polyline>
-          </svg>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Formulario -->
-  <div *ngIf="showForm" class="form-container">
-    <h3>Crear Nueva Entrevista</h3>
-    
-    <form (ngSubmit)="handleSubmit()">
-      <div class="form-grid">
-        <div class="form-group">
-          <label>Título de la Entrevista *</label>
-          <input type="text" [(ngModel)]="titulo" name="titulo" required 
-                 placeholder="Ej: Entrevista con usuario final">
-        </div>
-
-        <div class="form-group">
-          <label>Entrevistador *</label>
-          <input type="text" [(ngModel)]="entrevistador" name="entrevistador" required 
-                 placeholder="Nombre del entrevistador">
-        </div>
-
-        <div class="form-group">
-          <label>Entrevistado *</label>
-          <input type="text" [(ngModel)]="entrevistado" name="entrevistado" required 
-                 placeholder="Nombre del entrevistado">
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label>Notas Generales</label>
-        <textarea [(ngModel)]="notas" name="notas" rows="2" 
-                  placeholder="Contexto o notas adicionales"></textarea>
-      </div>
-
-      <div class="preguntas-section">
-        <div class="preguntas-header">
-          <label>Preguntas y Respuestas</label>
-          <button type="button" (click)="addPregunta()" class="btn-add-pregunta">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="12" y1="5" x2="12" y2="19"></line>
-              <line x1="5" y1="12" x2="19" y2="12"></line>
-            </svg>
-            Añadir Pregunta
-          </button>
-        </div>
-
-        <div class="preguntas-list">
-          <div *ngFor="let p of preguntas; let i = index" class="pregunta-card">
-            <button type="button" (click)="removePregunta(i)" class="btn-remove">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="3 6 5 6 21 6"></polyline>
-                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-              </svg>
-            </button>
-
-            <div class="pregunta-content">
-              <div class="form-group">
-                <label>Pregunta {{ i + 1 }}</label>
-                <input type="text" [(ngModel)]="p.pregunta" [name]="'pregunta' + i" 
-                       placeholder="Escribe la pregunta">
-              </div>
-
-              <div class="form-group">
-                <label>Respuesta</label>
-                <textarea [(ngModel)]="p.respuesta" [name]="'respuesta' + i" rows="2" 
-                          placeholder="Escribe la respuesta"></textarea>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <button type="submit" class="btn-submit">Guardar Entrevista</button>
-    </form>
-  </div>
-
-  <!-- Entrevistas Pendientes -->
-  <div *ngIf="entrevistasPendientes.length > 0" class="section">
-    <h3 class="section-title">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-orange">
-        <circle cx="12" cy="12" r="10"></circle>
-        <polyline points="12 6 12 12 16 14"></polyline>
-      </svg>
-      Pendientes de Realizar ({{ entrevistasPendientes.length }})
-    </h3>
-    <div class="cards-grid">
-      <div *ngFor="let entrevista of entrevistasPendientes" class="entrevista-card">
-        <div class="card-header">
-          <div class="card-title-section">
-            <h4>{{ entrevista.titulo }}</h4>
-            <div class="card-meta">
-              <span>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                  <line x1="16" y1="2" x2="16" y2="6"></line>
-                  <line x1="8" y1="2" x2="8" y2="6"></line>
-                  <line x1="3" y1="10" x2="21" y2="10"></line>
-                </svg>
-                {{ formatShortDate(entrevista.date) }}
-              </span>
-              <span>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                  <circle cx="12" cy="7" r="4"></circle>
-                </svg>
-                {{ entrevista.entrevistador }}
-              </span>
-            </div>
-          </div>
-          <div class="card-actions">
-            <button (click)="selectedEntrevista = entrevista" class="icon-btn" title="Ver completa">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                <circle cx="12" cy="12" r="3"></circle>
-              </svg>
-            </button>
-            <button (click)="deleteEntrevista(entrevista.id)" class="icon-btn delete" title="Eliminar">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="3 6 5 6 21 6"></polyline>
-                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-              </svg>
-            </button>
-          </div>
-        </div>
-
-        <div class="card-body">
-          <p><strong>Entrevistado:</strong> {{ entrevista.entrevistado }}</p>
-          <p><strong>Preguntas:</strong> {{ entrevista.preguntas.length }}</p>
-
-          <!-- Archivo adjunto -->
-          <div *ngIf="entrevista.archivoUrl" class="archivo-attached">
-            <div class="archivo-info">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
-                <polyline points="13 2 13 9 20 9"></polyline>
-              </svg>
-              <div>
-                <p class="archivo-nombre">{{ entrevista.archivoNombre }}</p>
-                <p class="archivo-tipo">{{ entrevista.archivoTipo }}</p>
-              </div>
-            </div>
-            <div class="archivo-actions">
-              <a [href]="entrevista.archivoUrl" target="_blank" class="icon-btn" title="Ver/Descargar">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                  <polyline points="7 10 12 15 17 10"></polyline>
-                  <line x1="12" y1="15" x2="12" y2="3"></line>
-                </svg>
-              </a>
-              <button (click)="removeArchivo(entrevista.id)" class="icon-btn delete" title="Eliminar archivo">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <line x1="18" y1="6" x2="6" y2="18"></line>
-                  <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
-              </button>
-            </div>
-          </div>
-
-          <button *ngIf="!entrevista.archivoUrl" (click)="openUploadModal(entrevista.id)" class="btn-upload">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-              <polyline points="17 8 12 3 7 8"></polyline>
-              <line x1="12" y1="3" x2="12" y2="15"></line>
-            </svg>
-            Subir archivo de entrevista
-          </button>
-
-          <button (click)="toggleRealizada(entrevista.id)" class="btn-toggle realizada">
-            Marcar como Realizada
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Entrevistas Realizadas -->
-  <div *ngIf="entrevistasRealizadas.length > 0" class="section">
-    <h3 class="section-title">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-green">
-        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-        <polyline points="22 4 12 14.01 9 11.01"></polyline>
-      </svg>
-      Realizadas ({{ entrevistasRealizadas.length }})
-    </h3>
-    <div class="cards-grid">
-      <div *ngFor="let entrevista of entrevistasRealizadas" class="entrevista-card realizada">
-        <div class="card-header">
-          <div class="card-title-section">
-            <div class="title-with-badge">
-              <h4>{{ entrevista.titulo }}</h4>
-              <span class="badge-realizada">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                  <polyline points="22 4 12 14.01 9 11.01"></polyline>
-                </svg>
-                Realizada
-              </span>
-            </div>
-            <div class="card-meta">
-              <span>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                  <line x1="16" y1="2" x2="16" y2="6"></line>
-                  <line x1="8" y1="2" x2="8" y2="6"></line>
-                  <line x1="3" y1="10" x2="21" y2="10"></line>
-                </svg>
-                {{ formatShortDate(entrevista.date) }}
-              </span>
-              <span>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                  <circle cx="12" cy="7" r="4"></circle>
-                </svg>
-                {{ entrevista.entrevistador }}
-              </span>
-            </div>
-          </div>
-          <div class="card-actions">
-            <button (click)="selectedEntrevista = entrevista" class="icon-btn" title="Ver completa">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                <circle cx="12" cy="12" r="3"></circle>
-              </svg>
-            </button>
-            <button (click)="deleteEntrevista(entrevista.id)" class="icon-btn delete" title="Eliminar">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="3 6 5 6 21 6"></polyline>
-                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-              </svg>
-            </button>
-          </div>
-        </div>
-
-        <div class="card-body">
-          <p><strong>Entrevistado:</strong> {{ entrevista.entrevistado }}</p>
-          <p><strong>Preguntas:</strong> {{ entrevista.preguntas.length }}</p>
-
-          <!-- Archivo adjunto -->
-          <div *ngIf="entrevista.archivoUrl" class="archivo-attached">
-            <div class="archivo-info">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
-                <polyline points="13 2 13 9 20 9"></polyline>
-              </svg>
-              <div>
-                <p class="archivo-nombre">{{ entrevista.archivoNombre }}</p>
-                <p class="archivo-tipo">{{ entrevista.archivoTipo }}</p>
-              </div>
-            </div>
-            <div class="archivo-actions">
-              <a [href]="entrevista.archivoUrl" target="_blank" class="icon-btn" title="Ver/Descargar">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                  <polyline points="7 10 12 15 17 10"></polyline>
-                  <line x1="12" y1="15" x2="12" y2="3"></line>
-                </svg>
-              </a>
-              <button (click)="removeArchivo(entrevista.id)" class="icon-btn delete" title="Eliminar archivo">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <line x1="18" y1="6" x2="6" y2="18"></line>
-                  <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
-              </button>
-            </div>
-          </div>
-
-          <button *ngIf="!entrevista.archivoUrl" (click)="openUploadModal(entrevista.id)" class="btn-upload">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-              <polyline points="17 8 12 3 7 8"></polyline>
-              <line x1="12" y1="3" x2="12" y2="15"></line>
-            </svg>
-            Subir archivo de entrevista
-          </button>
-
-          <button (click)="toggleRealizada(entrevista.id)" class="btn-toggle pendiente">
-            Marcar como Pendiente
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Empty state -->
-  <div *ngIf="entrevistas.length === 0 && !showForm" class="empty-state">
-    <p>No hay entrevistas registradas</p>
-    <p class="empty-subtitle">Haz clic en "Nueva Entrevista" para comenzar</p>
-  </div>
-</div>
-
-<!-- Modal de Upload -->
-<div *ngIf="showUploadModal" class="modal-overlay" (click)="closeUploadModal()">
-  <div class="modal-content" (click)="$event.stopPropagation()">
-    <div class="modal-header">
-      <h3>Subir Archivo de Entrevista</h3>
-      <button (click)="closeUploadModal()" class="modal-close">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <line x1="18" y1="6" x2="6" y2="18"></line>
-          <line x1="6" y1="6" x2="18" y2="18"></line>
-        </svg>
-      </button>
-    </div>
-
-    <div class="modal-body">
-      <div class="form-group">
-        <label>Tipo de Archivo</label>
-        <div class="tipo-grid">
-          <button type="button" (click)="uploadTipo = 'link'" 
-                  [class.active]="uploadTipo === 'link'" class="tipo-btn">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
-              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
-            </svg>
-            <span>Link</span>
-          </button>
-          <button type="button" (click)="uploadTipo = 'pdf'" 
-                  [class.active]="uploadTipo === 'pdf'" class="tipo-btn">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
-              <polyline points="13 2 13 9 20 9"></polyline>
-            </svg>
-            <span>PDF</span>
-          </button>
-          <button type="button" (click)="uploadTipo = 'audio'" 
-                  [class.active]="uploadTipo === 'audio'" class="tipo-btn">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
-              <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-              <line x1="12" y1="19" x2="12" y2="23"></line>
-              <line x1="8" y1="23" x2="16" y2="23"></line>
-            </svg>
-            <span>Audio</span>
-          </button>
-          <button type="button" (click)="uploadTipo = 'video'" 
-                  [class.active]="uploadTipo === 'video'" class="tipo-btn">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polygon points="23 7 16 12 23 17 23 7"></polygon>
-              <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
-            </svg>
-            <span>Video</span>
-          </button>
-        </div>
-      </div>
-
-      <div *ngIf="uploadTipo === 'link'">
-        <div class="form-group">
-          <label>URL del Archivo *</label>
-          <input type="url" [(ngModel)]="uploadUrl" placeholder="https://...">
-        </div>
-        <div class="form-group">
-          <label>Nombre del Archivo (Opcional)</label>
-          <input type="text" [(ngModel)]="uploadNombre" placeholder="Ej: Grabación entrevista">
-        </div>
-        <button (click)="handleLinkUpload()" [disabled]="!uploadUrl" class="btn-submit">
-          Guardar Link
+          {{ showForm ? 'Cancelar' : 'Agregar Entrevista' }}
         </button>
       </div>
 
-      <div *ngIf="uploadTipo !== 'link'">
-        <div class="form-group">
-          <label>Seleccionar Archivo</label>
-          <div class="file-upload">
-            <label class="file-upload-label">
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                <polyline points="17 8 12 3 7 8"></polyline>
-                <line x1="12" y1="3" x2="12" y2="15"></line>
+      <!-- Stats Row -->
+      <div class="stats-row" *ngIf="!showForm">
+        <div class="stat-card">
+          <div class="stat-header">
+            <span class="stat-label">Total</span>
+            <div class="stat-icon stat-icon-blue">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="16" y1="2" x2="16" y2="6"></line>
+                <line x1="8" y1="2" x2="8" y2="6"></line>
+                <line x1="3" y1="10" x2="21" y2="10"></line>
               </svg>
-              <p><strong>Click para subir</strong></p>
-              <p class="file-upload-hint">
-                {{ uploadTipo === 'pdf' ? 'PDF (MAX. 10MB)' : '' }}
-                {{ uploadTipo === 'audio' ? 'MP3, WAV (MAX. 50MB)' : '' }}
-                {{ uploadTipo === 'video' ? 'MP4, MOV (MAX. 100MB)' : '' }}
-              </p>
-              <input type="file" (change)="onFileSelected($event)"
-                     [accept]="uploadTipo === 'pdf' ? '.pdf' : uploadTipo === 'audio' ? 'audio/*' : 'video/*'">
-            </label>
+            </div>
+          </div>
+          <span class="stat-value">{{ totalEntrevistas }}</span>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-header">
+            <span class="stat-label">Realizadas</span>
+            <div class="stat-icon stat-icon-green">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="16" y1="2" x2="16" y2="6"></line>
+                <line x1="8" y1="2" x2="8" y2="6"></line>
+                <line x1="3" y1="10" x2="21" y2="10"></line>
+              </svg>
+            </div>
+          </div>
+          <span class="stat-value stat-green">{{ realizadas }}</span>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-header">
+            <span class="stat-label">Pendientes</span>
+            <div class="stat-icon stat-icon-orange">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="16" y1="2" x2="16" y2="6"></line>
+                <line x1="8" y1="2" x2="8" y2="6"></line>
+                <line x1="3" y1="10" x2="21" y2="10"></line>
+              </svg>
+            </div>
+          </div>
+          <span class="stat-value stat-orange">{{ pendientes }}</span>
+        </div>
+      </div>
+
+      <!-- ===== FORM: Crear Nueva Entrevista ===== -->
+      <div class="form-card" *ngIf="showForm">
+        <h3 class="form-title">Crear Nueva Entrevista</h3>
+        <p class="form-desc">Primero crea la entrevista. Luego podrás anotar las respuestas y subir archivos.</p>
+
+        <form (ngSubmit)="handleSubmit()">
+          <div class="form-grid form-grid-3">
+            <div class="form-group">
+              <label class="form-label">Título de la Entrevista *</label>
+              <input class="form-input" type="text" [(ngModel)]="titulo" name="titulo" placeholder="Ej: Entrevista con usuario final" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Entrevistador *</label>
+              <input class="form-input" type="text" [(ngModel)]="entrevistador" name="entrevistador" placeholder="Tu nombre" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Entrevistado *</label>
+              <input class="form-input" type="text" [(ngModel)]="entrevistado" name="entrevistado" placeholder="Nombre del entrevistado" required />
+            </div>
+          </div>
+
+          <div class="form-group full-width">
+            <label class="form-label">Notas / Contexto</label>
+            <textarea class="form-input form-textarea" [(ngModel)]="notas" name="notas" rows="3" placeholder="Contexto o notas adicionales sobre la entrevista"></textarea>
+          </div>
+
+          <div class="form-grid form-grid-2">
+            <div class="form-group">
+              <label class="form-label">Proceso</label>
+              <input class="form-input" type="text" [(ngModel)]="proceso" name="proceso" placeholder="" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Subproceso</label>
+              <input class="form-input" type="text" [(ngModel)]="subproceso" name="subproceso" placeholder="" />
+            </div>
+          </div>
+
+          <!-- Preguntas -->
+          <div class="preguntas-section">
+            <div class="preguntas-header">
+              <label class="form-label">Preguntas de la Entrevista *</label>
+              <button type="button" class="btn-add-pregunta" (click)="addPregunta()">
+                + Añadir Pregunta
+              </button>
+            </div>
+            <div class="preguntas-list">
+              <div class="pregunta-row" *ngFor="let p of preguntas; let i = index">
+                <input class="form-input" type="text" [(ngModel)]="p.texto" [name]="'pregunta_' + i" [placeholder]="'Pregunta ' + (i + 1)" />
+                <button type="button" class="btn-remove-pregunta" *ngIf="preguntas.length > 1" (click)="removePregunta(i)">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn-submit" [disabled]="!titulo || !entrevistador || !entrevistado">
+              Crear Entrevista
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- ===== ENTREVISTAS REALIZADAS ===== -->
+      <div class="section" *ngIf="entrevistasRealizadas.length > 0 && !showForm">
+        <h3 class="section-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+          Realizadas ({{ realizadas }})
+        </h3>
+        <div class="entrevistas-grid">
+          <div class="entrevista-card" *ngFor="let e of entrevistasRealizadas">
+            <!-- Card Header -->
+            <div class="card-top">
+              <h4 class="card-title">{{ e.titulo }}</h4>
+              <div class="card-actions">
+                <button class="btn-icon" (click)="deleteEntrevista(e.id, $event)" title="Eliminar">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- Card Meta -->
+            <div class="card-meta">
+              <span class="meta-item">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="16" y1="2" x2="16" y2="6"></line>
+                  <line x1="8" y1="2" x2="8" y2="6"></line>
+                  <line x1="3" y1="10" x2="21" y2="10"></line>
+                </svg>
+                {{ formatDate(e.fecha) }}
+              </span>
+              <span class="meta-item">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+                {{ e.entrevistador }}
+              </span>
+            </div>
+
+            <p class="card-entrevistado">Entrevistados: {{ e.entrevistado }}</p>
+
+            <div class="card-info-row">
+              <span class="card-preguntas">Preguntas: {{ e.preguntas.length }}</span>
+              <span class="badge badge-green" *ngIf="e.conRespuestas">Con respuestas</span>
+              <span class="badge badge-gray" *ngIf="!e.conRespuestas">Sin respuestas</span>
+            </div>
+
+            <!-- File upload area -->
+            <div class="file-upload-area">
+              <div class="archivos-list" *ngIf="e.archivos.length > 0">
+                <div class="archivo-item" *ngFor="let a of e.archivos">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                  </svg>
+                  <span>{{ a.nombre }}</span>
+                  <button class="btn-remove-file" (click)="removeArchivo(e.id, a.id)">&times;</button>
+                </div>
+              </div>
+              <label class="file-upload-btn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="17 8 12 3 7 8"></polyline>
+                  <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
+                Subir archivo (grabación/documento)
+                <input type="file" (change)="onFileSelect($event, e.id)" multiple hidden />
+              </label>
+            </div>
+
+            <!-- Card Footer -->
+            <div class="card-footer">
+              <button class="btn-anotar" (click)="startAnotar(e.id)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                </svg>
+                Anotar Respuestas
+              </button>
+              <span class="badge" [class.badge-green]="e.estado === 'realizada'" [class.badge-gray]="e.estado === 'pendiente'">
+                {{ e.estado === 'realizada' ? 'Realizada' : 'Pendiente' }}
+              </span>
+            </div>
+
+            <!-- Anotar Respuestas Panel -->
+            <div class="respuestas-panel" *ngIf="anotandoId === e.id">
+              <h4 class="respuestas-title">Anotar Respuestas</h4>
+              <div class="respuesta-group" *ngFor="let p of e.preguntas; let i = index">
+                <label class="respuesta-label">{{ i + 1 }}. {{ p.texto }}</label>
+                <textarea class="form-input form-textarea" [(ngModel)]="p.respuesta" [name]="'resp_' + p.id" rows="2" placeholder="Escribe la respuesta..."></textarea>
+              </div>
+              <div class="respuestas-actions">
+                <button class="btn-cancelar" (click)="cancelAnotar()">Cancelar</button>
+                <button class="btn-submit btn-sm" (click)="guardarRespuestas(e)">Guardar Respuestas</button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  </div>
-</div>
 
-<!-- Modal de Detalle -->
-<div *ngIf="selectedEntrevista" class="modal-overlay" (click)="selectedEntrevista = null">
-  <div class="modal-content large" (click)="$event.stopPropagation()">
-    <div class="modal-header">
-      <div class="modal-title-section">
-        <h3>{{ selectedEntrevista.titulo }}</h3>
-        <span *ngIf="selectedEntrevista.realizada" class="badge-realizada">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+      <!-- ===== ENTREVISTAS PENDIENTES ===== -->
+      <div class="section" *ngIf="entrevistasPendientes.length > 0 && !showForm">
+        <h3 class="section-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
           </svg>
-          Realizada
-        </span>
-      </div>
-      <button (click)="selectedEntrevista = null" class="modal-close">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <line x1="18" y1="6" x2="6" y2="18"></line>
-          <line x1="6" y1="6" x2="18" y2="18"></line>
-        </svg>
-      </button>
-    </div>
+          Pendientes ({{ pendientes }})
+        </h3>
+        <div class="entrevistas-grid">
+          <div class="entrevista-card" *ngFor="let e of entrevistasPendientes">
+            <div class="card-top">
+              <h4 class="card-title">{{ e.titulo }}</h4>
+              <div class="card-actions">
+                <button class="btn-icon" (click)="deleteEntrevista(e.id, $event)" title="Eliminar">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
 
-    <div class="modal-body">
-      <div class="detail-grid">
-        <div class="detail-item">
-          <span class="detail-label">Entrevistador:</span>
-          <p>{{ selectedEntrevista.entrevistador }}</p>
-        </div>
-        <div class="detail-item">
-          <span class="detail-label">Entrevistado:</span>
-          <p>{{ selectedEntrevista.entrevistado }}</p>
-        </div>
-        <div class="detail-item">
-          <span class="detail-label">Fecha de Creación:</span>
-          <p>{{ formatDate(selectedEntrevista.date) }}</p>
-        </div>
-        <div *ngIf="selectedEntrevista.fechaRealizacion" class="detail-item">
-          <span class="detail-label">Fecha de Realización:</span>
-          <p>{{ formatDate(selectedEntrevista.fechaRealizacion) }}</p>
-        </div>
-      </div>
+            <div class="card-meta">
+              <span class="meta-item">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="16" y1="2" x2="16" y2="6"></line>
+                  <line x1="8" y1="2" x2="8" y2="6"></line>
+                  <line x1="3" y1="10" x2="21" y2="10"></line>
+                </svg>
+                {{ formatDate(e.fecha) }}
+              </span>
+              <span class="meta-item">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+                {{ e.entrevistador }}
+              </span>
+            </div>
 
-      <div *ngIf="selectedEntrevista.archivoUrl" class="archivo-detail">
-        <div class="archivo-info">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
-            <polyline points="13 2 13 9 20 9"></polyline>
-          </svg>
-          <div>
-            <p class="archivo-nombre">{{ selectedEntrevista.archivoNombre }}</p>
-            <p class="archivo-tipo">{{ selectedEntrevista.archivoTipo }}</p>
+            <p class="card-entrevistado">Entrevistados: {{ e.entrevistado }}</p>
+
+            <div class="card-info-row">
+              <span class="card-preguntas">Preguntas: {{ e.preguntas.length }}</span>
+              <span class="badge badge-gray">Sin respuestas</span>
+            </div>
+
+            <div class="file-upload-area">
+              <div class="archivos-list" *ngIf="e.archivos.length > 0">
+                <div class="archivo-item" *ngFor="let a of e.archivos">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                  </svg>
+                  <span>{{ a.nombre }}</span>
+                  <button class="btn-remove-file" (click)="removeArchivo(e.id, a.id)">&times;</button>
+                </div>
+              </div>
+              <label class="file-upload-btn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="17 8 12 3 7 8"></polyline>
+                  <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
+                Subir archivo (grabación/documento)
+                <input type="file" (change)="onFileSelect($event, e.id)" multiple hidden />
+              </label>
+            </div>
+
+            <div class="card-footer">
+              <button class="btn-anotar" (click)="startAnotar(e.id)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                </svg>
+                Anotar Respuestas
+              </button>
+              <span class="badge badge-gray">Pendiente</span>
+            </div>
+
+            <!-- Anotar Respuestas Panel -->
+            <div class="respuestas-panel" *ngIf="anotandoId === e.id">
+              <h4 class="respuestas-title">Anotar Respuestas</h4>
+              <div class="respuesta-group" *ngFor="let p of e.preguntas; let i = index">
+                <label class="respuesta-label">{{ i + 1 }}. {{ p.texto }}</label>
+                <textarea class="form-input form-textarea" [(ngModel)]="p.respuesta" [name]="'resp_' + p.id" rows="2" placeholder="Escribe la respuesta..."></textarea>
+              </div>
+              <div class="respuestas-actions">
+                <button class="btn-cancelar" (click)="cancelAnotar()">Cancelar</button>
+                <button class="btn-submit btn-sm" (click)="guardarRespuestas(e)">Guardar Respuestas</button>
+              </div>
+            </div>
           </div>
         </div>
-        <a [href]="selectedEntrevista.archivoUrl" target="_blank" class="icon-btn">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-            <polyline points="7 10 12 15 17 10"></polyline>
-            <line x1="12" y1="15" x2="12" y2="3"></line>
+      </div>
+
+      <!-- ===== EMPTY STATE ===== -->
+      <div class="empty-state" *ngIf="entrevistas.length === 0 && !showForm">
+        <div class="empty-icon">
+          <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
           </svg>
-        </a>
-      </div>
-
-      <div *ngIf="selectedEntrevista.notas" class="notas-detail">
-        <p class="detail-label">Notas:</p>
-        <p>{{ selectedEntrevista.notas }}</p>
-      </div>
-
-      <div class="preguntas-detail">
-        <h4>Preguntas y Respuestas</h4>
-        <div class="preguntas-detail-list">
-          <div *ngFor="let p of selectedEntrevista.preguntas; let i = index" class="pregunta-detail-item">
-            <p class="pregunta-detail-text"><strong>{{ i + 1 }}. {{ p.pregunta }}</strong></p>
-            <p class="respuesta-detail-text">{{ p.respuesta || 'Sin respuesta' }}</p>
-          </div>
         </div>
+        <p class="empty-title">No hay entrevistas</p>
+        <p class="empty-desc">Crea entrevistas para recopilar información de los stakeholders del proyecto</p>
+        <button class="btn-agregar" (click)="showForm = true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          Agregar Entrevista
+        </button>
       </div>
+
     </div>
   </div>
 </div>

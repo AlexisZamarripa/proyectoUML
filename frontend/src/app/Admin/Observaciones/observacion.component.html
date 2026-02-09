@@ -1,0 +1,152 @@
+<div class="observacion-page">
+
+  <!-- Back link -->
+  <button class="back-link" (click)="goBack()">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="19" y1="12" x2="5" y2="12"></line>
+      <polyline points="12 19 5 12 12 5"></polyline>
+    </svg>
+    Volver a Proyectos
+  </button>
+
+  <!-- Project Header Card -->
+  <div class="project-header-card" [style.background]="getProyectoGradient()">
+    <div class="project-header-watermark">
+      <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="0.5">
+        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+        <circle cx="12" cy="12" r="3"></circle>
+      </svg>
+    </div>
+    <h1 class="project-header-title">{{ proyecto.nombre }}</h1>
+    <p class="project-header-desc">{{ proyecto.descripcion }}</p>
+  </div>
+
+  <!-- Main Layout: Sidebar + Content -->
+  <div class="main-layout">
+
+    <!-- Sidebar -->
+    <app-barra [projectId]="proyecto.id" [activeTab]="activeTab"></app-barra>
+
+    <!-- Content Area -->
+    <div class="content-area">
+
+      <!-- Content Header -->
+      <div class="content-header">
+        <div class="content-header-text">
+          <h2 class="content-title">Observaciones</h2>
+          <p class="content-subtitle">Notas rápidas de campo</p>
+        </div>
+        <button class="btn-agregar" (click)="showForm = !showForm">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <line *ngIf="!showForm" x1="12" y1="5" x2="12" y2="19"></line>
+            <line *ngIf="!showForm" x1="5" y1="12" x2="19" y2="12"></line>
+            <line *ngIf="showForm" x1="18" y1="6" x2="6" y2="18"></line>
+            <line *ngIf="showForm" x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+          {{ showForm ? 'Cancelar' : 'Agregar Observación' }}
+        </button>
+      </div>
+
+      <!-- Form -->
+      <div class="form-card" *ngIf="showForm">
+        <h3 class="form-title">Nota Rápida</h3>
+        <form (ngSubmit)="handleSubmit()">
+          <div class="form-stack">
+            <!-- Título -->
+            <div class="form-group">
+              <label class="form-label">Título *</label>
+              <input class="form-input" type="text" [(ngModel)]="titulo" name="titulo" placeholder="Ej: Observación en recepción" required />
+            </div>
+
+            <!-- Observaciones -->
+            <div class="form-group">
+              <label class="form-label">Observaciones *</label>
+              <textarea class="form-input form-textarea" [(ngModel)]="textoObservaciones" name="textoObservaciones" placeholder="Escribe tus observaciones aquí..." rows="5" required></textarea>
+            </div>
+
+            <!-- Hallazgos -->
+            <div class="form-group">
+              <div class="hallazgos-header">
+                <label class="form-label">Hallazgos o Puntos Clave (Opcional)</label>
+                <button type="button" class="btn-add-hallazgo" (click)="addHallazgo()">+ Añadir</button>
+              </div>
+              <div class="hallazgos-list" *ngIf="hallazgos.length > 0">
+                <div class="hallazgo-item" *ngFor="let h of hallazgos; let i = index">
+                  <span class="hallazgo-text">{{ h }}</span>
+                  <button type="button" class="btn-remove-hallazgo" (click)="removeHallazgo(i)">&times;</button>
+                </div>
+              </div>
+              <input class="form-input" type="text" [(ngModel)]="tempHallazgo" name="tempHallazgo" placeholder="Punto 1" (keydown.enter)="$event.preventDefault(); addHallazgo()" />
+            </div>
+
+            <!-- Proceso -->
+            <div class="form-group">
+              <label class="form-label">Proceso *</label>
+              <input class="form-input" type="text" [(ngModel)]="proceso" name="proceso" placeholder="Proceso asociado" />
+            </div>
+
+            <!-- Subproceso -->
+            <div class="form-group">
+              <label class="form-label">Subproceso (opcional)</label>
+              <input class="form-input" type="text" [(ngModel)]="subproceso" name="subproceso" placeholder="Subproceso asociado" />
+            </div>
+          </div>
+
+          <!-- Submit -->
+          <div class="form-actions">
+            <button type="submit" class="btn-submit" [disabled]="!titulo.trim() || !textoObservaciones.trim()">Guardar Nota</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Observaciones Grid -->
+      <div class="observaciones-grid" *ngIf="observaciones.length > 0 && !showForm">
+        <div class="observacion-card" *ngFor="let obs of observaciones">
+          <button class="card-delete-btn" (click)="deleteObservacion(obs.id)" title="Eliminar">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+          <h4 class="card-title">Observación: {{ obs.titulo }}</h4>
+          <p class="card-desc">{{ obs.observaciones }}</p>
+          <div class="card-footer">
+            <span class="card-date">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="16" y1="2" x2="16" y2="6"></line>
+                <line x1="8" y1="2" x2="8" y2="6"></line>
+                <line x1="3" y1="10" x2="21" y2="10"></line>
+              </svg>
+              {{ formatDate(obs.fecha) }}
+            </span>
+            <span class="card-puntos" *ngIf="obs.hallazgos.length > 0">{{ obs.hallazgos.length }} puntos</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div class="empty-state" *ngIf="observaciones.length === 0 && !showForm">
+        <div class="empty-icon">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+            <polyline points="10 9 9 9 8 9"></polyline>
+          </svg>
+        </div>
+        <h3 class="empty-title">No hay observaciones registradas</h3>
+        <p class="empty-desc">Haz clic en "Agregar Observación" para comenzar</p>
+        <button class="btn-agregar" (click)="showForm = true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          Agregar Observación
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>

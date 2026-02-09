@@ -1,66 +1,48 @@
-import { Component, OnInit } from '@angular/core';
-import { Router, NavigationEnd, RouterModule } from '@angular/router';
-import { filter } from 'rxjs/operators';
+import { Component, Input, OnInit, OnChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterLink } from '@angular/router';
+
+interface NavItem {
+  id: string;
+  label: string;
+  icon: string;
+  route: string;
+  section?: string;
+}
 
 @Component({
-    selector: 'app-barra',
-    templateUrl: './barra.component.html',
-    styleUrls: ['./barra.component.css'],
-    standalone: true,
-    imports: [CommonModule, RouterModule]
+  selector: 'app-barra',
+  standalone: true,
+  imports: [CommonModule, RouterLink],
+  templateUrl: './barra.component.html',
+  styleUrls: ['./barra.component.css']
 })
-export class BarraComponent implements OnInit {
-    isExpanded = false;
-    currentRoute = '';
-    encuestasCount = 0;
-    focusGroupsCount = 1;
-    historiasCount = 1;
-    catalogoCount = 1;
+export class BarraComponent implements OnInit, OnChanges {
+  @Input() projectId = '';
+  @Input() activeTab = '';
 
-    constructor(private router: Router) {
-        this.router.events
-            .pipe(filter(event => event instanceof NavigationEnd))
-            .subscribe((event: NavigationEnd) => {
-                this.updateCurrentRoute(event.url);
-            });
-    }
+  NAV_ITEMS: NavItem[] = [];
 
-    ngOnInit(): void {
-        this.updateCurrentRoute(this.router.url);
-    }
+  ngOnInit(): void {
+    this.NAV_ITEMS = this.buildNavItems(this.projectId);
+  }
 
-    updateCurrentRoute(url: string): void {
-        const segments = url.split('/').filter(segment => segment);
-        this.currentRoute = segments[0] || 'proyectos';
-    }
+  ngOnChanges(): void {
+    this.NAV_ITEMS = this.buildNavItems(this.projectId);
+  }
 
-    navigateToProyectos(): void {
-        this.router.navigate(['/proyectos']);
-    }
-
-    navigateToEntrevistas(): void {
-        this.router.navigate(['/entrevistas']);
-    }
-
-    navigateToCU(): void {
-        this.router.navigate(['/cu']);
-    }
-
-    toggleSidebar(): void {
-        this.isExpanded = !this.isExpanded;
-
-        const event = new CustomEvent('barra-expanded', {
-            detail: { expanded: this.isExpanded }
-        });
-        window.dispatchEvent(event);
-    }
-
-    onProjectHeaderClick(): void {
-        console.log('Cambiar de proyecto');
-    }
-
-    isActive(route: string): boolean {
-        return this.currentRoute === route;
-    }
+  private buildNavItems(projectId: string): NavItem[] {
+    const base = `/proyecto/${projectId}`;
+    return [
+      { id: 'stakeholders', label: 'Stakeholders', icon: 'users', route: `${base}/stakeholders` },
+      { id: 'procesos', label: 'Procesos', icon: 'grid', route: `${base}/procesos` },
+      { id: 'entrevistas', label: 'Entrevistas', icon: 'file', route: `${base}/entrevistas`, section: 'ANÁLISIS' },
+      { id: 'encuestas', label: 'Encuestas', icon: 'clipboard', route: `${base}/encuestas` },
+      { id: 'observaciones', label: 'Observaciones', icon: 'eye', route: `${base}/observaciones` },
+      { id: 'focus-groups', label: 'Focus Groups', icon: 'users-group', route: `${base}/focus-groups` },
+      { id: 'historias', label: 'Historias', icon: 'book', route: `${base}/historias` },
+      { id: 'documentos', label: 'Documentos', icon: 'folder', route: `${base}/documentos` },
+      { id: 'seguimiento', label: 'Seguimiento', icon: 'trending', route: `${base}/seguimiento` },
+    ];
+  }
 }

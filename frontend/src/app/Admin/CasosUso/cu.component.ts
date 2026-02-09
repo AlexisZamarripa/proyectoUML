@@ -1,122 +1,162 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router, ActivatedRoute } from '@angular/router';
+import { BarraComponent } from '../../components/barra/barra.component';
+import { ProyectoService } from '../../services/proyecto.service';
 
 interface HistoriaUsuario {
     id: string;
-    date: string;
     titulo: string;
+    fecha?: string;
+    proyecto_nombre?: string;
+    proyecto: string;
+    subproyecto: string;
     como: string;
     quiero: string;
     paraque: string;
-    prioridad: 'alta' | 'media' | 'baja';
-    estimacion?: string;
+    prioridad: 'Alta' | 'Media' | 'Baja';
+    estimacion: string;
     criteriosAceptacion: string[];
 }
 
 @Component({
     selector: 'app-casos-uso',
     standalone: true,
-    imports: [CommonModule, FormsModule],
+    imports: [CommonModule, FormsModule, BarraComponent],
     templateUrl: './cu.component.html',
     styleUrls: ['./cu.component.css']
 })
-export class CasosUsoComponent {
+export class CasosUsoComponent implements OnInit {
     showForm = false;
-    selectedHistoria: HistoriaUsuario | null = null;
     historias: HistoriaUsuario[] = [];
+
+    // Proyecto actual
+    proyecto = {
+        id: '',
+        nombre: '',
+        descripcion: '',
+        color: 'blue'
+    };
+
+    // Active tab in project sidebar
+    activeTab = 'historias';
 
     // Campos del formulario
     titulo = '';
+    proyecto_nombre = '';
+    subproyecto = '';
     como = '';
     quiero = '';
     paraque = '';
-    prioridad: 'alta' | 'media' | 'baja' = 'media';
+    prioridad: 'Alta' | 'Media' | 'Baja' = 'Media';
     estimacion = '';
     criteriosAceptacion: string[] = [''];
 
-    toggleForm() {
-        this.showForm = !this.showForm;
-        if (this.showForm) {
-            this.resetForm();
+    readonly COLORES_PROYECTO: { valor: string; gradient: string }[] = [
+        { valor: 'blue', gradient: 'linear-gradient(135deg, #3b82f6, #06b6d4)' },
+        { valor: 'emerald', gradient: 'linear-gradient(135deg, #10b981, #34d399)' },
+        { valor: 'purple', gradient: 'linear-gradient(135deg, #8b5cf6, #a78bfa)' },
+        { valor: 'orange', gradient: 'linear-gradient(135deg, #f97316, #fb923c)' },
+        { valor: 'pink', gradient: 'linear-gradient(135deg, #ec4899, #f472b6)' },
+        { valor: 'indigo', gradient: 'linear-gradient(135deg, #6366f1, #818cf8)' },
+    ];
+
+    constructor(private router: Router, private route: ActivatedRoute, private proyectoService: ProyectoService) {}
+
+    ngOnInit(): void {
+        const id = this.route.snapshot.paramMap.get('id');
+        if (id) {
+            this.proyecto.id = id;
+            const p = this.proyectoService.getProyectoById(id);
+            if (p) {
+                this.proyecto.nombre = p.nombre;
+                this.proyecto.descripcion = p.descripcion;
+                this.proyecto.color = p.color;
+            }
         }
+    }
+
+    goBack(): void {
+        this.router.navigate(['/proyectos']);
+    }
+
+    getProyectoGradient(): string {
+        const c = this.COLORES_PROYECTO.find(x => x.valor === this.proyecto.color);
+        return c ? c.gradient : this.COLORES_PROYECTO[0].gradient;
+    }
+
+    getEmptyHistoria(): HistoriaUsuario {
+        return {
+            id: '',
+            titulo: '',
+            proyecto: '',
+            subproyecto: '',
+            como: '',
+            quiero: '',
+            paraque: '',
+            prioridad: 'Media',
+            estimacion: '',
+            criteriosAceptacion: ['']
+        };
+    }
+
+    isFormValid(): boolean {
+        return !!(this.titulo && this.titulo.trim().length > 0 &&
+                  this.como && this.como.trim().length > 0 &&
+                  this.quiero && this.quiero.trim().length > 0 &&
+                  this.paraque && this.paraque.trim().length > 0);
     }
 
     resetForm() {
         this.titulo = '';
+        this.proyecto_nombre = '';
+        this.subproyecto = '';
         this.como = '';
         this.quiero = '';
         this.paraque = '';
-        this.prioridad = 'media';
+        this.prioridad = 'Media';
         this.estimacion = '';
         this.criteriosAceptacion = [''];
     }
 
-    addCriterio() {
-        this.criteriosAceptacion.push('');
-    }
-
-    removeCriterio(index: number) {
-        this.criteriosAceptacion = this.criteriosAceptacion.filter((_, i) => i !== index);
-    }
-
-    updateCriterio(index: number, value: string) {
-        this.criteriosAceptacion[index] = value;
-    }
-
     handleSubmit() {
-        const historia: HistoriaUsuario = {
+        if (!this.titulo.trim() || !this.como.trim() || !this.quiero.trim() || !this.paraque.trim()) {
+            return;
+        }
+
+        // Limpiar criterios vacíos
+        const criterios = this.criteriosAceptacion.filter(c => c.trim() !== '');
+
+        // Generar fecha actual
+        const now = new Date();
+        const fecha = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
+
+        const nueva: HistoriaUsuario = {
             id: this.generateUUID(),
-            date: new Date().toISOString(),
-            titulo: this.titulo,
-            como: this.como,
-            quiero: this.quiero,
-            paraque: this.paraque,
+            titulo: this.titulo.trim(),
+            fecha: fecha,
+            proyecto_nombre: this.proyecto_nombre.trim(),
+            proyecto: this.proyecto_nombre.trim(),
+            subproyecto: this.subproyecto.trim(),
+            como: this.como.trim(),
+            quiero: this.quiero.trim(),
+            paraque: this.paraque.trim(),
             prioridad: this.prioridad,
-            estimacion: this.estimacion || undefined,
-            criteriosAceptacion: this.criteriosAceptacion.filter(c => c.trim() !== '')
+            estimacion: this.estimacion.trim(),
+            criteriosAceptacion: criterios.length > 0 ? criterios : []
         };
 
-        this.historias.push(historia);
+        this.historias.push(nueva);
+        console.log('Historia creada. Total historias:', this.historias.length, this.historias);
         this.resetForm();
         this.showForm = false;
     }
 
-    verHistoria(historia: HistoriaUsuario) {
-        this.selectedHistoria = historia;
-    }
-
-    closeModal() {
-        this.selectedHistoria = null;
-    }
-
     eliminarHistoria(id: string) {
-        if (confirm('¿Estás seguro de eliminar esta historia de usuario?')) {
+        if (confirm('¿Está seguro de eliminar esta historia?')) {
             this.historias = this.historias.filter(h => h.id !== id);
         }
-    }
-
-    getPrioridadColor(prioridad: string): string {
-        switch (prioridad) {
-            case 'alta': return 'prioridad-alta';
-            case 'media': return 'prioridad-media';
-            case 'baja': return 'prioridad-baja';
-            default: return 'prioridad-default';
-        }
-    }
-
-    formatDate(dateString: string): string {
-        const date = new Date(dateString);
-        return date.toLocaleDateString('es-ES');
-    }
-
-    formatDateLong(dateString: string): string {
-        const date = new Date(dateString);
-        return date.toLocaleDateString('es-ES', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-        });
     }
 
     private generateUUID(): string {

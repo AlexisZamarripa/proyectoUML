@@ -1,0 +1,270 @@
+<div class="doc-page">
+
+  <!-- Back link -->
+  <button class="back-link" (click)="goBack()">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="19" y1="12" x2="5" y2="12"></line>
+      <polyline points="12 19 5 12 12 5"></polyline>
+    </svg>
+    Volver a Proyectos
+  </button>
+
+  <!-- Project Header Card -->
+  <div class="project-header-card" [style.background]="getProyectoGradient()">
+    <div class="project-header-watermark">
+      <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+      </svg>
+    </div>
+    <h1 class="project-header-title">{{ proyecto.nombre }}</h1>
+    <p class="project-header-desc">{{ proyecto.descripcion }}</p>
+  </div>
+
+  <!-- Main Layout: Sidebar + Content -->
+  <div class="main-layout">
+
+    <!-- Project Sidebar -->
+    <app-barra [projectId]="proyecto.id" [activeTab]="activeTab"></app-barra>
+
+    <!-- Content Area -->
+    <div class="content-area">
+
+      <!-- Content Header -->
+      <div class="content-header">
+        <div class="content-header-text">
+          <h2 class="content-title">Análisis de Documentos</h2>
+          <p class="content-subtitle">Revisa y analiza documentación del proyecto</p>
+        </div>
+        <button class="btn-agregar" (click)="showForm = !showForm">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <line *ngIf="!showForm" x1="12" y1="5" x2="12" y2="19"></line>
+            <line *ngIf="!showForm" x1="5" y1="12" x2="19" y2="12"></line>
+            <line *ngIf="showForm" x1="18" y1="6" x2="6" y2="18"></line>
+            <line *ngIf="showForm" x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+          {{ showForm ? 'Cancelar' : 'Agregar Análisis' }}
+        </button>
+      </div>
+
+      <!-- Form Card -->
+      <div class="form-card" *ngIf="showForm">
+        <h3 class="form-title">Crear Análisis de Documentos</h3>
+        <form (ngSubmit)="handleSubmit()">
+          
+          <!-- Título -->
+          <div class="form-group full-width">
+            <label class="form-label">Título del Análisis *</label>
+            <input class="form-input" type="text" [(ngModel)]="titulo" name="titulo" placeholder="Ej: Análisis de Políticas de Descuentos" required />
+          </div>
+
+          <!-- Tipo Documento + Fuente -->
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Tipo Documento *</label>
+              <input class="form-input" type="text" [(ngModel)]="tipoDocumento" name="tipoDocumento" placeholder="Ej: Política Empresarial, Manual, Reglamento" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Fuente</label>
+              <input class="form-input" type="text" [(ngModel)]="fuente" name="fuente" placeholder="Ej: Gerencia Comercial" />
+            </div>
+          </div>
+
+          <!-- Proceso + Subproceso -->
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Proceso</label>
+              <input class="form-input" type="text" [(ngModel)]="proceso" name="proceso" placeholder="Nombre del proceso" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Subproceso</label>
+              <input class="form-input" type="text" [(ngModel)]="subproceso" name="subproceso" placeholder="Nombre del subproceso" />
+            </div>
+          </div>
+
+          <!-- Documentos Analizados -->
+          <div class="documentos-box">
+            <div class="documentos-header">
+              <label class="form-label">Documentos Analizados</label>
+              <button type="button" class="btn-add" (click)="agregarDocumento()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                Agregar documento
+              </button>
+            </div>
+
+            <div class="documentos-lista">
+              <div class="documento-item" *ngFor="let doc of documentos; let i = index; trackBy: trackByIndex">
+                <div class="documento-header">
+                  <span class="documento-numero">Documento {{ i + 1 }}</span>
+                  <button type="button" class="btn-remove-doc" (click)="eliminarDocumento(i)" *ngIf="documentos.length > 1">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <line x1="18" y1="6" x2="6" y2="18"></line>
+                      <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                  </button>
+                </div>
+                
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label class="form-label">Nombre del documento</label>
+                    <input type="text" class="form-input" [(ngModel)]="documentos[i].nombre" [name]="'doc-nombre-' + i" placeholder="Nombre del documento">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Tipo</label>
+                    <input type="text" class="form-input" [(ngModel)]="documentos[i].tipo" [name]="'doc-tipo-' + i" placeholder="Ej: PDF, Word, Excel">
+                  </div>
+                </div>
+                
+                <div class="form-group full-width">
+                  <label class="form-label">URL o ubicación</label>
+                  <input type="text" class="form-input" [(ngModel)]="documentos[i].url" [name]="'doc-url-' + i" placeholder="URL o ruta del documento">
+                </div>
+                
+                <div class="form-group full-width">
+                  <label class="form-label">Descripción breve</label>
+                  <textarea class="form-textarea" [(ngModel)]="documentos[i].descripcion" [name]="'doc-desc-' + i" rows="2" placeholder="Descripción breve del documento"></textarea>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Hallazgos -->
+          <div class="hallazgos-box">
+            <div class="hallazgos-header">
+              <label class="form-label">Hallazgos</label>
+              <button type="button" class="btn-add" (click)="hallazgos.push('')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                Agregar hallazgo
+              </button>
+            </div>
+
+            <div class="hallazgos-inputs">
+              <div class="hallazgo-input-item" *ngFor="let hallazgo of hallazgos; let i = index; trackBy: trackByIndex">
+                <input type="text" class="form-input" [(ngModel)]="hallazgos[i]" [name]="'hallazgo-' + i" [placeholder]="'Hallazgo ' + (i + 1)">
+                <button type="button" class="btn-remove" (click)="hallazgos.length > 1 && hallazgos.splice(i, 1)" *ngIf="hallazgos.length > 1">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Recomendaciones -->
+          <div class="form-group full-width">
+            <label class="form-label">Recomendaciones</label>
+            <textarea class="form-textarea" [(ngModel)]="recomendaciones" name="recomendaciones" rows="4" placeholder="Describe las recomendaciones basadas en el análisis de los documentos"></textarea>
+          </div>
+
+          <!-- Submit -->
+          <div class="form-actions">
+            <button type="submit" class="btn-submit-orange" [disabled]="!isFormValid()">Crear Análisis de Documentos</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Empty State -->
+      <div class="empty-state" *ngIf="analisis.length === 0 && !showForm">
+        <div class="empty-icon">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+          </svg>
+        </div>
+        <h3 class="empty-title">No hay análisis de documentos registrados</h3>
+        <p class="empty-desc">Haz clic en "Agregar Análisis" para comenzar</p>
+        <button class="btn-agregar" (click)="showForm = true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          Agregar Análisis
+        </button>
+      </div>
+
+      <!-- Lista de Análisis -->
+      <div class="analisis-list" *ngIf="analisis.length > 0">
+        <div class="analisis-card" *ngFor="let item of analisis; trackBy: trackByAnalisis">
+          
+          <!-- Header -->
+          <div class="analisis-header">
+            <div class="analisis-header-left">
+              <h3 class="analisis-titulo">{{ item.titulo }}</h3>
+              <span class="analisis-fecha">{{ item.fecha }}</span>
+            </div>
+            <div class="analisis-header-right">
+              <button class="btn-icon btn-view" title="Ver detalles">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+              </button>
+              <button class="btn-icon btn-delete-icon" (click)="eliminarAnalisis(item.id)" title="Eliminar">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Info Badges -->
+          <div class="analisis-badges">
+            <span class="badge-tipo">{{ item.tipoDocumento }}</span>
+            <span class="badge-fuente" *ngIf="item.fuente">{{ item.fuente }}</span>
+            <span class="badge-proceso" *ngIf="item.proceso">{{ item.proceso }}</span>
+          </div>
+
+          <!-- Documentos -->
+          <div class="analisis-documentos" *ngIf="item.documentos && item.documentos.length > 0">
+            <p class="documentos-titulo">Documentos Analizados ({{ item.documentos.length }}):</p>
+            <ul class="documentos-lista-mini">
+              <li *ngFor="let doc of item.documentos.slice(0, 3)">
+                <svg class="doc-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                  <polyline points="14 2 14 8 20 8"></polyline>
+                </svg>
+                {{ doc.nombre }} <span class="doc-tipo">({{ doc.tipo }})</span>
+              </li>
+            </ul>
+            <span class="docs-more" *ngIf="item.documentos.length > 3">
+              +{{ item.documentos.length - 3 }} más...
+            </span>
+          </div>
+
+          <!-- Hallazgos -->
+          <div class="analisis-hallazgos" *ngIf="item.hallazgos && item.hallazgos.length > 0 && item.hallazgos[0].trim() !== ''">
+            <p class="hallazgos-titulo">Hallazgos:</p>
+            <ul class="hallazgos-lista">
+              <li *ngFor="let hallazgo of item.hallazgos.slice(0, 2)">
+                <svg class="check-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                {{ hallazgo }}
+              </li>
+            </ul>
+            <span class="hallazgos-more" *ngIf="item.hallazgos.length > 2">
+              +{{ item.hallazgos.length - 2 }} más...
+            </span>
+          </div>
+
+          <!-- Recomendaciones -->
+          <div class="analisis-footer" *ngIf="item.recomendaciones">
+            <p class="recomendaciones-text">
+              <strong>Recomendaciones:</strong> {{ item.recomendaciones }}
+            </p>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+</div>

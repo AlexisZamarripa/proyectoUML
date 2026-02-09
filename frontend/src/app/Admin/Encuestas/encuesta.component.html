@@ -1,0 +1,377 @@
+<div class="encuesta-page">
+
+  <!-- Back link -->
+  <button class="back-link" (click)="goBack()">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="19" y1="12" x2="5" y2="12"></line>
+      <polyline points="12 19 5 12 12 5"></polyline>
+    </svg>
+    Volver a Proyectos
+  </button>
+
+  <!-- Project Header Card -->
+  <div class="project-header-card" [style.background]="getProyectoGradient()">
+    <div class="project-header-watermark">
+      <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="0.5">
+        <path d="M9 11l3 3L22 4"></path>
+        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+      </svg>
+    </div>
+    <h1 class="project-header-title">{{ proyecto.nombre }}</h1>
+    <p class="project-header-desc">{{ proyecto.descripcion }}</p>
+  </div>
+
+  <!-- Main Layout: Sidebar + Content -->
+  <div class="main-layout">
+
+    <!-- Sidebar -->
+    <app-barra [projectId]="proyecto.id" [activeTab]="activeTab"></app-barra>
+
+    <!-- Content Area -->
+    <div class="content-area">
+
+      <!-- Content Header -->
+      <div class="content-header">
+        <div class="content-header-text">
+          <h2 class="content-title">Encuestas</h2>
+          <p class="content-subtitle">Diseña y gestiona encuestas</p>
+        </div>
+        <button class="btn-agregar" (click)="showForm = !showForm">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <line *ngIf="!showForm" x1="12" y1="5" x2="12" y2="19"></line>
+            <line *ngIf="!showForm" x1="5" y1="12" x2="19" y2="12"></line>
+            <line *ngIf="showForm" x1="18" y1="6" x2="6" y2="18"></line>
+            <line *ngIf="showForm" x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+          {{ showForm ? 'Cancelar' : 'Agregar Encuesta' }}
+        </button>
+      </div>
+
+      <!-- Stats Row -->
+      <div class="stats-row">
+        <!-- Total -->
+        <div class="stat-card">
+          <div class="stat-header">
+            <span class="stat-label">Total</span>
+            <div class="stat-icon stat-icon-blue">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="20" x2="18" y2="10"></line>
+                <line x1="12" y1="20" x2="12" y2="4"></line>
+                <line x1="6" y1="20" x2="6" y2="14"></line>
+              </svg>
+            </div>
+          </div>
+          <span class="stat-value">{{ totalEncuestas }}</span>
+        </div>
+
+        <!-- Borradores -->
+        <div class="stat-card">
+          <div class="stat-header">
+            <span class="stat-label">Borradores</span>
+            <div class="stat-icon stat-icon-gray">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+              </svg>
+            </div>
+          </div>
+          <span class="stat-value">{{ borradores }}</span>
+        </div>
+
+        <!-- Activas -->
+        <div class="stat-card">
+          <div class="stat-header">
+            <span class="stat-label">Activas</span>
+            <div class="stat-icon stat-icon-green">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+              </svg>
+            </div>
+          </div>
+          <span class="stat-value stat-green">{{ activas }}</span>
+        </div>
+
+        <!-- Cerradas -->
+        <div class="stat-card">
+          <div class="stat-header">
+            <span class="stat-label">Cerradas</span>
+            <div class="stat-icon stat-icon-emerald">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+              </svg>
+            </div>
+          </div>
+          <span class="stat-value">{{ cerradas }}</span>
+        </div>
+      </div>
+
+      <!-- Form -->
+      <div class="form-card" *ngIf="showForm">
+        <h3 class="form-title">Crear Nueva Encuesta</h3>
+        <form (ngSubmit)="handleSubmit()">
+          <div class="form-grid">
+            <!-- Título -->
+            <div class="form-group full-width">
+              <label class="form-label">Título de la Encuesta *</label>
+              <input class="form-input" type="text" [(ngModel)]="titulo" name="titulo" placeholder="Ej: Encuesta de satisfacción" required />
+            </div>
+
+            <!-- Descripción -->
+            <div class="form-group full-width">
+              <label class="form-label">Descripción *</label>
+              <textarea class="form-input form-textarea" [(ngModel)]="descripcion" name="descripcion" placeholder="Objetivo de la encuesta" rows="3" required></textarea>
+            </div>
+
+            <!-- Participantes -->
+            <div class="form-group full-width">
+              <label class="form-label">Número de Participantes Esperados</label>
+              <input class="form-input" type="number" [(ngModel)]="participantesEsperados" name="participantesEsperados" min="0" placeholder="0" />
+            </div>
+
+            <!-- Proceso + Subproceso -->
+            <div class="form-group">
+              <label class="form-label">Proceso</label>
+              <input class="form-input" type="text" [(ngModel)]="proceso" name="proceso" placeholder="Proceso asociado" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Subproceso</label>
+              <input class="form-input" type="text" [(ngModel)]="subproceso" name="subproceso" placeholder="Subproceso asociado" />
+            </div>
+          </div>
+
+          <!-- Preguntas -->
+          <div class="preguntas-section">
+            <div class="preguntas-header">
+              <span class="form-label">Preguntas</span>
+              <button type="button" class="btn-add-pregunta" (click)="addPregunta()">+ Añadir Pregunta</button>
+            </div>
+
+            <div class="preguntas-list">
+              <div class="pregunta-card" *ngFor="let pregunta of preguntas; let i = index">
+                <div class="pregunta-top">
+                  <span class="pregunta-number">Pregunta {{ i + 1 }}</span>
+                  <button type="button" class="btn-remove-pregunta" (click)="removePregunta(i)" *ngIf="preguntas.length > 1">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <polyline points="3 6 5 6 21 6"></polyline>
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    </svg>
+                  </button>
+                </div>
+                <input class="form-input" type="text" [(ngModel)]="pregunta.texto" [name]="'pregunta_' + i" placeholder="Escribe la pregunta" />
+                <div class="pregunta-tipo">
+                  <label class="form-label">Tipo de Pregunta</label>
+                  <select class="form-input form-select" [(ngModel)]="pregunta.tipo" [name]="'tipo_' + i">
+                    <option *ngFor="let tipo of TIPOS_PREGUNTA" [value]="tipo.valor">{{ tipo.label }}</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Submit -->
+          <div class="form-actions">
+            <button type="submit" class="btn-submit-green" [disabled]="!titulo.trim() || !descripcion.trim()">Guardar Encuesta</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Encuestas Cerradas -->
+      <div class="section" *ngIf="encuestasCerradas.length > 0">
+        <h3 class="section-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+          </svg>
+          Encuestas Cerradas ({{ encuestasCerradas.length }})
+        </h3>
+        <div class="encuestas-grid">
+          <div class="encuesta-card" *ngFor="let enc of encuestasCerradas">
+            <div class="card-top">
+              <h4 class="card-title">{{ enc.titulo }}</h4>
+              <div class="card-actions">
+                <span class="badge badge-blue">{{ getEstadoLabel(enc.estado) }}</span>
+                <button class="btn-icon" (click)="deleteEncuesta(enc.id)" title="Eliminar">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <p class="card-desc">{{ enc.descripcion }}</p>
+            <div class="card-meta">
+              <span class="meta-item">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="16" y1="2" x2="16" y2="6"></line>
+                  <line x1="8" y1="2" x2="8" y2="6"></line>
+                  <line x1="3" y1="10" x2="21" y2="10"></line>
+                </svg>
+                {{ formatDate(enc.fecha) }}
+              </span>
+              <span class="meta-item">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="9" cy="7" r="4"></circle>
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                </svg>
+                {{ enc.participantesReales }} participantes
+              </span>
+            </div>
+            <div class="card-info-row">
+              <span class="card-preguntas">Preguntas: {{ enc.preguntas.length }}</span>
+            </div>
+            <div class="card-footer">
+              <button class="btn-ver-resultados">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="18" y1="20" x2="18" y2="10"></line>
+                  <line x1="12" y1="20" x2="12" y2="4"></line>
+                  <line x1="6" y1="20" x2="6" y2="14"></line>
+                </svg>
+                Ver Resultados
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Encuestas Activas -->
+      <div class="section" *ngIf="encuestasActivas.length > 0">
+        <h3 class="section-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+          </svg>
+          Encuestas Activas ({{ encuestasActivas.length }})
+        </h3>
+        <div class="encuestas-grid">
+          <div class="encuesta-card" *ngFor="let enc of encuestasActivas">
+            <div class="card-top">
+              <h4 class="card-title">{{ enc.titulo }}</h4>
+              <div class="card-actions">
+                <span class="badge badge-green">{{ getEstadoLabel(enc.estado) }}</span>
+                <button class="btn-icon" (click)="deleteEncuesta(enc.id)" title="Eliminar">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <p class="card-desc">{{ enc.descripcion }}</p>
+            <div class="card-meta">
+              <span class="meta-item">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="16" y1="2" x2="16" y2="6"></line>
+                  <line x1="8" y1="2" x2="8" y2="6"></line>
+                  <line x1="3" y1="10" x2="21" y2="10"></line>
+                </svg>
+                {{ formatDate(enc.fecha) }}
+              </span>
+              <span class="meta-item">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="9" cy="7" r="4"></circle>
+                </svg>
+                {{ enc.participantesEsperados }} esperados
+              </span>
+            </div>
+            <div class="card-info-row">
+              <span class="card-preguntas">Preguntas: {{ enc.preguntas.length }}</span>
+            </div>
+            <div class="card-footer">
+              <button class="btn-cerrar" (click)="cerrarEncuesta(enc.id)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                  <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                </svg>
+                Cerrar Encuesta
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Encuestas Borrador -->
+      <div class="section" *ngIf="encuestasBorrador.length > 0">
+        <h3 class="section-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+          </svg>
+          Borradores ({{ encuestasBorrador.length }})
+        </h3>
+        <div class="encuestas-grid">
+          <div class="encuesta-card" *ngFor="let enc of encuestasBorrador">
+            <div class="card-top">
+              <h4 class="card-title">{{ enc.titulo }}</h4>
+              <div class="card-actions">
+                <span class="badge badge-gray">{{ getEstadoLabel(enc.estado) }}</span>
+                <button class="btn-icon" (click)="deleteEncuesta(enc.id)" title="Eliminar">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <p class="card-desc">{{ enc.descripcion }}</p>
+            <div class="card-meta">
+              <span class="meta-item">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="16" y1="2" x2="16" y2="6"></line>
+                  <line x1="8" y1="2" x2="8" y2="6"></line>
+                  <line x1="3" y1="10" x2="21" y2="10"></line>
+                </svg>
+                {{ formatDate(enc.fecha) }}
+              </span>
+              <span class="meta-item">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="9" cy="7" r="4"></circle>
+                </svg>
+                {{ enc.participantesEsperados }} esperados
+              </span>
+            </div>
+            <div class="card-info-row">
+              <span class="card-preguntas">Preguntas: {{ enc.preguntas.length }}</span>
+            </div>
+            <div class="card-footer">
+              <button class="btn-activar" (click)="activarEncuesta(enc.id)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                </svg>
+                Activar Encuesta
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div class="empty-state" *ngIf="encuestas.length === 0 && !showForm">
+        <div class="empty-icon">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M9 11l3 3L22 4"></path>
+            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+          </svg>
+        </div>
+        <h3 class="empty-title">No hay encuestas registradas</h3>
+        <p class="empty-desc">Haz clic en "Agregar Encuesta" para comenzar</p>
+        <button class="btn-agregar" (click)="showForm = true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          Agregar Encuesta
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
