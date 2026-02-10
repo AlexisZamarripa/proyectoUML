@@ -18,8 +18,8 @@ CREATE TABLE stakeholders (
 
     -- Relaciones
     id_proyecto INT NULL,
-    id_proceso INT NOT NULL,
-    id_subproceso INT NOT NULL,
+    id_proceso INT  NULL,
+    id_subproceso INT  NULL,
 
     -- Datos del stakeholder
     nombre_completo VARCHAR(150) NOT NULL,
