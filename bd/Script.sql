@@ -33,9 +33,9 @@ CREATE TABLE stakeholders (
 FOREIGN KEY (id_proyecto) REFERENCES proyectos(id_proyecto)
     ON DELETE CASCADE ON UPDATE CASCADE,
 FOREIGN KEY (id_proceso) REFERENCES procesos(id_proceso)
-    ON DELETE SET NULL ON UPDATE CASCADE,  -- 👈 SET NULL porque es opcional
+    ON DELETE SET NULL ON UPDATE CASCADE,  --  SET NULL porque es opcional
 FOREIGN KEY (id_subproceso) REFERENCES subprocesos(id_subproceso)
-    ON DELETE SET NULL ON UPDATE CASCADE   -- 👈 SET NULL porque es opcional
+    ON DELETE SET NULL ON UPDATE CASCADE   -- SET NULL porque es opcional
 );
 
 -- =========================
