@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { BarraComponent } from '../../components/barra/barra.component';
-import { ProyectoService } from '../../services/proyecto.service';
+import { ProyectoApiService } from '../../services/proyecto-api.service';
 
 interface Pregunta {
   id: string;
@@ -73,21 +73,23 @@ export class EncuestaComponent implements OnInit {
   constructor(
     private router: Router,
     private route: ActivatedRoute,
-    private proyectoService: ProyectoService
+    private proyectoApiService: ProyectoApiService
   ) {}
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
-      const p = this.proyectoService.getProyectoById(id);
-      if (p) {
-        this.proyecto = {
-          id: p.id,
-          nombre: p.nombre,
-          descripcion: p.descripcion,
-          color: p.color
-        };
-      }
+      this.proyectoApiService.getProyecto(id).subscribe({
+        next: (p) => {
+          this.proyecto = {
+            id: p.id,
+            nombre: p.nombre,
+            descripcion: p.descripcion,
+            color: p.color
+          };
+        },
+        error: (error) => console.error('Error al cargar proyecto:', error)
+      });
     }
   }
 

@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { BarraComponent } from '../../components/barra/barra.component';
-import { ProyectoService } from '../../services/proyecto.service';
+import { ProyectoApiService } from '../../services/proyecto-api.service';
 
 interface Stakeholder {
   id: string;
@@ -70,18 +70,20 @@ export class StakeholderComponent implements OnInit {
     { valor: 'indigo', gradient: 'linear-gradient(135deg, #6366f1, #818cf8)' },
   ];
 
-  constructor(private router: Router, private route: ActivatedRoute, private proyectoService: ProyectoService) {}
+  constructor(private router: Router, private route: ActivatedRoute, private proyectoApiService: ProyectoApiService) {}
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
       this.proyecto.id = id;
-      const p = this.proyectoService.getProyectoById(id);
-      if (p) {
-        this.proyecto.nombre = p.nombre;
-        this.proyecto.descripcion = p.descripcion;
-        this.proyecto.color = p.color;
-      }
+      this.proyectoApiService.getProyecto(id).subscribe({
+        next: (p) => {
+          this.proyecto.nombre = p.nombre;
+          this.proyecto.descripcion = p.descripcion;
+          this.proyecto.color = p.color;
+        },
+        error: (error) => console.error('Error al cargar proyecto:', error)
+      });
     }
   }
 
