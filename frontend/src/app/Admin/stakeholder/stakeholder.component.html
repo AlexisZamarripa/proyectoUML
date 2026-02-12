@@ -200,4 +200,13 @@
 
     </div>
   </div>
+
+  <!-- Confirm Modal -->
+  <app-confirm-modal
+    [isOpen]="showConfirmModal"
+    [config]="confirmModalConfig"
+    (confirm)="confirmDelete()"
+    (cancel)="cancelDelete()"
+  ></app-confirm-modal>
+  
 </div>

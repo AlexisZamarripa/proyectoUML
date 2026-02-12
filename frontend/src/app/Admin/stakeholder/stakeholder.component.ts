@@ -4,16 +4,10 @@ import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { BarraComponent } from '../../components/barra/barra.component';
 import { ProyectoApiService } from '../../services/proyecto-api.service';
+import { StakeholderApiService, Stakeholder } from '../../services/stakeholder-api.service';
+import { ConfirmModalComponent, ConfirmModalConfig } from '../../components/confirm-modal/confirm-modal.component';
 
-interface Stakeholder {
-  id: string;
-  nombre: string;
-  rol: string;
-  area: string;
-  contacto: string;
-  notas: string;
-  color: string;
-}
+// Stakeholder interface is now imported from the service
 
 interface ColorOption {
   valor: string;
@@ -23,7 +17,7 @@ interface ColorOption {
 @Component({
   selector: 'app-stakeholder',
   standalone: true,
-  imports: [CommonModule, FormsModule, BarraComponent],
+  imports: [CommonModule, FormsModule, BarraComponent, ConfirmModalComponent],
   templateUrl: './stakeholder.component.html',
   styleUrls: ['./stakeholder.component.css']
 })
@@ -40,6 +34,18 @@ export class StakeholderComponent implements OnInit {
   stakeholders: Stakeholder[] = [];
 
   showForm = false;
+
+  // Confirm modal state
+  showConfirmModal = false;
+  confirmModalConfig: ConfirmModalConfig = {
+    title: '',
+    message: '',
+    confirmText: 'Eliminar',
+    cancelText: 'Cancelar',
+    type: 'danger',
+    icon: 'trash'
+  };
+  stakeholderToDelete: string | null = null;
 
   // Form fields
   nombre = '';
@@ -70,21 +76,40 @@ export class StakeholderComponent implements OnInit {
     { valor: 'indigo', gradient: 'linear-gradient(135deg, #6366f1, #818cf8)' },
   ];
 
-  constructor(private router: Router, private route: ActivatedRoute, private proyectoApiService: ProyectoApiService) {}
+  constructor(
+    private router: Router, 
+    private route: ActivatedRoute, 
+    private proyectoApiService: ProyectoApiService,
+    private stakeholderApiService: StakeholderApiService
+  ) {}
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
       this.proyecto.id = id;
-      this.proyectoApiService.getProyecto(id).subscribe({
-        next: (p) => {
-          this.proyecto.nombre = p.nombre;
-          this.proyecto.descripcion = p.descripcion;
-          this.proyecto.color = p.color;
-        },
-        error: (error) => console.error('Error al cargar proyecto:', error)
-      });
+      this.cargarProyecto(id);
+      this.cargarStakeholders(id);
     }
+  }
+
+  cargarProyecto(id: string): void {
+    this.proyectoApiService.getProyecto(id).subscribe({
+      next: (p) => {
+        this.proyecto.nombre = p.nombre;
+        this.proyecto.descripcion = p.descripcion;
+        this.proyecto.color = p.color;
+      },
+      error: (error) => console.error('Error al cargar proyecto:', error)
+    });
+  }
+
+  cargarStakeholders(proyectoId: string): void {
+    this.stakeholderApiService.getStakeholders(proyectoId).subscribe({
+      next: (stakeholders) => {
+        this.stakeholders = stakeholders;
+      },
+      error: (error) => console.error('Error al cargar stakeholders:', error)
+    });
   }
 
   goBack(): void {
@@ -113,8 +138,7 @@ export class StakeholderComponent implements OnInit {
   handleSubmit(): void {
     if (!this.nombre || !this.rol || !this.area || !this.contacto) return;
 
-    const nuevo: Stakeholder = {
-      id: this.generateUUID(),
+    const nuevoStakeholder = {
       nombre: this.nombre,
       rol: this.rol,
       area: this.area,
@@ -123,8 +147,13 @@ export class StakeholderComponent implements OnInit {
       color: this.color,
     };
 
-    this.stakeholders.push(nuevo);
-    this.resetForm();
+    this.stakeholderApiService.createStakeholder(this.proyecto.id, nuevoStakeholder).subscribe({
+      next: (stakeholder) => {
+        this.stakeholders.push(stakeholder);
+        this.resetForm();
+      },
+      error: (error) => console.error('Error al crear stakeholder:', error)
+    });
   }
 
   resetForm(): void {
@@ -139,20 +168,43 @@ export class StakeholderComponent implements OnInit {
 
   deleteStakeholder(id: string, event: Event): void {
     event.stopPropagation();
-    if (confirm('¿Eliminar este stakeholder?')) {
-      this.stakeholders = this.stakeholders.filter(s => s.id !== id);
+    const stakeholder = this.stakeholders.find(s => s.id === id);
+    
+    this.stakeholderToDelete = id;
+    this.confirmModalConfig = {
+      title: '¿Eliminar stakeholder?',
+      message: `¿Estás seguro de que deseas eliminar a "${stakeholder?.nombre}"? Esta acción no se puede deshacer.`,
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar',
+      type: 'danger',
+      icon: 'trash'
+    };
+    this.showConfirmModal = true;
+  }
+
+  confirmDelete(): void {
+    if (this.stakeholderToDelete) {
+      this.stakeholderApiService.deleteStakeholder(this.stakeholderToDelete).subscribe({
+        next: () => {
+          this.stakeholders = this.stakeholders.filter(s => s.id !== this.stakeholderToDelete);
+          this.showConfirmModal = false;
+          this.stakeholderToDelete = null;
+        },
+        error: (error) => {
+          console.error('Error al eliminar stakeholder:', error);
+          this.showConfirmModal = false;
+          this.stakeholderToDelete = null;
+        }
+      });
     }
+  }
+
+  cancelDelete(): void {
+    this.showConfirmModal = false;
+    this.stakeholderToDelete = null;
   }
 
   navigateTo(route: string): void {
     this.router.navigateByUrl(route);
-  }
-
-  private generateUUID(): string {
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-      const r = Math.random() * 16 | 0;
-      const v = c === 'x' ? r : (r & 0x3 | 0x8);
-      return v.toString(16);
-    });
   }
 }

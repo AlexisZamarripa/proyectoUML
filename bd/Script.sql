@@ -17,9 +17,9 @@ CREATE TABLE stakeholders (
     id_stakeholder INT AUTO_INCREMENT PRIMARY KEY,
 
     -- Relaciones
-    id_proyecto INT NULL,
-    id_proceso INT NOT NULL,
-    id_subproceso INT NOT NULL,
+    id_proyecto INT NOT NULL,
+    id_proceso INT NULL,
+    id_subproceso INT NULL,
 
     -- Datos del stakeholder
     nombre_completo VARCHAR(150) NOT NULL,
@@ -33,9 +33,9 @@ CREATE TABLE stakeholders (
 FOREIGN KEY (id_proyecto) REFERENCES proyectos(id_proyecto)
     ON DELETE CASCADE ON UPDATE CASCADE,
 FOREIGN KEY (id_proceso) REFERENCES procesos(id_proceso)
-    ON DELETE SET NULL ON UPDATE CASCADE,  --  SET NULL porque es opcional
+    ON DELETE SET NULL ON UPDATE CASCADE,
 FOREIGN KEY (id_subproceso) REFERENCES subprocesos(id_subproceso)
-    ON DELETE SET NULL ON UPDATE CASCADE   -- SET NULL porque es opcional
+    ON DELETE SET NULL ON UPDATE CASCADE
 );
 
 -- =========================
