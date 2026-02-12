@@ -10,28 +10,22 @@ export class ProyectosService {
   constructor(
     @InjectRepository(Proyecto)
     private proyectosRepository: Repository<Proyecto>,
-  ) {}
+  ) { }
 
-  /**
-   * Crear un nuevo proyecto
-   */
+  /* Crear un nuevo proyecto */
   async create(createProyectoDto: CreateProyectoDto): Promise<Proyecto> {
     const proyecto = this.proyectosRepository.create(createProyectoDto);
     return await this.proyectosRepository.save(proyecto);
   }
 
-  /**
-   * Obtener todos los proyectos
-   */
+  /* Obtener todos los proyectos */
   async findAll(): Promise<Proyecto[]> {
     return await this.proyectosRepository.find({
       order: { id_proyecto: 'DESC' },
     });
   }
 
-  /**
-   * Obtener un proyecto por ID
-   */
+  /* Obtener un proyecto por ID */
   async findOne(id: number): Promise<Proyecto> {
     const proyecto = await this.proyectosRepository.findOne({
       where: { id_proyecto: id },
@@ -44,9 +38,7 @@ export class ProyectosService {
     return proyecto;
   }
 
-  /**
-   * Actualizar un proyecto
-   */
+  /* Actualizar un proyecto */
   async update(
     id: number,
     updateProyectoDto: UpdateProyectoDto,
@@ -58,17 +50,13 @@ export class ProyectosService {
     return await this.proyectosRepository.save(proyecto);
   }
 
-  /**
-   * Eliminar un proyecto
-   */
+  /* Eliminar un proyecto */
   async remove(id: number): Promise<void> {
     const proyecto = await this.findOne(id);
     await this.proyectosRepository.remove(proyecto);
   }
 
-  /**
-   * Obtener estadísticas de proyectos
-   */
+  /* Obtener estadísticas de proyectos */
   async getStats() {
     const total = await this.proyectosRepository.count();
     const enProgreso = await this.proyectosRepository.count({
