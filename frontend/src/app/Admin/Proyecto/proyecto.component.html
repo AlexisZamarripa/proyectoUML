@@ -247,6 +247,13 @@
             </svg>
             Ver
           </button>
+          <button class="btn-edit" (click)="openEditModal(proyecto, $event)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+            </svg>
+            Editar
+          </button>
           <button class="btn-delete" (click)="deleteProyecto(proyecto.id, $event)">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <polyline points="3 6 5 6 21 6"></polyline>
@@ -339,5 +346,111 @@
       </div>
     </div>
   </div>
+
+  <!-- Modal de edición -->
+  <div class="modal-overlay" *ngIf="editingProyecto" (click)="closeEditModal()">
+    <div class="modal-box modal-edit" (click)="$event.stopPropagation()">
+      <!-- Modal header con gradiente -->
+      <div class="modal-header" [style.background]="getGradient(editColor)">
+        <div class="modal-header-text">
+          <h3 class="modal-title">Editar Proyecto</h3>
+          <p class="modal-desc">Actualiza la información del proyecto</p>
+        </div>
+        <button class="modal-close" (click)="closeEditModal()">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Modal body con formulario -->
+      <div class="modal-body">
+        <form (ngSubmit)="handleEditSubmit()" #editForm="ngForm">
+          <div class="form-grid">
+            <div class="form-group full-width">
+              <label class="form-label">Nombre del Proyecto *</label>
+              <input
+                type="text"
+                [(ngModel)]="editNombre"
+                name="editNombre"
+                required
+                class="form-input"
+                placeholder="Ej: Análisis Sistema de Ventas 2025"
+              />
+            </div>
+
+            <div class="form-group full-width">
+              <label class="form-label">Descripción *</label>
+              <textarea
+                [(ngModel)]="editDescripcion"
+                name="editDescripcion"
+                required
+                rows="3"
+                class="form-input form-textarea"
+                placeholder="Describe el objetivo y alcance del proyecto"
+              ></textarea>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Fecha de Inicio *</label>
+              <input
+                type="date"
+                [(ngModel)]="editFechaInicio"
+                name="editFechaInicio"
+                required
+                class="form-input"
+              />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Estado *</label>
+              <select
+                [(ngModel)]="editEstado"
+                name="editEstado"
+                class="form-input"
+              >
+                <option value="planificacion">Planificación</option>
+                <option value="en-progreso">En Progreso</option>
+                <option value="pausado">Pausado</option>
+                <option value="completado">Completado</option>
+              </select>
+            </div>
+
+            <div class="form-group full-width">
+              <label class="form-label">Color del Proyecto</label>
+              <div class="color-selector">
+                <button
+                  *ngFor="let c of COLORES_PROYECTO"
+                  type="button"
+                  (click)="editColor = c.valor"
+                  class="color-btn"
+                  [class.selected]="editColor === c.valor"
+                  [style.background]="c.gradient"
+                ></button>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn-crear" [disabled]="!editNombre || !editDescripcion">
+              Guardar Cambios
+            </button>
+            <button type="button" class="btn-cancelar" (click)="closeEditModal()">
+              Cancelar
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirm Modal -->
+  <app-confirm-modal
+    [isOpen]="showConfirmModal"
+    [config]="confirmModalConfig"
+    (confirm)="confirmDelete()"
+    (cancel)="cancelDelete()"
+  ></app-confirm-modal>
 
 </div>

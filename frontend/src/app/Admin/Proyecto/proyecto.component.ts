@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ProyectoApiService, Proyecto, EstadoProyecto } from '../../services/proyecto-api.service';
+import { ConfirmModalComponent, ConfirmModalConfig } from '../../components/confirm-modal/confirm-modal.component';
 
 interface ColorProyecto {
   valor: string;
@@ -20,7 +21,7 @@ interface EstadoInfo {
 @Component({
   selector: 'app-proyectos',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ConfirmModalComponent],
   templateUrl: './proyecto.component.html',
   styleUrls: ['./proyecto.component.css']
 })
@@ -33,6 +34,19 @@ export class ProyectosComponent implements OnInit {
 
   showForm = false;
   selectedProyecto: Proyecto | null = null;
+  editingProyecto: Proyecto | null = null;
+
+  // Confirm modal state
+  showConfirmModal = false;
+  confirmModalConfig: ConfirmModalConfig = {
+    title: '',
+    message: '',
+    confirmText: 'Eliminar',
+    cancelText: 'Cancelar',
+    type: 'danger',
+    icon: 'trash'
+  };
+  proyectoToDelete: string | null = null;
 
   // Form state
   nombre = '';
@@ -40,6 +54,13 @@ export class ProyectosComponent implements OnInit {
   fechaInicio = new Date().toISOString().split('T')[0];
   estado: EstadoProyecto = 'en-progreso';
   color = 'blue';
+
+  // Edit form state
+  editNombre = '';
+  editDescripcion = '';
+  editFechaInicio = '';
+  editEstado: EstadoProyecto = 'en-progreso';
+  editColor = 'blue';
 
   readonly COLORES_PROYECTO: ColorProyecto[] = [
     { valor: 'blue', gradient: 'linear-gradient(135deg, #3b82f6, #06b6d4)', label: 'Azul' },
@@ -140,14 +161,40 @@ export class ProyectosComponent implements OnInit {
 
   deleteProyecto(id: string, event: Event): void {
     event.stopPropagation();
-    if (confirm('¿Eliminar este proyecto y todos sus datos?')) {
-      this.proyectoApiService.deleteProyecto(id).subscribe({
+    const proyecto = this.proyectos.find(p => p.id === id);
+    
+    this.proyectoToDelete = id;
+    this.confirmModalConfig = {
+      title: '¿Eliminar proyecto?',
+      message: `¿Estás seguro de que deseas eliminar el proyecto "${proyecto?.nombre}"? Esta acción eliminará todos los datos asociados y no se puede deshacer.`,
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar',
+      type: 'danger',
+      icon: 'trash'
+    };
+    this.showConfirmModal = true;
+  }
+
+  confirmDelete(): void {
+    if (this.proyectoToDelete) {
+      this.proyectoApiService.deleteProyecto(this.proyectoToDelete).subscribe({
         next: () => {
-          this.proyectos = this.proyectos.filter(p => p.id !== id);
+          this.proyectos = this.proyectos.filter(p => p.id !== this.proyectoToDelete);
+          this.showConfirmModal = false;
+          this.proyectoToDelete = null;
         },
-        error: (error) => console.error('Error al eliminar proyecto:', error)
+        error: (error) => {
+          console.error('Error al eliminar proyecto:', error);
+          this.showConfirmModal = false;
+          this.proyectoToDelete = null;
+        }
       });
     }
+  }
+
+  cancelDelete(): void {
+    this.showConfirmModal = false;
+    this.proyectoToDelete = null;
   }
 
   openPreview(proyecto: Proyecto, event: Event): void {
@@ -164,6 +211,51 @@ export class ProyectosComponent implements OnInit {
 
   closeModal(): void {
     this.selectedProyecto = null;
+  }
+
+  openEditModal(proyecto: Proyecto, event: Event): void {
+    event.stopPropagation();
+    this.editingProyecto = proyecto;
+    this.editNombre = proyecto.nombre;
+    this.editDescripcion = proyecto.descripcion;
+    this.editFechaInicio = proyecto.fechaInicio;
+    this.editEstado = proyecto.estado;
+    this.editColor = proyecto.color;
+  }
+
+  closeEditModal(): void {
+    this.editingProyecto = null;
+    this.editNombre = '';
+    this.editDescripcion = '';
+    this.editFechaInicio = '';
+    this.editEstado = 'en-progreso';
+    this.editColor = 'blue';
+  }
+
+  handleEditSubmit(): void {
+    if (!this.editingProyecto || !this.editNombre || !this.editDescripcion) {
+      alert('Por favor completa todos los campos requeridos');
+      return;
+    }
+
+    const updatedData: Partial<Proyecto> = {
+      nombre: this.editNombre,
+      descripcion: this.editDescripcion,
+      fechaInicio: this.editFechaInicio,
+      estado: this.editEstado,
+      color: this.editColor
+    };
+
+    this.proyectoApiService.updateProyecto(this.editingProyecto.id, updatedData).subscribe({
+      next: (proyectoActualizado) => {
+        const index = this.proyectos.findIndex(p => p.id === this.editingProyecto!.id);
+        if (index !== -1) {
+          this.proyectos[index] = proyectoActualizado;
+        }
+        this.closeEditModal();
+      },
+      error: (error) => console.error('Error al actualizar proyecto:', error)
+    });
   }
 
   openAndClose(): void {
