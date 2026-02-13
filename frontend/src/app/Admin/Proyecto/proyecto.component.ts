@@ -2,7 +2,8 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { ProyectoApiService, Proyecto, EstadoProyecto } from '../../services/proyecto-api.service';
+import { ProyectoApiService, Proyecto, EstadoProyecto, Stakeholder } from '../../services/proyecto-api.service';
+import { StakeholderApiService } from '../../services/stakeholder-api.service';
 import { ConfirmModalComponent, ConfirmModalConfig } from '../../components/confirm-modal/confirm-modal.component';
 
 interface ColorProyecto {
@@ -71,7 +72,11 @@ export class ProyectosComponent implements OnInit {
     { valor: 'indigo', gradient: 'linear-gradient(135deg, #6366f1, #818cf8)', label: 'Índigo' },
   ];
 
-  constructor(private router: Router, private proyectoApiService: ProyectoApiService) {}
+  constructor(
+    private router: Router, 
+    private proyectoApiService: ProyectoApiService,
+    private stakeholderApiService: StakeholderApiService
+  ) {}
 
   ngOnInit(): void {
     this.cargarProyectos();
@@ -218,7 +223,8 @@ export class ProyectosComponent implements OnInit {
     this.editingProyecto = proyecto;
     this.editNombre = proyecto.nombre;
     this.editDescripcion = proyecto.descripcion;
-    this.editFechaInicio = proyecto.fechaInicio;
+    // Asegurar que la fecha esté en formato YYYY-MM-DD para el input date
+    this.editFechaInicio = proyecto.fechaInicio?.split('T')[0] || proyecto.fechaInicio;
     this.editEstado = proyecto.estado;
     this.editColor = proyecto.color;
   }
@@ -246,6 +252,8 @@ export class ProyectosComponent implements OnInit {
       color: this.editColor
     };
 
+    console.log('Datos a actualizar:', updatedData);
+    
     this.proyectoApiService.updateProyecto(this.editingProyecto.id, updatedData).subscribe({
       next: (proyectoActualizado) => {
         const index = this.proyectos.findIndex(p => p.id === this.editingProyecto!.id);
@@ -254,7 +262,13 @@ export class ProyectosComponent implements OnInit {
         }
         this.closeEditModal();
       },
-      error: (error) => console.error('Error al actualizar proyecto:', error)
+      error: (error) => {
+        console.error('Error al actualizar proyecto:', error);
+        if (error.error) {
+          console.error('Detalles del error:', error.error);
+        }
+        alert('Error al actualizar el proyecto. Revisa la consola para más detalles.');
+      }
     });
   }
 
