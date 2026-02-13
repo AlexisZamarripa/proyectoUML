@@ -47,70 +47,46 @@
       <div class="form-card" *ngIf="showForm">
         <h3 class="form-title">Gestionar Procesos</h3>
         <form (ngSubmit)="handleSubmit()">
-          <div class="form-grid">
-            <!-- Nombre -->
-            <div class="form-group">
-              <label class="form-label">Nombre del Proceso *</label>
-              <input class="form-input" type="text" [(ngModel)]="nombre" name="nombre" placeholder="Ej: Proceso de Ventas" required />
-            </div>
+          <!-- Nombre -->
+          <div class="form-group">
+            <label class="form-label">Nombre del Proceso *</label>
+            <input class="form-input" type="text" [(ngModel)]="nombre" name="nombre" placeholder="Ej: Proceso de Ventas" required />
+          </div>
 
-            <!-- Descripción -->
-            <div class="form-group full-width">
-              <label class="form-label">Descripción *</label>
-              <textarea class="form-input form-textarea" [(ngModel)]="descripcion" name="descripcion" placeholder="Describe el proceso..." rows="3" required></textarea>
-            </div>
+          <!-- Descripción -->
+          <div class="form-group">
+            <label class="form-label">Descripción *</label>
+            <textarea class="form-input form-textarea" [(ngModel)]="descripcion" name="descripcion" placeholder="Describe el proceso..." rows="3" required></textarea>
+          </div>
 
-            <!-- Color -->
-            <div class="form-group">
-              <label class="form-label">Color</label>
-              <div class="color-selector">
-                <button type="button" class="color-option" *ngFor="let c of COLORES"
-                  [style.background]="c.gradient"
-                  [class.selected]="color === c.valor"
-                  (click)="color = c.valor">
-                </button>
-              </div>
+          <!-- Color -->
+          <div class="form-group">
+            <label class="form-label">Color</label>
+            <div class="color-selector">
+              <button type="button" class="color-option" *ngFor="let c of COLORES"
+                [style.background]="c.gradient"
+                [class.selected]="color === c.valor"
+                (click)="color = c.valor">
+              </button>
             </div>
+          </div>
 
-            <!-- Stakeholder -->
-            <div class="form-group">
-              <label class="form-label">Stakeholder (opcional)</label>
-              <input class="form-input" type="text" [(ngModel)]="stakeholder" name="stakeholder" placeholder="Nombre del stakeholder" />
-            </div>
+          <!-- Peso -->
+          <div class="form-group">
+            <label class="form-label">Peso *</label>
+            <input class="form-input" type="number" [(ngModel)]="peso" name="peso" placeholder="1-10" min="1" max="10" required />
+          </div>
 
-            <!-- Departamentos -->
-            <div class="form-group">
-              <label class="form-label">Departamentos (opcional)</label>
-              <div class="tag-input-wrapper">
-                <div class="tags-list" *ngIf="departamentos.length > 0">
-                  <span class="tag" *ngFor="let dept of departamentos; let i = index">
-                    {{ dept.nombre }}
-                    <button type="button" class="tag-remove" (click)="removeDepartamento(i)">&times;</button>
-                  </span>
-                </div>
-                <div class="tag-input-row">
-                  <input class="form-input tag-input" type="text" [(ngModel)]="tempDepartamento" name="tempDepartamento" placeholder="Departamento 1" (keydown.enter)="$event.preventDefault(); addDepartamento()" />
-                  <button type="button" class="btn-add-tag" (click)="addDepartamento()">+ Añadir</button>
-                </div>
-              </div>
-            </div>
+          <!-- Departamentos -->
+          <div class="form-group">
+            <label class="form-label">Departamentos (opcional)</label>
+            <input class="form-input" type="text" [(ngModel)]="departamentos" name="departamentos" placeholder="Ej: Ventas, Marketing, IT" />
+          </div>
 
-            <!-- Pasos Clave -->
-            <div class="form-group">
-              <label class="form-label">Pasos Clave (opcional)</label>
-              <div class="tag-input-wrapper">
-                <div class="tags-list" *ngIf="plazoClave.length > 0">
-                  <span class="tag" *ngFor="let plazo of plazoClave; let i = index">
-                    {{ plazo }}
-                    <button type="button" class="tag-remove" (click)="removePlazoClave(i)">&times;</button>
-                  </span>
-                </div>
-                <div class="tag-input-row">
-                  <input class="form-input tag-input" type="text" [(ngModel)]="tempPlazoClave" name="tempPlazoClave" placeholder="Paso 1" (keydown.enter)="$event.preventDefault(); addPlazoClave()" />
-                  <button type="button" class="btn-add-tag" (click)="addPlazoClave()">+ Añadir</button>
-                </div>
-              </div>
-            </div>
+          <!-- Plazos Clave -->
+          <div class="form-group">
+            <label class="form-label">Plazos Clave (opcional)</label>
+            <input class="form-input" type="date" [(ngModel)]="plazos_clave" name="plazos_clave" />
           </div>
 
           <!-- Actions -->
@@ -142,13 +118,24 @@
                 </button>
               </div>
             </div>
-            <p class="proceso-item-stakeholder" *ngIf="proceso.stakeholder">
-              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                <circle cx="12" cy="7" r="4"/>
-              </svg>
-              {{ proceso.stakeholder }}
-            </p>
+            <div style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;" *ngIf="proceso.peso || proceso.departamentos">
+              <span class="proceso-item-stakeholder" *ngIf="proceso.peso">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <circle cx="12" cy="12" r="9"/>
+                  <path d="M12 8v4l2 2"/>
+                </svg>
+                Peso: {{ proceso.peso }}
+              </span>
+              <span class="proceso-item-stakeholder" *ngIf="proceso.departamentos">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <rect x="3" y="3" width="7" height="7"/>
+                  <rect x="14" y="3" width="7" height="7"/>
+                  <rect x="14" y="14" width="7" height="7"/>
+                  <rect x="3" y="14" width="7" height="7"/>
+                </svg>
+                {{ proceso.departamentos }}
+              </span>
+            </div>
             <p class="proceso-item-desc">{{ proceso.descripcion }}</p>
           </div>
 
@@ -239,19 +226,14 @@
         </div>
         <p class="modal-desc">{{ selectedProceso.descripcion }}</p>
         
-        <!-- Stakeholder Responsable -->
-        <div class="modal-stakeholder" *ngIf="selectedProceso.stakeholder">
-          <div class="stakeholder-label">Stakeholder Responsable</div>
+        <!-- Información del Proceso -->
+        <div class="modal-stakeholder" *ngIf="selectedProceso.peso || selectedProceso.departamentos || selectedProceso.plazos_clave">
+          <div class="stakeholder-label">Información del Proceso</div>
           <div class="stakeholder-card">
-            <div class="stakeholder-avatar">
-              <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                <circle cx="12" cy="7" r="4"/>
-              </svg>
-            </div>
-            <div class="stakeholder-info">
-              <div class="stakeholder-name">{{ selectedProceso.stakeholder }}</div>
-              <div class="stakeholder-role" *ngIf="selectedProceso.departamentos.length > 0">{{ selectedProceso.departamentos[0].nombre }}</div>
+            <div class="stakeholder-info" style="width: 100%;">
+              <div class="stakeholder-name" *ngIf="selectedProceso.peso">Peso: {{ selectedProceso.peso }}</div>
+              <div class="stakeholder-role" *ngIf="selectedProceso.departamentos">Departamentos: {{ selectedProceso.departamentos }}</div>
+              <div class="stakeholder-role" *ngIf="selectedProceso.plazos_clave">Fecha límite: {{ selectedProceso.plazos_clave }}</div>
             </div>
           </div>
         </div>
@@ -259,42 +241,6 @@
 
       <!-- Modal Body -->
       <div class="modal-body">
-        <!-- Departamentos Involucrados -->
-        <div class="modal-section" *ngIf="selectedProceso.departamentos.length > 0">
-          <div class="section-header">
-            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-              <rect x="3" y="3" width="7" height="7"/>
-              <rect x="14" y="3" width="7" height="7"/>
-              <rect x="14" y="14" width="7" height="7"/>
-              <rect x="3" y="14" width="7" height="7"/>
-            </svg>
-            <h3 class="section-title">Departamentos Involucrados</h3>
-          </div>
-          <div class="badges-list">
-            <span class="badge-blue" *ngFor="let dept of selectedProceso.departamentos">{{ dept.nombre }}</span>
-          </div>
-        </div>
-
-        <!-- Pasos Clave del Proceso -->
-        <div class="modal-section" *ngIf="selectedProceso.plazoClave.length > 0">
-          <div class="section-header">
-            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-              <line x1="8" y1="6" x2="21" y2="6"/>
-              <line x1="8" y1="12" x2="21" y2="12"/>
-              <line x1="8" y1="18" x2="21" y2="18"/>
-              <line x1="3" y1="6" x2="3.01" y2="6"/>
-              <line x1="3" y1="12" x2="3.01" y2="12"/>
-              <line x1="3" y1="18" x2="3.01" y2="18"/>
-            </svg>
-            <h3 class="section-title">Pasos Clave del Proceso</h3>
-          </div>
-          <div class="pasos-list">
-            <div class="paso-item" *ngFor="let paso of selectedProceso.plazoClave; let i = index">
-              <div class="paso-number">{{ i + 1 }}</div>
-              <div class="paso-text">{{ paso }}</div>
-            </div>
-          </div>
-        </div>
 
         <!-- Subprocesos -->
         <div class="modal-section">

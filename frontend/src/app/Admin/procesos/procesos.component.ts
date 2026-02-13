@@ -10,19 +10,14 @@ interface Subproceso {
   descripcion: string;
 }
 
-interface Departamento {
-  nombre: string;
-}
-
 interface Proceso {
   id: string;
   nombre: string;
   descripcion: string;
   color: string;
-  stakeholder: string;
-  departamentos: Departamento[];
-  plazoClave: string[];
   peso: number;
+  departamentos: string;
+  plazos_clave: string;
   subprocesos: Subproceso[];
 }
 
@@ -57,12 +52,9 @@ export class ProcesosComponent implements OnInit {
   nombre = '';
   descripcion = '';
   color = 'blue';
-  stakeholder = '';
   peso: number = 1;
-  departamentos: Departamento[] = [];
-  plazoClave: string[] = [];
-  tempDepartamento = '';
-  tempPlazoClave = '';
+  departamentos = '';
+  plazos_clave = '';
 
   // Subproceso inline form
   addingSubprocesoToId: string | null = null;
@@ -91,7 +83,11 @@ export class ProcesosComponent implements OnInit {
     { valor: 'indigo', gradient: 'linear-gradient(135deg, #6366f1, #818cf8)' },
   ];
 
-  constructor(private router: Router, private route: ActivatedRoute, private proyectoApiService: ProyectoApiService) {}
+  constructor(
+    private router: Router,
+    private route: ActivatedRoute,
+    private proyectoApiService: ProyectoApiService
+  ) {}
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
@@ -130,17 +126,16 @@ export class ProcesosComponent implements OnInit {
   // ===== FORM =====
 
   handleSubmit(): void {
-    if (!this.nombre || !this.descripcion) return;
+    if (!this.nombre || !this.descripcion || !this.peso) return;
 
     const nuevo: Proceso = {
       id: this.generateUUID(),
       nombre: this.nombre,
       descripcion: this.descripcion,
       color: this.color,
-      stakeholder: this.stakeholder,
-      departamentos: [...this.departamentos],
-      plazoClave: [...this.plazoClave],
       peso: this.peso,
+      departamentos: this.departamentos,
+      plazos_clave: this.plazos_clave,
       subprocesos: [],
     };
 
@@ -152,35 +147,10 @@ export class ProcesosComponent implements OnInit {
     this.nombre = '';
     this.descripcion = '';
     this.color = 'blue';
-    this.stakeholder = '';
     this.peso = 1;
-    this.departamentos = [];
-    this.plazoClave = [];
-    this.tempDepartamento = '';
-    this.tempPlazoClave = '';
+    this.departamentos = '';
+    this.plazos_clave = '';
     this.showForm = false;
-  }
-
-  addDepartamento(): void {
-    if (this.tempDepartamento.trim()) {
-      this.departamentos.push({ nombre: this.tempDepartamento.trim() });
-      this.tempDepartamento = '';
-    }
-  }
-
-  removeDepartamento(index: number): void {
-    this.departamentos.splice(index, 1);
-  }
-
-  addPlazoClave(): void {
-    if (this.tempPlazoClave.trim()) {
-      this.plazoClave.push(this.tempPlazoClave.trim());
-      this.tempPlazoClave = '';
-    }
-  }
-
-  removePlazoClave(index: number): void {
-    this.plazoClave.splice(index, 1);
   }
 
   deleteProceso(id: string, event: Event): void {
