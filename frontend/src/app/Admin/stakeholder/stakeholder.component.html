@@ -12,8 +12,11 @@
   <!-- Project Header Card -->
   <div class="project-header-card" [style.background]="getProyectoGradient()">
     <div class="project-header-watermark">
-      <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+      <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="0.5">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+        <circle cx="9" cy="7" r="4"/>
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
       </svg>
     </div>
     <h1 class="project-header-title">{{ proyecto.nombre }}</h1>
@@ -22,8 +25,6 @@
 
   <!-- Main Layout: Sidebar + Content -->
   <div class="main-layout">
-
-    <!-- Project Sidebar -->
     <app-barra [projectId]="proyecto.id" [activeTab]="activeTab"></app-barra>
 
     <!-- Content Area -->
@@ -33,7 +34,7 @@
       <div class="content-header">
         <div class="content-header-text">
           <h2 class="content-title">Stakeholders</h2>
-          <p class="content-subtitle">Gestiona los interesados del proyecto</p>
+          <p class="content-subtitle">Gestiona los interesados que participan en los procesos</p>
         </div>
         <button class="btn-agregar" (click)="showForm = !showForm">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
@@ -42,95 +43,48 @@
             <line *ngIf="showForm" x1="18" y1="6" x2="6" y2="18"></line>
             <line *ngIf="showForm" x1="6" y1="6" x2="18" y2="18"></line>
           </svg>
-          {{ showForm ? 'Cancelar' : 'Agregar Stakeholder' }}
+          {{ showForm ? 'Cancelar' : 'Nuevo Stakeholder' }}
         </button>
       </div>
 
       <!-- Form -->
       <div class="form-card" *ngIf="showForm">
-        <form (ngSubmit)="handleSubmit()" #stakeholderForm="ngForm">
+        <h3 class="form-title">{{ stakeholderEditando ? 'Modificar Stakeholder' : 'Registrar Nuevo Stakeholder' }}</h3>
+        <form (ngSubmit)="handleSubmit()">
           <div class="form-grid">
             <div class="form-group">
-              <label class="form-label">Nombre *</label>
-              <input
-                type="text"
-                [(ngModel)]="nombre"
-                name="nombre"
-                required
-                class="form-input"
-                placeholder="Nombre completo"
-              />
+              <label class="form-label">Nombre Completo *</label>
+              <input type="text" [(ngModel)]="nombre" name="nombre" required class="form-input" placeholder="Ej: Juan Pérez" />
             </div>
-
             <div class="form-group">
-              <label class="form-label">Rol *</label>
-              <input
-                type="text"
-                [(ngModel)]="rol"
-                name="rol"
-                required
-                class="form-input"
-                placeholder="Ej: Gerente de Ventas"
-              />
+              <label class="form-label">Rol / Cargo *</label>
+              <input type="text" [(ngModel)]="rol" name="rol" required class="form-input" placeholder="Ej: Gerente de Ventas" />
             </div>
-
             <div class="form-group">
-              <label class="form-label">Área *</label>
-              <input
-                type="text"
-                [(ngModel)]="area"
-                name="area"
-                required
-                class="form-input"
-                placeholder="Ej: Ventas, Tecnología"
-              />
+              <label class="form-label">Área / Departamento *</label>
+              <input type="text" [(ngModel)]="area" name="area" required class="form-input" placeholder="Ej: Ventas" />
             </div>
-
             <div class="form-group">
               <label class="form-label">Contacto *</label>
-              <input
-                type="email"
-                [(ngModel)]="contacto"
-                name="contacto"
-                required
-                class="form-input"
-                placeholder="correo@empresa.com"
-              />
+              <input type="text" [(ngModel)]="contacto" name="contacto" required class="form-input" placeholder="Email o teléfono" />
             </div>
-
             <div class="form-group full-width">
-              <label class="form-label">Notas</label>
-              <textarea
-                [(ngModel)]="notas"
-                name="notas"
-                rows="3"
-                class="form-input form-textarea"
-                placeholder="Notas adicionales sobre el stakeholder"
-              ></textarea>
+              <label class="form-label">Notas Adicionales</label>
+              <textarea [(ngModel)]="notas" name="notas" rows="3" class="form-input form-textarea" placeholder="Información adicional relevante sobre este stakeholder"></textarea>
             </div>
-
             <div class="form-group full-width">
-              <label class="form-label">Color</label>
+              <label class="form-label">Color Identificador</label>
               <div class="color-selector">
-                <button
-                  *ngFor="let c of COLORES"
-                  type="button"
-                  (click)="color = c.valor"
-                  class="color-btn"
-                  [class.selected]="color === c.valor"
-                  [style.background]="c.hex"
-                ></button>
+                <button *ngFor="let c of COLORES" type="button" (click)="color = c.valor" class="color-btn" [class.selected]="color === c.valor" [style.background]="c.hex"></button>
               </div>
             </div>
           </div>
-
-          <div class="form-actions">
-            <button
-              type="submit"
-              class="btn-submit"
-              [disabled]="!nombre || !rol || !area || !contacto"
-            >
-              Agregar Stakeholder
+          <div class="form-actions-row">
+            <button type="submit" class="btn-submit" [disabled]="!nombre || !rol || !area || !contacto">
+              {{ stakeholderEditando ? 'Guardar Cambios' : 'Registrar Stakeholder' }}
+            </button>
+            <button type="button" class="btn-cancel" (click)="resetForm()">
+              Cancelar
             </button>
           </div>
         </form>
@@ -138,41 +92,59 @@
 
       <!-- Stakeholders Grid -->
       <div class="stakeholders-grid" *ngIf="stakeholders.length > 0">
-        <div *ngFor="let s of stakeholders" class="stakeholder-card">
-          <!-- Delete button -->
-          <button class="card-delete-btn" (click)="deleteStakeholder(s.id, $event)">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="3 6 5 6 21 6"></polyline>
-              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-            </svg>
-          </button>
-
-          <!-- Avatar -->
-          <div class="card-avatar" [style.background]="getStakeholderColor(s.color)">
-            {{ getInitials(s.nombre) }}
+        <div *ngFor="let s of stakeholders" class="stakeholder-card" [style.border-color]="getStakeholderColor(s.color) + '40'">
+          <div class="card-top">
+            <div class="card-top-left">
+              <div class="card-avatar" [style.background]="getStakeholderColor(s.color) + '18'">
+                <svg width="24" height="24" fill="none" [attr.stroke]="getStakeholderColor(s.color)" stroke-width="2" viewBox="0 0 24 24">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                  <circle cx="9" cy="7" r="4"/>
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                </svg>
+              </div>
+              <div class="card-identity">
+                <h3 class="card-name">{{ s.nombre }}</h3>
+                <p class="card-role">{{ s.rol }}</p>
+              </div>
+            </div>
+            <div class="card-actions">
+              <button class="card-action-btn" (click)="editStakeholder(s)" title="Modificar">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                </svg>
+              </button>
+              <button class="card-action-btn card-action-delete" (click)="deleteStakeholder(s.id, $event)" title="Eliminar">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <polyline points="3 6 5 6 21 6"/>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                </svg>
+              </button>
+            </div>
           </div>
-
-          <!-- Info -->
-          <h3 class="card-name">{{ s.nombre }}</h3>
-          <p class="card-role">{{ s.rol }}</p>
 
           <div class="card-details">
             <div class="card-detail-row">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="3" y="3" width="7" height="7"></rect>
-                <rect x="14" y="3" width="7" height="7"></rect>
-                <rect x="14" y="14" width="7" height="7"></rect>
-                <rect x="3" y="14" width="7" height="7"></rect>
+              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <rect x="3" y="3" width="7" height="7"/>
+                <rect x="14" y="3" width="7" height="7"/>
+                <rect x="14" y="14" width="7" height="7"/>
+                <rect x="3" y="14" width="7" height="7"/>
               </svg>
               <span>{{ s.area }}</span>
             </div>
             <div class="card-detail-row">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
-                <polyline points="22,6 12,13 2,6"></polyline>
+              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                <polyline points="22,6 12,13 2,6"/>
               </svg>
               <span>{{ s.contacto }}</span>
             </div>
+          </div>
+
+          <div class="card-notes" *ngIf="s.notas" [style.background]="getStakeholderColor(s.color) + '12'">
+            <p>{{ s.notas }}</p>
           </div>
         </div>
       </div>
@@ -180,24 +152,23 @@
       <!-- Empty State -->
       <div class="empty-state" *ngIf="stakeholders.length === 0 && !showForm">
         <div class="empty-icon">
-          <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-            <circle cx="9" cy="7" r="4"></circle>
-            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
           </svg>
         </div>
-        <p class="empty-title">No hay stakeholders</p>
-        <p class="empty-desc">Agrega stakeholders para documentar los participantes del proyecto</p>
+        <p class="empty-title">No hay stakeholders registrados</p>
+        <p class="empty-desc">Registra a las personas que participarán en los procesos y entrevistas</p>
         <button class="btn-agregar" (click)="showForm = true">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
             <line x1="12" y1="5" x2="12" y2="19"></line>
             <line x1="5" y1="12" x2="19" y2="12"></line>
           </svg>
-          Agregar Primer Stakeholder
+          Registrar Primer Stakeholder
         </button>
       </div>
-
     </div>
   </div>
 
@@ -208,5 +179,5 @@
     (confirm)="confirmDelete()"
     (cancel)="cancelDelete()"
   ></app-confirm-modal>
-  
+
 </div>

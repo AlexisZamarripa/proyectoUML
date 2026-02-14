@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { Observable, forkJoin, of } from 'rxjs';
+import { map, switchMap, catchError } from 'rxjs/operators';
 
 export type EstadoProyecto = 'planificacion' | 'en-progreso' | 'pausado' | 'completado';
 
@@ -14,6 +14,16 @@ export interface ProyectoBackend {
   color: string;
 }
 
+export interface Stakeholder {
+  id: string;
+  nombre: string;
+  rol: string;
+  area: string;
+  contacto: string;
+  notas: string;
+  color: string;
+}
+
 export interface Proyecto {
   id: string;
   nombre: string;
@@ -21,7 +31,7 @@ export interface Proyecto {
   fechaInicio: string;
   estado: EstadoProyecto;
   color: string;
-  stakeholders: any[];
+  stakeholders: Stakeholder[];
   procesos: any[];
 }
 
@@ -38,6 +48,7 @@ export interface CreateProyectoRequest {
 })
 export class ProyectoApiService {
   private apiUrl = 'http://localhost:3000/proyectos';
+  private stakeholdersUrl = 'http://localhost:3000/stakeholders';
 
   constructor(private http: HttpClient) {}
 
@@ -58,7 +69,7 @@ export class ProyectoApiService {
   /**
    * Convertir proyecto del backend al formato del frontend
    */
-  private mapToFrontend(proyecto: ProyectoBackend): Proyecto {
+  private mapToFrontend(proyecto: ProyectoBackend, stakeholders: any[] = []): Proyecto {
     return {
       id: proyecto.id_proyecto.toString(),
       nombre: proyecto.nombre_proyecto,
@@ -66,7 +77,15 @@ export class ProyectoApiService {
       fechaInicio: proyecto.fecha_inicio,
       estado: this.estadoFromBackend(proyecto.estado),
       color: proyecto.color,
-      stakeholders: [],
+      stakeholders: stakeholders.map(s => ({
+        id: s.id_stakeholder.toString(),
+        nombre: s.nombre_completo,
+        rol: s.rol,
+        area: s.area,
+        contacto: s.contacto,
+        notas: s.notas || '',
+        color: s.color
+      })),
       procesos: []
     };
   }
@@ -76,7 +95,19 @@ export class ProyectoApiService {
    */
   getProyectos(): Observable<Proyecto[]> {
     return this.http.get<ProyectoBackend[]>(this.apiUrl).pipe(
-      map(proyectos => proyectos.map(p => this.mapToFrontend(p)))
+      switchMap(proyectos => {
+        if (proyectos.length === 0) {
+          return of([]);
+        }
+        // Cargar stakeholders para cada proyecto
+        const requests = proyectos.map(proyecto =>
+          this.http.get<any[]>(`${this.stakeholdersUrl}?proyectoId=${proyecto.id_proyecto}`).pipe(
+            catchError(() => of([])),
+            map(stakeholders => this.mapToFrontend(proyecto, stakeholders))
+          )
+        );
+        return forkJoin(requests);
+      })
     );
   }
 
@@ -85,7 +116,12 @@ export class ProyectoApiService {
    */
   getProyecto(id: string): Observable<Proyecto> {
     return this.http.get<ProyectoBackend>(`${this.apiUrl}/${id}`).pipe(
-      map(p => this.mapToFrontend(p))
+      switchMap(proyecto => 
+        this.http.get<any[]>(`${this.stakeholdersUrl}?proyectoId=${id}`).pipe(
+          catchError(() => of([])),
+          map(stakeholders => this.mapToFrontend(proyecto, stakeholders))
+        )
+      )
     );
   }
 
@@ -102,7 +138,7 @@ export class ProyectoApiService {
     };
 
     return this.http.post<ProyectoBackend>(this.apiUrl, request).pipe(
-      map(p => this.mapToFrontend(p))
+      map(p => this.mapToFrontend(p, []))
     );
   }
 
@@ -112,14 +148,21 @@ export class ProyectoApiService {
   updateProyecto(id: string, proyecto: Partial<Proyecto>): Observable<Proyecto> {
     const request: Partial<CreateProyectoRequest> = {};
 
-    if (proyecto.nombre) request.nombre_proyecto = proyecto.nombre;
-    if (proyecto.descripcion) request.descripcion = proyecto.descripcion;
-    if (proyecto.fechaInicio) request.fecha_inicio = proyecto.fechaInicio;
-    if (proyecto.estado) request.estado = this.estadoToBackend(proyecto.estado) as any;
-    if (proyecto.color) request.color = proyecto.color;
+    if (proyecto.nombre !== undefined) request.nombre_proyecto = proyecto.nombre;
+    if (proyecto.descripcion !== undefined) request.descripcion = proyecto.descripcion;
+    if (proyecto.fechaInicio !== undefined) request.fecha_inicio = proyecto.fechaInicio;
+    if (proyecto.estado !== undefined) request.estado = this.estadoToBackend(proyecto.estado) as any;
+    if (proyecto.color !== undefined) request.color = proyecto.color;
+
+    console.log('Datos enviados al backend:', request);
 
     return this.http.patch<ProyectoBackend>(`${this.apiUrl}/${id}`, request).pipe(
-      map(p => this.mapToFrontend(p))
+      switchMap(proyectoActualizado => 
+        this.http.get<any[]>(`${this.stakeholdersUrl}?proyectoId=${id}`).pipe(
+          catchError(() => of([])),
+          map(stakeholders => this.mapToFrontend(proyectoActualizado, stakeholders))
+        )
+      )
     );
   }
 

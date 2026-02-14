@@ -55,6 +55,9 @@ export class StakeholderComponent implements OnInit {
   notas = '';
   color = 'blue';
 
+  // Stakeholder being edited
+  stakeholderEditando: string | null = null;
+
   // Active tab in project sidebar
   activeTab = 'stakeholders';
 
@@ -138,7 +141,7 @@ export class StakeholderComponent implements OnInit {
   handleSubmit(): void {
     if (!this.nombre || !this.rol || !this.area || !this.contacto) return;
 
-    const nuevoStakeholder = {
+    const stakeholderData = {
       nombre: this.nombre,
       rol: this.rol,
       area: this.area,
@@ -147,13 +150,28 @@ export class StakeholderComponent implements OnInit {
       color: this.color,
     };
 
-    this.stakeholderApiService.createStakeholder(this.proyecto.id, nuevoStakeholder).subscribe({
-      next: (stakeholder) => {
-        this.stakeholders.push(stakeholder);
-        this.resetForm();
-      },
-      error: (error) => console.error('Error al crear stakeholder:', error)
-    });
+    if (this.stakeholderEditando) {
+      // Actualizar stakeholder existente
+      this.stakeholderApiService.updateStakeholder(this.stakeholderEditando, stakeholderData).subscribe({
+        next: (stakeholder) => {
+          const index = this.stakeholders.findIndex(s => s.id === this.stakeholderEditando);
+          if (index !== -1) {
+            this.stakeholders[index] = stakeholder;
+          }
+          this.resetForm();
+        },
+        error: (error) => console.error('Error al actualizar stakeholder:', error)
+      });
+    } else {
+      // Crear nuevo stakeholder
+      this.stakeholderApiService.createStakeholder(this.proyecto.id, stakeholderData).subscribe({
+        next: (stakeholder) => {
+          this.stakeholders.push(stakeholder);
+          this.resetForm();
+        },
+        error: (error) => console.error('Error al crear stakeholder:', error)
+      });
+    }
   }
 
   resetForm(): void {
@@ -164,6 +182,7 @@ export class StakeholderComponent implements OnInit {
     this.notas = '';
     this.color = 'blue';
     this.showForm = false;
+    this.stakeholderEditando = null;
   }
 
   deleteStakeholder(id: string, event: Event): void {
@@ -202,6 +221,22 @@ export class StakeholderComponent implements OnInit {
   cancelDelete(): void {
     this.showConfirmModal = false;
     this.stakeholderToDelete = null;
+  }
+
+  editStakeholder(s: Stakeholder): void {
+    this.stakeholderEditando = s.id;
+    this.nombre = s.nombre;
+    this.rol = s.rol;
+    this.area = s.area;
+    this.contacto = s.contacto;
+    this.notas = s.notas || '';
+    this.color = s.color;
+    this.showForm = true;
+
+    // Scroll to form
+    setTimeout(() => {
+      document.querySelector('.form-card')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 100);
   }
 
   navigateTo(route: string): void {
