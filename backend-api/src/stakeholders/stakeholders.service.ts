@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DeepPartial, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { CreateStakeholderDto } from './dto/create-stakeholder.dto';
 import { UpdateStakeholderDto } from './dto/update-stakeholder.dto';
 import { Stakeholder } from './entities/stakeholder.entity';
@@ -13,14 +13,7 @@ export class StakeholdersService {
   ) {}
 
   async create(createStakeholderDto: CreateStakeholderDto): Promise<Stakeholder> {
-    // Establecer NULL explícitamente para campos opcionales no proporcionados
-    const data: DeepPartial<Stakeholder> = {
-      ...createStakeholderDto,
-      id_proceso: createStakeholderDto.id_proceso ?? null,
-      id_subproceso: createStakeholderDto.id_subproceso ?? null,
-    };
-    
-    const stakeholder = this.stakeholdersRepository.create(data);
+    const stakeholder = this.stakeholdersRepository.create(createStakeholderDto);
     return this.stakeholdersRepository.save(stakeholder);
   }
 

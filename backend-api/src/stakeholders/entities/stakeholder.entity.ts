@@ -8,12 +8,6 @@ export class Stakeholder {
   @Column({ type: 'int' })
   id_proyecto: number;
 
-  @Column({ type: 'int', nullable: true, default: null })
-  id_proceso: number | null;
-
-  @Column({ type: 'int', nullable: true, default: null })
-  id_subproceso: number | null;
-
   @Column({ type: 'varchar', length: 150 })
   nombre_completo: string;
 

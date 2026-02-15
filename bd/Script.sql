@@ -18,8 +18,6 @@ CREATE TABLE stakeholders (
 
     -- Relaciones
     id_proyecto INT NOT NULL,
-    id_proceso INT NULL,
-    id_subproceso INT NULL,
 
     -- Datos del stakeholder
     nombre_completo VARCHAR(150) NOT NULL,
@@ -30,12 +28,8 @@ CREATE TABLE stakeholders (
     color VARCHAR(30),
 
     -- Llaves foráneas
-FOREIGN KEY (id_proyecto) REFERENCES proyectos(id_proyecto)
-    ON DELETE CASCADE ON UPDATE CASCADE,
-FOREIGN KEY (id_proceso) REFERENCES procesos(id_proceso)
-    ON DELETE SET NULL ON UPDATE CASCADE,
-FOREIGN KEY (id_subproceso) REFERENCES subprocesos(id_subproceso)
-    ON DELETE SET NULL ON UPDATE CASCADE
+    FOREIGN KEY (id_proyecto) REFERENCES proyectos(id_proyecto)
+        ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- =========================
@@ -44,14 +38,16 @@ FOREIGN KEY (id_subproceso) REFERENCES subprocesos(id_subproceso)
 CREATE TABLE procesos (
     id_proceso INT AUTO_INCREMENT PRIMARY KEY,
     id_proyecto INT NOT NULL,
+    id_stakeholder INT NULL,
     nombre_proceso VARCHAR(150),
     descripcion TEXT,
     color VARCHAR(30),
-    peso INT,
-    departamentos VARCHAR(150),
-    plazos_clave DATE,
+    departamentos TEXT,  -- JSON array de strings
+    pasos_clave TEXT,    -- JSON array de strings
     FOREIGN KEY (id_proyecto) REFERENCES proyectos(id_proyecto)
-    ON DELETE CASCADE ON UPDATE CASCADE
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (id_stakeholder) REFERENCES stakeholders(id_stakeholder)
+        ON DELETE SET NULL ON UPDATE CASCADE
 );
 
 -- =========================
@@ -61,12 +57,16 @@ CREATE TABLE subprocesos (
     id_subproceso INT AUTO_INCREMENT PRIMARY KEY,
     id_proyecto INT NOT NULL,
     id_proceso INT NOT NULL,
+    id_stakeholder INT NULL,
     nombre_subproceso VARCHAR(150),
     descripcion TEXT,
     FOREIGN KEY (id_proyecto) REFERENCES proyectos(id_proyecto)
-    ON DELETE CASCADE ON UPDATE CASCADE,
-FOREIGN KEY (id_proceso) REFERENCES procesos(id_proceso)
-    ON DELETE CASCADE ON UPDATE CASCADE);
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (id_proceso) REFERENCES procesos(id_proceso)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (id_stakeholder) REFERENCES stakeholders(id_stakeholder)
+        ON DELETE SET NULL ON UPDATE CASCADE
+);
 
 -- =========================
 -- ENTREVISTAS

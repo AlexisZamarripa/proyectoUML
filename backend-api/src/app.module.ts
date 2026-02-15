@@ -5,6 +5,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ProyectosModule } from './proyectos/proyectos.module';
 import { StakeholdersModule } from './stakeholders/stakeholders.module';
+import { ProcesosModule } from './procesos/procesos.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { StakeholdersModule } from './stakeholders/stakeholders.module';
     }),
     ProyectosModule,
     StakeholdersModule,
+    ProcesosModule,
   ],
   controllers: [AppController],
   providers: [AppService],

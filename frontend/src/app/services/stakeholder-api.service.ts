@@ -5,8 +5,6 @@ import { Observable } from 'rxjs';
 export interface StakeholderBackend {
   id_stakeholder: number;
   id_proyecto: number;
-  id_proceso?: number;
-  id_subproceso?: number;
   nombre_completo: string;
   rol: string;
   area: string;

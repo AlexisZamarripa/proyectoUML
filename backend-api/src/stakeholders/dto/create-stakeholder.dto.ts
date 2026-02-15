@@ -5,14 +5,6 @@ export class CreateStakeholderDto {
   @IsNotEmpty()
   id_proyecto: number;
 
-  @IsInt()
-  @IsOptional()
-  id_proceso?: number;
-
-  @IsInt()
-  @IsOptional()
-  id_subproceso?: number;
-
   @IsString()
   @IsNotEmpty()
   nombre_completo: string;
