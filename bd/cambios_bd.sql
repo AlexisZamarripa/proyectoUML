@@ -101,3 +101,32 @@ DEALLOCATE PREPARE stmt9;
 
 -- Ver estructura de stakeholders
 -- DESCRIBE stakeholders;
+
+-- =========================
+-- PASO 4: Modificar la tabla documentos para el nuevo diseño de análisis
+-- =========================
+
+-- Agregar columna fuente
+SET @sql10 = IF((SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS 
+    WHERE table_schema = DATABASE() AND table_name = 'documentos' AND column_name = 'fuente') = 0,
+    'ALTER TABLE documentos ADD COLUMN fuente VARCHAR(150) NULL AFTER tipo_documento',
+    'SELECT "Column fuente already exists"');
+PREPARE stmt10 FROM @sql10;
+EXECUTE stmt10;
+DEALLOCATE PREPARE stmt10;
+
+-- Agregar columna documentos_json para almacenar array de documentos analizados
+SET @sql11 = IF((SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS 
+    WHERE table_schema = DATABASE() AND table_name = 'documentos' AND column_name = 'documentos_json') = 0,
+    'ALTER TABLE documentos ADD COLUMN documentos_json TEXT NULL AFTER descripcion_documento',
+    'SELECT "Column documentos_json already exists"');
+PREPARE stmt11 FROM @sql11;
+EXECUTE stmt11;
+DEALLOCATE PREPARE stmt11;
+
+-- Hacer nullable los campos de documento individual (ya que usamos documentos_json)
+ALTER TABLE documentos MODIFY COLUMN nombre_documento VARCHAR(150) NULL;
+ALTER TABLE documentos MODIFY COLUMN tipo_archivo ENUM('pdf','word','excel') NULL;
+
+-- Ver estructura de documentos
+-- DESCRIBE documentos;

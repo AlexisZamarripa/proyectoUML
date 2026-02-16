@@ -3,7 +3,10 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { BarraComponent } from '../../components/barra/barra.component';
+import { ConfirmModalComponent, ConfirmModalConfig } from '../../components/confirm-modal/confirm-modal.component';
 import { ProyectoApiService } from '../../services/proyecto-api.service';
+import { DocumentoApiService, CreateDocumentoDto } from '../../services/documento-api.service';
+import { ProcesoApiService, Proceso, Subproceso } from '../../services/proceso-api.service';
 
 interface Documento {
     nombre: string;
@@ -20,6 +23,8 @@ interface AnalisisDocumento {
     fuente: string;
     proceso: string;
     subproceso: string;
+    id_proceso?: number;
+    id_subproceso?: number;
     documentos: Documento[];
     hallazgos: string[];
     recomendaciones: string;
@@ -28,13 +33,27 @@ interface AnalisisDocumento {
 @Component({
     selector: 'app-documentos',
     standalone: true,
-    imports: [CommonModule, FormsModule, BarraComponent],
+    imports: [CommonModule, FormsModule, BarraComponent, ConfirmModalComponent],
     templateUrl: './doc.component.html',
     styleUrls: ['./doc.component.css']
 })
 export class DocumentosComponent implements OnInit {
     showForm = false;
     analisis: AnalisisDocumento[] = [];
+
+    // Modales
+    showDetailModal = false;
+    selectedAnalisis: AnalisisDocumento | null = null;
+    showConfirmModal = false;
+    analisisToDelete: string | null = null;
+    confirmModalConfig: ConfirmModalConfig = {
+        title: '¿Eliminar análisis?',
+        message: 'Esta acción no se puede deshacer. ¿Estás seguro de que deseas eliminar este análisis de documentos?',
+        confirmText: 'Eliminar',
+        cancelText: 'Cancelar',
+        type: 'danger',
+        icon: 'trash'
+    };
 
     // Proyecto actual
     proyecto = {
@@ -47,12 +66,16 @@ export class DocumentosComponent implements OnInit {
     // Active tab in project sidebar
     activeTab = 'documentos';
 
+    // Procesos y subprocesos disponibles
+    procesos: Proceso[] = [];
+    subprocesos: Subproceso[] = [];
+
     // Campos del formulario
     titulo = '';
     tipoDocumento = '';
     fuente = '';
-    proceso = '';
-    subproceso = '';
+    procesoId: number | null = null;
+    subprocesoId: number | null = null;
     documentos: Documento[] = [{ nombre: '', tipo: '', url: '', descripcion: '' }];
     hallazgos: string[] = [''];
     recomendaciones = '';
@@ -68,7 +91,9 @@ export class DocumentosComponent implements OnInit {
     constructor(
         private router: Router,
         private route: ActivatedRoute,
-        private proyectoApiService: ProyectoApiService
+        private proyectoApiService: ProyectoApiService,
+        private documentoApiService: DocumentoApiService,
+        private procesoApiService: ProcesoApiService
     ) { }
 
     ngOnInit(): void {
@@ -83,7 +108,68 @@ export class DocumentosComponent implements OnInit {
                 },
                 error: (error) => console.error('Error al cargar proyecto:', error)
             });
+
+            // Cargar procesos del proyecto
+            this.procesoApiService.getProcesosByProyecto(Number(id)).subscribe({
+                next: (procesos) => {
+                    this.procesos = procesos;
+                },
+                error: (error) => console.error('Error al cargar procesos:', error)
+            });
+
+            // Cargar análisis de documentos existentes
+            this.cargarAnalisis();
         }
+    }
+
+    cargarAnalisis(): void {
+        if (!this.proyecto.id) return;
+        this.documentoApiService.getByProyecto(Number(this.proyecto.id)).subscribe({
+            next: (data) => {
+                this.analisis = data.map(item => ({
+                    id: item.id,
+                    titulo: item.titulo,
+                    tipoDocumento: item.tipoDocumento,
+                    fuente: item.fuente,
+                    proceso: this.getNombreProceso(item.id_proceso),
+                    subproceso: this.getNombreSubproceso(item.id_subproceso),
+                    id_proceso: item.id_proceso,
+                    id_subproceso: item.id_subproceso,
+                    documentos: item.documentos || [],
+                    hallazgos: item.hallazgos || [],
+                    recomendaciones: item.recomendaciones || ''
+                }));
+            },
+            error: (error) => console.error('Error al cargar análisis:', error)
+        });
+    }
+
+    onProcesoChange(): void {
+        this.subprocesoId = null;
+        this.subprocesos = [];
+        if (this.procesoId) {
+            const proceso = this.procesos.find(p => Number(p.id) === this.procesoId);
+            if (proceso && proceso.subprocesos) {
+                this.subprocesos = proceso.subprocesos;
+            }
+        }
+    }
+
+    getNombreProceso(idProceso: number | undefined): string {
+        if (!idProceso) return '';
+        const p = this.procesos.find(proc => Number(proc.id) === idProceso);
+        return p ? p.nombre : '';
+    }
+
+    getNombreSubproceso(idSubproceso: number | undefined): string {
+        if (!idSubproceso) return '';
+        for (const proc of this.procesos) {
+            if (proc.subprocesos) {
+                const sub = proc.subprocesos.find(s => Number(s.id) === idSubproceso);
+                if (sub) return sub.nombre;
+            }
+        }
+        return '';
     }
 
     goBack(): void {
@@ -97,15 +183,17 @@ export class DocumentosComponent implements OnInit {
 
     isFormValid(): boolean {
         return !!(this.titulo && this.titulo.trim().length > 0 &&
-                  this.tipoDocumento && this.tipoDocumento.trim().length > 0);
+                  this.tipoDocumento && this.tipoDocumento.trim().length > 0 &&
+                  this.procesoId && this.subprocesoId);
     }
 
     resetForm() {
         this.titulo = '';
         this.tipoDocumento = '';
         this.fuente = '';
-        this.proceso = '';
-        this.subproceso = '';
+        this.procesoId = null;
+        this.subprocesoId = null;
+        this.subprocesos = [];
         this.documentos = [{ nombre: '', tipo: '', url: '', descripcion: '' }];
         this.hallazgos = [''];
         this.recomendaciones = '';
@@ -120,33 +208,26 @@ export class DocumentosComponent implements OnInit {
         const docsLimpios = this.documentos.filter(d => d.nombre.trim() !== '');
         const hallazgosLimpios = this.hallazgos.filter(h => h.trim() !== '');
 
-        // Generar fecha actual
-        const now = new Date();
-        const fecha = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
-
-        const nuevo: AnalisisDocumento = {
-            id: this.generateUUID(),
-            titulo: this.titulo.trim(),
-            fecha: fecha,
-            tipoDocumento: this.tipoDocumento.trim(),
-            fuente: this.fuente.trim(),
-            proceso: this.proceso.trim(),
-            subproceso: this.subproceso.trim(),
-            documentos: docsLimpios.length > 0 ? docsLimpios : [],
-            hallazgos: hallazgosLimpios.length > 0 ? hallazgosLimpios : [],
-            recomendaciones: this.recomendaciones.trim()
+        const dto: CreateDocumentoDto = {
+            id_proyecto: Number(this.proyecto.id),
+            id_proceso: this.procesoId!,
+            id_subproceso: this.subprocesoId!,
+            titulo_analisis: this.titulo.trim(),
+            tipo_documento: this.tipoDocumento.trim(),
+            fuente: this.fuente.trim() || undefined,
+            documentos: docsLimpios.length > 0 ? docsLimpios : undefined,
+            hallazgos: hallazgosLimpios.length > 0 ? hallazgosLimpios : undefined,
+            recomendaciones: this.recomendaciones.trim() || undefined
         };
 
-        this.analisis.push(nuevo);
-        console.log('Análisis creado. Total análisis:', this.analisis.length, this.analisis);
-        this.resetForm();
-        this.showForm = false;
-    }
-
-    eliminarAnalisis(id: string) {
-        if (confirm('¿Está seguro de eliminar este análisis?')) {
-            this.analisis = this.analisis.filter(a => a.id !== id);
-        }
+        this.documentoApiService.create(dto).subscribe({
+            next: () => {
+                this.resetForm();
+                this.showForm = false;
+                this.cargarAnalisis();
+            },
+            error: (error) => console.error('Error al crear análisis:', error)
+        });
     }
 
     agregarDocumento() {
@@ -159,19 +240,56 @@ export class DocumentosComponent implements OnInit {
         }
     }
 
-    private generateUUID(): string {
-        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-            const r = Math.random() * 16 | 0;
-            const v = c === 'x' ? r : (r & 0x3 | 0x8);
-            return v.toString(16);
-        });
-    }
-
     trackByIndex(index: number): number {
         return index;
     }
 
     trackByAnalisis(index: number, item: AnalisisDocumento): string {
         return item.id;
+    }
+
+    // Métodos del modal de detalles
+    verDetalles(analisis: AnalisisDocumento): void {
+        this.selectedAnalisis = analisis;
+        this.showDetailModal = true;
+    }
+
+    closeDetailModal(): void {
+        this.showDetailModal = false;
+        setTimeout(() => {
+            this.selectedAnalisis = null;
+        }, 200);
+    }
+
+    stopPropagation(event: Event): void {
+        event.stopPropagation();
+    }
+
+    // Métodos del confirm modal
+    eliminarAnalisis(id: string): void {
+        this.analisisToDelete = id;
+        this.showConfirmModal = true;
+    }
+
+    confirmarEliminacion(): void {
+        if (this.analisisToDelete) {
+            this.documentoApiService.delete(Number(this.analisisToDelete)).subscribe({
+                next: () => {
+                    this.analisis = this.analisis.filter(a => a.id !== this.analisisToDelete);
+                    this.showConfirmModal = false;
+                    this.analisisToDelete = null;
+                },
+                error: (error) => {
+                    console.error('Error al eliminar análisis:', error);
+                    this.showConfirmModal = false;
+                    this.analisisToDelete = null;
+                }
+            });
+        }
+    }
+
+    cancelarEliminacion(): void {
+        this.showConfirmModal = false;
+        this.analisisToDelete = null;
     }
 }
