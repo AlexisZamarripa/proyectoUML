@@ -17,19 +17,19 @@ export class Documento {
   @Column({ type: 'varchar', length: 150, nullable: true })
   nombre_documento: string;
 
-  @Column({ type: 'enum', enum: ['pdf', 'word', 'excel'], nullable: true })
+  @Column({ type: 'varchar', length: 50, nullable: true })
   tipo_archivo: string;
 
-  @Column({ type: 'text', nullable: true })
+  @Column({ type: 'longtext', nullable: true })
   url_ubicacion: string;
 
   @Column({ type: 'text', nullable: true })
   descripcion_documento: string;
 
-  @Column({ type: 'text', nullable: true })
+  @Column({ type: 'longtext', nullable: true })
   documentos_json: string; // JSON array of {nombre, tipo, url, descripcion}
 
-  @Column({ type: 'text', nullable: true })
+  @Column({ type: 'longtext', nullable: true })
   hallazgos: string; // JSON array of strings
 
   @Column({ type: 'text', nullable: true })

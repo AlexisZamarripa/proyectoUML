@@ -52,8 +52,33 @@ export interface UpdateDocumentoDto {
 })
 export class DocumentoApiService {
   private apiUrl = 'http://localhost:3000/documentos';
+  private baseUrl = 'http://localhost:3000';
 
   constructor(private http: HttpClient) {}
+
+  /**
+   * Subir un archivo al servidor y obtener la URL
+   */
+  uploadFile(file: File): Observable<{ originalName: string; filename: string; url: string }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post<{ originalName: string; filename: string; url: string }>(
+      `${this.apiUrl}/upload`,
+      formData
+    );
+  }
+
+  /**
+   * Obtener la URL completa de un archivo subido
+   */
+  getFileUrl(relativePath: string): string {
+    if (!relativePath) return '';
+    // URLs absolutas (http/https) y data URIs se devuelven tal cual
+    if (relativePath.startsWith('http') || relativePath.startsWith('data:')) return relativePath;
+    // Asegurar que la ruta relativa empiece con /
+    const path = relativePath.startsWith('/') ? relativePath : `/${relativePath}`;
+    return `${this.baseUrl}${path}`;
+  }
 
   /**
    * Crear un nuevo análisis de documentos

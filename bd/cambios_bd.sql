@@ -118,7 +118,7 @@ DEALLOCATE PREPARE stmt10;
 -- Agregar columna documentos_json para almacenar array de documentos analizados
 SET @sql11 = IF((SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS 
     WHERE table_schema = DATABASE() AND table_name = 'documentos' AND column_name = 'documentos_json') = 0,
-    'ALTER TABLE documentos ADD COLUMN documentos_json TEXT NULL AFTER descripcion_documento',
+    'ALTER TABLE documentos ADD COLUMN documentos_json LONGTEXT NULL AFTER descripcion_documento',
     'SELECT "Column documentos_json already exists"');
 PREPARE stmt11 FROM @sql11;
 EXECUTE stmt11;

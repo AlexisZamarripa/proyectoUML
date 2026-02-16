@@ -13,6 +13,7 @@ interface Documento {
     tipo: string;
     url: string;
     descripcion: string;
+    isDragging?: boolean;
 }
 
 interface AnalisisDocumento {
@@ -205,7 +206,10 @@ export class DocumentosComponent implements OnInit {
         }
 
         // Limpiar documentos y hallazgos vacíos
-        const docsLimpios = this.documentos.filter(d => d.nombre.trim() !== '');
+        // Eliminar isDragging y otras propiedades internas antes de enviar al backend
+        const docsLimpios = this.documentos
+            .filter(d => d.nombre.trim() !== '')
+            .map(({ nombre, tipo, url, descripcion }) => ({ nombre, tipo, url, descripcion }));
         const hallazgosLimpios = this.hallazgos.filter(h => h.trim() !== '');
 
         const dto: CreateDocumentoDto = {
@@ -291,5 +295,119 @@ export class DocumentosComponent implements OnInit {
     cancelarEliminacion(): void {
         this.showConfirmModal = false;
         this.analisisToDelete = null;
+    }
+
+    // Métodos de drag & drop y upload de archivos
+    onDragOver(event: DragEvent, index: number): void {
+        event.preventDefault();
+        event.stopPropagation();
+        this.documentos[index].isDragging = true;
+    }
+
+    onDragLeave(event: DragEvent, index: number): void {
+        event.preventDefault();
+        event.stopPropagation();
+        this.documentos[index].isDragging = false;
+    }
+
+    onDrop(event: DragEvent, index: number): void {
+        event.preventDefault();
+        event.stopPropagation();
+        this.documentos[index].isDragging = false;
+
+        const files = event.dataTransfer?.files;
+        if (files && files.length > 0) {
+            this.processFile(files[0], index);
+        }
+    }
+
+    triggerFileInput(index: number): void {
+        const fileInput = document.getElementById(`file-input-${index}`) as HTMLInputElement;
+        if (fileInput) {
+            fileInput.click();
+        }
+    }
+
+    onFileSelected(event: Event, index: number): void {
+        const input = event.target as HTMLInputElement;
+        if (input.files && input.files.length > 0) {
+            this.processFile(input.files[0], index);
+        }
+    }
+
+    processFile(file: File, index: number): void {
+        // Validar tamaño del archivo (máximo 10MB)
+        const maxSize = 10 * 1024 * 1024; // 10MB
+        if (file.size > maxSize) {
+            alert('El archivo es demasiado grande. Tamaño máximo: 10MB');
+            return;
+        }
+
+        // Detectar tipo de archivo automáticamente
+        const fileType = this.detectFileType(file.name);
+        
+        // Actualizar nombre y tipo
+        this.documentos[index].nombre = file.name;
+        this.documentos[index].tipo = fileType;
+
+        // Subir archivo al servidor
+        this.documentoApiService.uploadFile(file).subscribe({
+            next: (res) => {
+                this.documentos[index].url = res.url;
+            },
+            error: (err) => {
+                console.error('Error al subir el archivo:', err);
+                alert('Error al subir el archivo. Por favor, intenta de nuevo.');
+                this.documentos[index].nombre = '';
+                this.documentos[index].tipo = '';
+            }
+        });
+    }
+
+    detectFileType(filename: string): string {
+        const ext = filename.split('.').pop()?.toLowerCase();
+        
+        const typeMap: { [key: string]: string } = {
+            'pdf': 'PDF',
+            'doc': 'Word',
+            'docx': 'Word',
+            'xls': 'Excel',
+            'xlsx': 'Excel',
+            'ppt': 'PowerPoint',
+            'pptx': 'PowerPoint',
+            'txt': 'Texto',
+            'jpg': 'Imagen',
+            'jpeg': 'Imagen',
+            'png': 'Imagen',
+            'gif': 'Imagen',
+            'bmp': 'Imagen',
+            'svg': 'Imagen',
+            'zip': 'Comprimido',
+            'rar': 'Comprimido',
+            '7z': 'Comprimido'
+        };
+
+        return typeMap[ext || ''] || 'Documento';
+    }
+
+    removeFile(index: number): void {
+        this.documentos[index].url = '';
+        this.documentos[index].nombre = '';
+        this.documentos[index].tipo = '';
+        
+        // Limpiar el input file
+        const fileInput = document.getElementById(`file-input-${index}`) as HTMLInputElement;
+        if (fileInput) {
+            fileInput.value = '';
+        }
+    }
+
+    /**
+     * Abrir un archivo subido en una nueva pestaña
+     */
+    abrirArchivo(url: string): void {
+        if (url) {
+            window.open(this.documentoApiService.getFileUrl(url), '_blank');
+        }
     }
 }

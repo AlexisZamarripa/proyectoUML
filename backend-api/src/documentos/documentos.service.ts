@@ -27,7 +27,7 @@ export class DocumentosService {
       documentoData.documentos_json = JSON.stringify(documentos);
       // Guardar el primer documento en los campos individuales por compatibilidad
       documentoData.nombre_documento = documentos[0].nombre || null;
-      documentoData.tipo_archivo = this.mapTipoArchivo(documentos[0].tipo);
+      documentoData.tipo_archivo = documentos[0].tipo || null;
       documentoData.url_ubicacion = documentos[0].url || null;
       documentoData.descripcion_documento = documentos[0].descripcion || null;
     }
@@ -93,7 +93,7 @@ export class DocumentosService {
       updateData.documentos_json = JSON.stringify(documentos);
       if (documentos.length > 0) {
         updateData.nombre_documento = documentos[0].nombre || null;
-        updateData.tipo_archivo = this.mapTipoArchivo(documentos[0].tipo);
+        updateData.tipo_archivo = documentos[0].tipo || null;
         updateData.url_ubicacion = documentos[0].url || null;
         updateData.descripcion_documento = documentos[0].descripcion || null;
       }
@@ -173,15 +173,5 @@ export class DocumentosService {
     };
   }
 
-  /**
-   * Mapear tipo de archivo del frontend al enum de la BD
-   */
-  private mapTipoArchivo(tipo?: string): string | null {
-    if (!tipo) return null;
-    const lower = tipo.toLowerCase().trim();
-    if (lower.includes('pdf')) return 'pdf';
-    if (lower.includes('word') || lower.includes('doc')) return 'word';
-    if (lower.includes('excel') || lower.includes('xls')) return 'excel';
-    return null;
-  }
+
 }
