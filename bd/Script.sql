@@ -194,7 +194,7 @@ CREATE TABLE `pasos_proceso` (
   `id_seguimiento` int DEFAULT NULL,
   `nombre_paso` varchar(100) DEFAULT NULL,
   `duracion` varchar(50) DEFAULT NULL,
-  `responsable` varchar(150) DEFAULT NULL,
+  `estado` varchar(50) DEFAULT 'pendiente' COMMENT 'Estados: completado, con demora, pendiente',
   `problemas_identificados` text,
   `metricas` text,
   PRIMARY KEY (`id_paso`),

@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { BarraComponent } from '../../components/barra/barra.component';
+import { ConfirmModalComponent, ConfirmModalConfig } from '../../components/confirm-modal/confirm-modal.component';
 import { ProyectoApiService } from '../../services/proyecto-api.service';
 import { SeguimientoApiService, SeguimientoResponse, Paso, Metrica } from '../../services/seguimiento-api.service';
 import { ProcesoApiService, Proceso, Subproceso } from '../../services/proceso-api.service';
@@ -10,12 +11,18 @@ import { ProcesoApiService, Proceso, Subproceso } from '../../services/proceso-a
 @Component({
     selector: 'app-seguimiento',
     standalone: true,
-    imports: [CommonModule, FormsModule, BarraComponent],
+    imports: [CommonModule, FormsModule, BarraComponent, ConfirmModalComponent],
     templateUrl: './seguimiento.component.html',
     styleUrls: ['./seguimiento.component.css']
 })
 export class SeguimientoComponent implements OnInit {
     showForm = false;
+    showModal = false;
+    showDeleteModal = false;
+    isEditMode = false;
+    seguimientoEditando: string | null = null;
+    seguimientoDetalle: SeguimientoResponse | null = null;
+    seguimientoAEliminar: string | null = null;
     seguimientos: SeguimientoResponse[] = [];
     procesosDisponibles: Proceso[] = [];
     subprocesosDisponibles: Subproceso[] = [];
@@ -31,12 +38,22 @@ export class SeguimientoComponent implements OnInit {
     // Active tab in project sidebar
     activeTab = 'seguimiento';
 
+    // Config para modal de confirmación
+    deleteModalConfig: ConfirmModalConfig = {
+        title: '¿Eliminar seguimiento?',
+        message: '¿Estás seguro de que deseas eliminar este seguimiento transaccional? Esta acción no se puede deshacer.',
+        confirmText: 'Eliminar',
+        cancelText: 'Cancelar',
+        type: 'danger',
+        icon: 'trash'
+    };
+
     // Campos del formulario
     titulo = '';
     nombreProceso = '';
     procesoVinculadoId = ''; // ID del proceso seleccionado
     subprocesoId = ''; // ID del subproceso seleccionado
-    pasos: Paso[] = [{ nombre: '', duracion: '', responsable: '' }];
+    pasos: Paso[] = [{ nombre: '', duracion: '', estado: 'pendiente' }];
     problemas: string[] = [''];
     metricas: Metrica[] = [{ nombre: '', valor: '' }];
 
@@ -127,10 +144,12 @@ export class SeguimientoComponent implements OnInit {
         this.nombreProceso = '';
         this.procesoVinculadoId = '';
         this.subprocesoId = '';
-        this.pasos = [{ nombre: '', duracion: '', responsable: '' }];
+        this.pasos = [{ nombre: '', duracion: '', estado: 'pendiente' }];
         this.problemas = [''];
         this.metricas = [{ nombre: '', valor: '' }];
         this.subprocesosDisponibles = [];
+        this.isEditMode = false;
+        this.seguimientoEditando = null;
     }
 
     handleSubmit() {
@@ -160,29 +179,104 @@ export class SeguimientoComponent implements OnInit {
             metricas: metricasLimpias
         };
 
-        this.seguimientoApiService.create(dto).subscribe({
-            next: (nuevo) => {
-                this.seguimientos.unshift(nuevo);
-                this.resetForm();
-                this.showForm = false;
-            },
-            error: (error) => console.error('Error al crear seguimiento:', error)
-        });
-    }
-
-    eliminarSeguimiento(id: string) {
-        if (confirm('¿Está seguro de eliminar este seguimiento?')) {
-            this.seguimientoApiService.delete(parseInt(id, 10)).subscribe({
-                next: () => {
-                    this.seguimientos = this.seguimientos.filter(s => s.id !== id);
+        if (this.isEditMode && this.seguimientoEditando) {
+            // Modo edición
+            this.seguimientoApiService.update(parseInt(this.seguimientoEditando, 10), dto).subscribe({
+                next: (actualizado) => {
+                    const index = this.seguimientos.findIndex(s => s.id === this.seguimientoEditando);
+                    if (index !== -1) {
+                        this.seguimientos[index] = actualizado;
+                    }
+                    this.resetForm();
+                    this.showForm = false;
                 },
-                error: (error) => console.error('Error al eliminar seguimiento:', error)
+                error: (error) => console.error('Error al actualizar seguimiento:', error)
+            });
+        } else {
+            // Modo creación
+            this.seguimientoApiService.create(dto).subscribe({
+                next: (nuevo) => {
+                    this.seguimientos.unshift(nuevo);
+                    this.resetForm();
+                    this.showForm = false;
+                },
+                error: (error) => console.error('Error al crear seguimiento:', error)
             });
         }
     }
 
+    eliminarSeguimiento(id: string) {
+        this.seguimientoAEliminar = id;
+        this.showDeleteModal = true;
+    }
+
+    confirmarEliminacion() {
+        if (!this.seguimientoAEliminar) return;
+        
+        this.seguimientoApiService.delete(parseInt(this.seguimientoAEliminar, 10)).subscribe({
+            next: () => {
+                this.seguimientos = this.seguimientos.filter(s => s.id !== this.seguimientoAEliminar);
+                this.showDeleteModal = false;
+                this.seguimientoAEliminar = null;
+            },
+            error: (error) => {
+                console.error('Error al eliminar seguimiento:', error);
+                this.showDeleteModal = false;
+                this.seguimientoAEliminar = null;
+            }
+        });
+    }
+
+    cancelarEliminacion() {
+        this.showDeleteModal = false;
+        this.seguimientoAEliminar = null;
+    }
+
+    editarSeguimiento(seguimiento: SeguimientoResponse) {
+        this.isEditMode = true;
+        this.seguimientoEditando = seguimiento.id;
+        this.titulo = seguimiento.titulo;
+        this.nombreProceso = seguimiento.nombreProceso;
+        
+        // Cargar proceso y subproceso si existen
+        if (seguimiento.id_proceso) {
+            this.procesoVinculadoId = seguimiento.id_proceso.toString();
+            this.onProcesoChange();
+            if (seguimiento.id_subproceso) {
+                setTimeout(() => {
+                    this.subprocesoId = seguimiento.id_subproceso?.toString() || '';
+                }, 100);
+            }
+        }
+
+        // Cargar pasos (asegurar al menos uno)
+        this.pasos = seguimiento.pasos && seguimiento.pasos.length > 0 
+            ? seguimiento.pasos.map(p => ({ ...p })) 
+            : [{ nombre: '', duracion: '', estado: 'pendiente' }];
+
+        // Cargar problemas (asegurar al menos uno)
+        this.problemas = seguimiento.problemas && seguimiento.problemas.length > 0 
+            ? [...seguimiento.problemas] 
+            : [''];
+
+        // Cargar métricas (asegurar al menos una)
+        this.metricas = seguimiento.metricas && seguimiento.metricas.length > 0 
+            ? seguimiento.metricas.map(m => ({ ...m })) 
+            : [{ nombre: '', valor: '' }];
+
+        this.showForm = true;
+        
+        // Scroll al formulario
+        setTimeout(() => {
+            const formCard = document.querySelector('.form-card');
+            if (formCard) {
+                formCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }, 100);
+    }
+
     agregarPaso() {
-        this.pasos.push({ nombre: '', duracion: '', responsable: '' });
+        this.pasos.push({ nombre: '', duracion: '', estado: 'pendiente' });
     }
 
     eliminarPaso(index: number) {
@@ -250,5 +344,39 @@ export class SeguimientoComponent implements OnInit {
 
     trackBySeguimiento(index: number, item: SeguimientoResponse): string {
         return item.id;
+    }
+
+    verDetalle(seguimiento: SeguimientoResponse) {
+        this.seguimientoDetalle = seguimiento;
+        this.showModal = true;
+    }
+
+    cerrarModal() {
+        this.showModal = false;
+        this.seguimientoDetalle = null;
+    }
+
+    getEstadoIcon(estado: string): string {
+        switch (estado) {
+            case 'completado':
+                return 'check';
+            case 'con demora':
+                return 'alert';
+            case 'pendiente':
+            default:
+                return 'clock';
+        }
+    }
+
+    getEstadoClass(estado: string): string {
+        switch (estado) {
+            case 'completado':
+                return 'estado-completado';
+            case 'con demora':
+                return 'estado-demora';
+            case 'pendiente':
+            default:
+                return 'estado-pendiente';
+        }
     }
 }

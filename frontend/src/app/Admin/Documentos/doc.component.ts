@@ -5,7 +5,7 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { BarraComponent } from '../../components/barra/barra.component';
 import { ConfirmModalComponent, ConfirmModalConfig } from '../../components/confirm-modal/confirm-modal.component';
 import { ProyectoApiService } from '../../services/proyecto-api.service';
-import { DocumentoApiService, CreateDocumentoDto } from '../../services/documento-api.service';
+import { DocumentoApiService, CreateDocumentoDto, UpdateDocumentoDto } from '../../services/documento-api.service';
 import { ProcesoApiService, Proceso, Subproceso } from '../../services/proceso-api.service';
 
 interface Documento {
@@ -41,6 +41,8 @@ interface AnalisisDocumento {
 export class DocumentosComponent implements OnInit {
     showForm = false;
     analisis: AnalisisDocumento[] = [];
+    isEditMode = false;
+    analisisEditando: string | null = null;
 
     // Modales
     showDetailModal = false;
@@ -198,6 +200,8 @@ export class DocumentosComponent implements OnInit {
         this.documentos = [{ nombre: '', tipo: '', url: '', descripcion: '' }];
         this.hallazgos = [''];
         this.recomendaciones = '';
+        this.isEditMode = false;
+        this.analisisEditando = null;
     }
 
     handleSubmit() {
@@ -212,26 +216,50 @@ export class DocumentosComponent implements OnInit {
             .map(({ nombre, tipo, url, descripcion }) => ({ nombre, tipo, url, descripcion }));
         const hallazgosLimpios = this.hallazgos.filter(h => h.trim() !== '');
 
-        const dto: CreateDocumentoDto = {
-            id_proyecto: Number(this.proyecto.id),
-            id_proceso: this.procesoId!,
-            id_subproceso: this.subprocesoId!,
-            titulo_analisis: this.titulo.trim(),
-            tipo_documento: this.tipoDocumento.trim(),
-            fuente: this.fuente.trim() || undefined,
-            documentos: docsLimpios.length > 0 ? docsLimpios : undefined,
-            hallazgos: hallazgosLimpios.length > 0 ? hallazgosLimpios : undefined,
-            recomendaciones: this.recomendaciones.trim() || undefined
-        };
+        if (this.isEditMode && this.analisisEditando) {
+            // Actualizar análisis existente
+            const updateDto: UpdateDocumentoDto = {
+                titulo_analisis: this.titulo.trim(),
+                tipo_documento: this.tipoDocumento.trim(),
+                fuente: this.fuente.trim() || undefined,
+                id_proceso: this.procesoId!,
+                id_subproceso: this.subprocesoId!,
+                documentos: docsLimpios.length > 0 ? docsLimpios : undefined,
+                hallazgos: hallazgosLimpios.length > 0 ? hallazgosLimpios : undefined,
+                recomendaciones: this.recomendaciones.trim() || undefined
+            };
 
-        this.documentoApiService.create(dto).subscribe({
-            next: () => {
-                this.resetForm();
-                this.showForm = false;
-                this.cargarAnalisis();
-            },
-            error: (error) => console.error('Error al crear análisis:', error)
-        });
+            this.documentoApiService.update(Number(this.analisisEditando), updateDto).subscribe({
+                next: () => {
+                    this.resetForm();
+                    this.showForm = false;
+                    this.cargarAnalisis();
+                },
+                error: (error) => console.error('Error al actualizar análisis:', error)
+            });
+        } else {
+            // Crear nuevo análisis
+            const createDto: CreateDocumentoDto = {
+                id_proyecto: Number(this.proyecto.id),
+                id_proceso: this.procesoId!,
+                id_subproceso: this.subprocesoId!,
+                titulo_analisis: this.titulo.trim(),
+                tipo_documento: this.tipoDocumento.trim(),
+                fuente: this.fuente.trim() || undefined,
+                documentos: docsLimpios.length > 0 ? docsLimpios : undefined,
+                hallazgos: hallazgosLimpios.length > 0 ? hallazgosLimpios : undefined,
+                recomendaciones: this.recomendaciones.trim() || undefined
+            };
+
+            this.documentoApiService.create(createDto).subscribe({
+                next: () => {
+                    this.resetForm();
+                    this.showForm = false;
+                    this.cargarAnalisis();
+                },
+                error: (error) => console.error('Error al crear análisis:', error)
+            });
+        }
     }
 
     agregarDocumento() {
@@ -267,6 +295,46 @@ export class DocumentosComponent implements OnInit {
 
     stopPropagation(event: Event): void {
         event.stopPropagation();
+    }
+
+    editarAnalisis(analisis: AnalisisDocumento): void {
+        this.isEditMode = true;
+        this.analisisEditando = analisis.id;
+        
+        // Pre-llenar formulario
+        this.titulo = analisis.titulo;
+        this.tipoDocumento = analisis.tipoDocumento;
+        this.fuente = analisis.fuente;
+        this.procesoId = analisis.id_proceso || null;
+        this.subprocesoId = analisis.id_subproceso || null;
+        
+        // Cargar subprocesos del proceso seleccionado
+        if (this.procesoId) {
+            const proceso = this.procesos.find(p => Number(p.id) === this.procesoId);
+            if (proceso && proceso.subprocesos) {
+                this.subprocesos = proceso.subprocesos;
+            }
+        }
+        
+        // Copiar documentos (sin isDragging)
+        this.documentos = analisis.documentos.length > 0 
+            ? analisis.documentos.map(d => ({ ...d, isDragging: false }))
+            : [{ nombre: '', tipo: '', url: '', descripcion: '' }];
+        
+        // Copiar hallazgos
+        this.hallazgos = analisis.hallazgos.length > 0 ? [...analisis.hallazgos] : [''];
+        
+        // Copiar recomendaciones
+        this.recomendaciones = analisis.recomendaciones;
+        
+        // Mostrar formulario y scroll
+        this.showForm = true;
+        setTimeout(() => {
+            const formCard = document.querySelector('.form-card');
+            if (formCard) {
+                formCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }, 100);
     }
 
     // Métodos del confirm modal

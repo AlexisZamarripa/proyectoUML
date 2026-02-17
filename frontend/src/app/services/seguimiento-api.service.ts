@@ -5,7 +5,7 @@ import { Observable } from 'rxjs';
 export interface Paso {
   nombre: string;
   duracion: string;
-  responsable: string;
+  estado: string; // 'completado', 'con demora', 'pendiente'
 }
 
 export interface Metrica {

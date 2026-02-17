@@ -634,6 +634,11 @@
     color: #3b82f6 !important;
 }
 
+.btn-edit:hover {
+    background: rgba(16, 185, 129, 0.1) !important;
+    color: #10b981 !important;
+}
+
 /* Badges */
 .analisis-badges {
     display: flex;

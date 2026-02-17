@@ -59,7 +59,7 @@ export class SeguimientoService {
           id_seguimiento: saved.id_seguimiento,
           nombre_paso: paso.nombre,
           duracion: paso.duracion || null,
-          responsable: paso.responsable || null,
+          estado: paso.estado || 'pendiente',
         } as Partial<PasoProceso>);
         await this.pasosRepository.save(pasoEntity);
       }
@@ -139,7 +139,7 @@ export class SeguimientoService {
             id_seguimiento: id,
             nombre_paso: paso.nombre,
             duracion: paso.duracion || null,
-            responsable: paso.responsable || null,
+            estado: paso.estado || 'pendiente',
           } as Partial<PasoProceso>);
           await this.pasosRepository.save(pasoEntity);
         }
@@ -193,7 +193,7 @@ export class SeguimientoService {
     const pasos = (seg.pasos || []).map((paso) => ({
       nombre: paso.nombre_paso || '',
       duracion: paso.duracion || '',
-      responsable: paso.responsable || '',
+      estado: paso.estado || 'pendiente',
     }));
 
     // Formatear fecha

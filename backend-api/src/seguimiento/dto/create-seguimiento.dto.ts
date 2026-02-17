@@ -17,7 +17,7 @@ class PasoDto {
 
   @IsString()
   @IsOptional()
-  responsable?: string;
+  estado?: string; // 'completado', 'con demora', 'pendiente'
 }
 
 class MetricaDto {
