@@ -1,0 +1,205 @@
+/* ============================================
+   CONFIRM MODAL OVERLAY
+   ============================================ */
+.confirm-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3000;
+  padding: 1.5rem;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ============================================
+   MODAL BOX
+   ============================================ */
+.confirm-modal {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 1rem;
+  width: 100%;
+  max-width: 420px;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 1.5rem;
+  animation: scaleIn 0.2s ease;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 
+              0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+@keyframes scaleIn {
+  from { 
+    opacity: 0; 
+    transform: scale(0.95) translateY(10px); 
+  }
+  to   { 
+    opacity: 1; 
+    transform: scale(1) translateY(0); 
+  }
+}
+
+/* ============================================
+   ICON STYLES
+   ============================================ */
+.confirm-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  animation: iconBounce 0.5s ease;
+}
+
+@keyframes iconBounce {
+  0% { 
+    transform: scale(0); 
+    opacity: 0;
+  }
+  50% { 
+    transform: scale(1.1); 
+  }
+  100% { 
+    transform: scale(1); 
+    opacity: 1;
+  }
+}
+
+.confirm-icon-danger {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+}
+
+.confirm-icon-warning {
+  background: rgba(249, 115, 22, 0.12);
+  color: #f97316;
+}
+
+.confirm-icon-info {
+  background: rgba(59, 130, 246, 0.12);
+  color: #3b82f6;
+}
+
+/* ============================================
+   CONTENT
+   ============================================ */
+.confirm-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.confirm-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.confirm-message {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* ============================================
+   ACTIONS
+   ============================================ */
+.confirm-actions {
+  display: flex;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.btn-confirm-cancel {
+  flex: 1;
+  padding: 0.75rem 1.5rem;
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 0.625rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-confirm-cancel:hover {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.btn-confirm-action {
+  flex: 1;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 0.625rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #ffffff;
+}
+
+.btn-confirm-danger {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+}
+
+.btn-confirm-danger:hover {
+  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.4);
+  transform: translateY(-1px);
+}
+
+.btn-confirm-warning {
+  background: linear-gradient(135deg, #f97316, #ea580c);
+}
+
+.btn-confirm-warning:hover {
+  box-shadow: 0 4px 16px rgba(249, 115, 22, 0.4);
+  transform: translateY(-1px);
+}
+
+.btn-confirm-info {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+}
+
+.btn-confirm-info:hover {
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.4);
+  transform: translateY(-1px);
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+@media (max-width: 480px) {
+  .confirm-modal {
+    padding: 1.5rem;
+    max-width: 100%;
+  }
+
+  .confirm-actions {
+    flex-direction: column;
+  }
+
+  .btn-confirm-cancel,
+  .btn-confirm-action {
+    width: 100%;
+  }
+}

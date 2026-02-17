@@ -1,0 +1,182 @@
+import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable, forkJoin, of } from 'rxjs';
+import { map, switchMap, catchError } from 'rxjs/operators';
+
+export type EstadoProyecto = 'planificacion' | 'en-progreso' | 'pausado' | 'completado';
+
+export interface ProyectoBackend {
+  id_proyecto: number;
+  nombre_proyecto: string;
+  descripcion: string;
+  fecha_inicio: string;
+  estado: 'planificacion' | 'en_progreso' | 'pausado' | 'completado';
+  color: string;
+}
+
+export interface Stakeholder {
+  id: string;
+  nombre: string;
+  rol: string;
+  area: string;
+  contacto: string;
+  notas: string;
+  color: string;
+}
+
+export interface Proyecto {
+  id: string;
+  nombre: string;
+  descripcion: string;
+  fechaInicio: string;
+  estado: EstadoProyecto;
+  color: string;
+  stakeholders: Stakeholder[];
+  procesos: any[];
+}
+
+export interface CreateProyectoRequest {
+  nombre_proyecto: string;
+  descripcion: string;
+  fecha_inicio: string;
+  estado: 'planificacion' | 'en_progreso' | 'pausado' | 'completado';
+  color: string;
+}
+
+@Injectable({
+  providedIn: 'root'
+})
+export class ProyectoApiService {
+  private apiUrl = 'http://localhost:3000/proyectos';
+  private stakeholdersUrl = 'http://localhost:3000/stakeholders';
+
+  constructor(private http: HttpClient) {}
+
+  /**
+   * Convertir estado del frontend al formato del backend
+   */
+  private estadoToBackend(estado: EstadoProyecto): string {
+    return estado.replace('-', '_');
+  }
+
+  /**
+   * Convertir estado del backend al formato del frontend
+   */
+  private estadoFromBackend(estado: string): EstadoProyecto {
+    return estado.replace('_', '-') as EstadoProyecto;
+  }
+
+  /**
+   * Convertir proyecto del backend al formato del frontend
+   */
+  private mapToFrontend(proyecto: ProyectoBackend, stakeholders: any[] = []): Proyecto {
+    return {
+      id: proyecto.id_proyecto.toString(),
+      nombre: proyecto.nombre_proyecto,
+      descripcion: proyecto.descripcion,
+      fechaInicio: proyecto.fecha_inicio,
+      estado: this.estadoFromBackend(proyecto.estado),
+      color: proyecto.color,
+      stakeholders: stakeholders.map(s => ({
+        id: s.id_stakeholder.toString(),
+        nombre: s.nombre_completo,
+        rol: s.rol,
+        area: s.area,
+        contacto: s.contacto,
+        notas: s.notas || '',
+        color: s.color
+      })),
+      procesos: []
+    };
+  }
+
+  /**
+   * Obtener todos los proyectos
+   */
+  getProyectos(): Observable<Proyecto[]> {
+    return this.http.get<ProyectoBackend[]>(this.apiUrl).pipe(
+      switchMap(proyectos => {
+        if (proyectos.length === 0) {
+          return of([]);
+        }
+        // Cargar stakeholders para cada proyecto
+        const requests = proyectos.map(proyecto =>
+          this.http.get<any[]>(`${this.stakeholdersUrl}?proyectoId=${proyecto.id_proyecto}`).pipe(
+            catchError(() => of([])),
+            map(stakeholders => this.mapToFrontend(proyecto, stakeholders))
+          )
+        );
+        return forkJoin(requests);
+      })
+    );
+  }
+
+  /**
+   * Obtener un proyecto por ID
+   */
+  getProyecto(id: string): Observable<Proyecto> {
+    return this.http.get<ProyectoBackend>(`${this.apiUrl}/${id}`).pipe(
+      switchMap(proyecto => 
+        this.http.get<any[]>(`${this.stakeholdersUrl}?proyectoId=${id}`).pipe(
+          catchError(() => of([])),
+          map(stakeholders => this.mapToFrontend(proyecto, stakeholders))
+        )
+      )
+    );
+  }
+
+  /**
+   * Crear un nuevo proyecto
+   */
+  createProyecto(proyecto: Omit<Proyecto, 'id' | 'stakeholders' | 'procesos'>): Observable<Proyecto> {
+    const request: CreateProyectoRequest = {
+      nombre_proyecto: proyecto.nombre,
+      descripcion: proyecto.descripcion,
+      fecha_inicio: proyecto.fechaInicio,
+      estado: this.estadoToBackend(proyecto.estado) as any,
+      color: proyecto.color
+    };
+
+    return this.http.post<ProyectoBackend>(this.apiUrl, request).pipe(
+      map(p => this.mapToFrontend(p, []))
+    );
+  }
+
+  /**
+   * Actualizar un proyecto
+   */
+  updateProyecto(id: string, proyecto: Partial<Proyecto>): Observable<Proyecto> {
+    const request: Partial<CreateProyectoRequest> = {};
+
+    if (proyecto.nombre !== undefined) request.nombre_proyecto = proyecto.nombre;
+    if (proyecto.descripcion !== undefined) request.descripcion = proyecto.descripcion;
+    if (proyecto.fechaInicio !== undefined) request.fecha_inicio = proyecto.fechaInicio;
+    if (proyecto.estado !== undefined) request.estado = this.estadoToBackend(proyecto.estado) as any;
+    if (proyecto.color !== undefined) request.color = proyecto.color;
+
+    console.log('Datos enviados al backend:', request);
+
+    return this.http.patch<ProyectoBackend>(`${this.apiUrl}/${id}`, request).pipe(
+      switchMap(proyectoActualizado => 
+        this.http.get<any[]>(`${this.stakeholdersUrl}?proyectoId=${id}`).pipe(
+          catchError(() => of([])),
+          map(stakeholders => this.mapToFrontend(proyectoActualizado, stakeholders))
+        )
+      )
+    );
+  }
+
+  /**
+   * Eliminar un proyecto
+   */
+  deleteProyecto(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/${id}`);
+  }
+
+  /**
+   * Obtener estadísticas
+   */
+  getStats(): Observable<any> {
+    return this.http.get(`${this.apiUrl}/stats`);
+  }
+}

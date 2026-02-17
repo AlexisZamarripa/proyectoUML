@@ -48,70 +48,91 @@
       <div class="form-card" *ngIf="showForm">
         <h3 class="form-title">Gestionar Procesos</h3>
         <form (ngSubmit)="handleSubmit()">
-          <div class="form-grid">
-            <!-- Nombre -->
-            <div class="form-group">
-              <label class="form-label">Nombre del Proceso *</label>
-              <input class="form-input" type="text" [(ngModel)]="nombre" name="nombre" placeholder="Ej: Proceso de Ventas" required />
-            </div>
+          <!-- Nombre -->
+          <div class="form-group">
+            <label class="form-label">Nombre del Proceso *</label>
+            <input class="form-input" type="text" [(ngModel)]="nombre" name="nombre" placeholder="Ej: Proceso de Ventas" required />
+          </div>
 
-            <!-- Descripción -->
-            <div class="form-group full-width">
-              <label class="form-label">Descripción *</label>
-              <textarea class="form-input form-textarea" [(ngModel)]="descripcion" name="descripcion" placeholder="Describe el proceso..." rows="3" required></textarea>
-            </div>
+          <!-- Descripción -->
+          <div class="form-group">
+            <label class="form-label">Descripción *</label>
+            <textarea class="form-input form-textarea" [(ngModel)]="descripcion" name="descripcion" placeholder="Describe el proceso..." rows="3" required></textarea>
+          </div>
 
-            <!-- Color -->
-            <div class="form-group">
-              <label class="form-label">Color</label>
-              <div class="color-selector">
-                <button type="button" class="color-option" *ngFor="let c of COLORES"
-                  [style.background]="c.gradient"
-                  [class.selected]="color === c.valor"
-                  (click)="color = c.valor">
+          <!-- Color -->
+          <div class="form-group">
+            <label class="form-label">Color</label>
+            <div class="color-selector">
+              <button type="button" class="color-option" *ngFor="let c of COLORES"
+                [style.background]="c.gradient"
+                [class.selected]="color === c.valor"
+                (click)="color = c.valor">
+              </button>
+            </div>
+          </div>
+
+          <!-- Stakeholder -->
+          <div class="form-group">
+            <label class="form-label">Stakeholder (opcional)</label>
+            <select class="form-input" [(ngModel)]="stakeholder_id" name="stakeholder_id">
+              <option value="">Seleccionar Stakeholder</option>
+              <option *ngFor="let s of stakeholders" [value]="s.id">{{ s.nombre }} - {{ s.rol }}</option>
+            </select>
+          </div>
+
+          <!-- Departamentos -->
+          <div class="form-group">
+            <div class="form-group-header">
+              <label class="form-label">Departamentos (opcional)</label>
+              <button type="button" class="btn-add-inline" (click)="addDepartamento()">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                  <line x1="12" y1="5" x2="12" y2="19"/>
+                  <line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+                Añadir
+              </button>
+            </div>
+            <div class="items-list" *ngIf="departamentos.length > 0">
+              <div class="item-row" *ngFor="let dep of departamentos; let i = index">
+                <input class="form-input" type="text" [value]="dep" readonly />
+                <button type="button" class="btn-delete-item" (click)="removeDepartamento(i)">
+                  <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <polyline points="3 6 5 6 21 6"/>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                  </svg>
                 </button>
               </div>
             </div>
+            <input class="form-input" type="text" [(ngModel)]="nuevoDepartamento" name="nuevoDepartamento" [placeholder]="'Departamento ' + (departamentos.length + 1)" 
+              (keydown.enter)="$event.preventDefault(); addDepartamento()" />
+          </div>
 
-            <!-- Stakeholder -->
-            <div class="form-group">
-              <label class="form-label">Stakeholder (opcional)</label>
-              <input class="form-input" type="text" [(ngModel)]="stakeholder" name="stakeholder" placeholder="Nombre del stakeholder" />
-            </div>
-
-            <!-- Departamentos -->
-            <div class="form-group">
-              <label class="form-label">Departamentos (opcional)</label>
-              <div class="tag-input-wrapper">
-                <div class="tags-list" *ngIf="departamentos.length > 0">
-                  <span class="tag" *ngFor="let dept of departamentos; let i = index">
-                    {{ dept.nombre }}
-                    <button type="button" class="tag-remove" (click)="removeDepartamento(i)">&times;</button>
-                  </span>
-                </div>
-                <div class="tag-input-row">
-                  <input class="form-input tag-input" type="text" [(ngModel)]="tempDepartamento" name="tempDepartamento" placeholder="Departamento 1" (keydown.enter)="$event.preventDefault(); addDepartamento()" />
-                  <button type="button" class="btn-add-tag" (click)="addDepartamento()">+ Añadir</button>
-                </div>
-              </div>
-            </div>
-
-            <!-- Pasos Clave -->
-            <div class="form-group">
+          <!-- Pasos Clave -->
+          <div class="form-group">
+            <div class="form-group-header">
               <label class="form-label">Pasos Clave (opcional)</label>
-              <div class="tag-input-wrapper">
-                <div class="tags-list" *ngIf="plazoClave.length > 0">
-                  <span class="tag" *ngFor="let plazo of plazoClave; let i = index">
-                    {{ plazo }}
-                    <button type="button" class="tag-remove" (click)="removePlazoClave(i)">&times;</button>
-                  </span>
-                </div>
-                <div class="tag-input-row">
-                  <input class="form-input tag-input" type="text" [(ngModel)]="tempPlazoClave" name="tempPlazoClave" placeholder="Paso 1" (keydown.enter)="$event.preventDefault(); addPlazoClave()" />
-                  <button type="button" class="btn-add-tag" (click)="addPlazoClave()">+ Añadir</button>
-                </div>
+              <button type="button" class="btn-add-inline" (click)="addPaso()">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                  <line x1="12" y1="5" x2="12" y2="19"/>
+                  <line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+                Añadir
+              </button>
+            </div>
+            <div class="items-list" *ngIf="pasos_clave.length > 0">
+              <div class="item-row" *ngFor="let paso of pasos_clave; let i = index">
+                <input class="form-input" type="text" [value]="paso" readonly />
+                <button type="button" class="btn-delete-item" (click)="removePaso(i)">
+                  <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <polyline points="3 6 5 6 21 6"/>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                  </svg>
+                </button>
               </div>
             </div>
+            <input class="form-input" type="text" [(ngModel)]="nuevoPaso" name="nuevoPaso" [placeholder]="'Paso ' + (pasos_clave.length + 1)" 
+              (keydown.enter)="$event.preventDefault(); addPaso()" />
           </div>
 
           <!-- Actions -->
@@ -143,13 +164,6 @@
                 </button>
               </div>
             </div>
-            <p class="proceso-item-stakeholder" *ngIf="proceso.stakeholder">
-              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                <circle cx="12" cy="7" r="4"/>
-              </svg>
-              {{ proceso.stakeholder }}
-            </p>
             <p class="proceso-item-desc">{{ proceso.descripcion }}</p>
           </div>
 
@@ -173,6 +187,13 @@
                 <div class="subproceso-info">
                   <span class="subproceso-simple-nombre">{{ sub.nombre }}</span>
                   <span class="subproceso-simple-desc" *ngIf="sub.descripcion">{{ sub.descripcion }}</span>
+                  <span class="subproceso-simple-stakeholder" *ngIf="sub.stakeholder_id">
+                    <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                      <circle cx="12" cy="7" r="4"/>
+                    </svg>
+                    {{ getStakeholderNombre(sub.stakeholder_id) }}
+                  </span>
                 </div>
                 <button class="btn-delete-simple" (click)="deleteSubproceso(proceso.id, sub.id)" title="Eliminar">
                   <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -190,8 +211,24 @@
 
             <!-- Inline add subproceso form -->
             <div class="inline-sub-form" *ngIf="addingSubprocesoToId === proceso.id">
-              <input class="form-input sub-input" type="text" [(ngModel)]="subNombre" placeholder="Nombre del subproceso" />
-              <input class="form-input sub-input" type="text" [(ngModel)]="subDescripcion" placeholder="Descripción (opcional)" />
+              <div class="inline-sub-header">
+                <h4 class="inline-sub-title">Agregar Subproceso a: {{ proceso.nombre }}</h4>
+              </div>
+              <div class="inline-sub-field">
+                <label class="inline-sub-label">Nombre *</label>
+                <input class="form-input" type="text" [(ngModel)]="subNombre" placeholder="Nombre del subproceso" />
+              </div>
+              <div class="inline-sub-field">
+                <label class="inline-sub-label">Descripción *</label>
+                <textarea class="form-input" [(ngModel)]="subDescripcion" placeholder="Descripción" rows="3"></textarea>
+              </div>
+              <div class="inline-sub-field">
+                <label class="inline-sub-label">Stakeholder (opcional)</label>
+                <select class="form-input" [(ngModel)]="subStakeholderId">
+                  <option value="">Seleccionar Stakeholder</option>
+                  <option *ngFor="let s of stakeholders" [value]="s.id">{{ s.nombre }} - {{ s.rol }}</option>
+                </select>
+              </div>
               <div class="inline-sub-actions">
                 <button class="btn-cancelar btn-sm" (click)="cancelAddSubproceso()">Cancelar</button>
                 <button class="btn-guardar btn-sm" (click)="addSubproceso(proceso.id)">Agregar</button>
@@ -226,7 +263,7 @@
 
   <!-- Modal de Detalle -->
   <div class="modal-overlay" *ngIf="selectedProceso" (click)="closeModal()">
-    <div class="modal-content" (click)="$event.stopPropagation()" [style.border-top-color]="getProcesoColor(selectedProceso.color)">
+    <div class="modal-content" (click)="$event.stopPropagation()">
       <!-- Modal Header -->
       <div class="modal-header" [style.background]="getProcesoGradient(selectedProceso.color)">
         <div class="modal-header-content">
@@ -239,60 +276,38 @@
           </button>
         </div>
         <p class="modal-desc">{{ selectedProceso.descripcion }}</p>
-        
-        <!-- Stakeholder Responsable -->
-        <div class="modal-stakeholder" *ngIf="selectedProceso.stakeholder">
-          <div class="stakeholder-label">Stakeholder Responsable</div>
-          <div class="stakeholder-card">
-            <div class="stakeholder-avatar">
-              <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                <circle cx="12" cy="7" r="4"/>
-              </svg>
-            </div>
-            <div class="stakeholder-info">
-              <div class="stakeholder-name">{{ selectedProceso.stakeholder }}</div>
-              <div class="stakeholder-role" *ngIf="selectedProceso.departamentos.length > 0">{{ selectedProceso.departamentos[0].nombre }}</div>
-            </div>
-          </div>
-        </div>
       </div>
 
       <!-- Modal Body -->
       <div class="modal-body">
+        
         <!-- Departamentos Involucrados -->
         <div class="modal-section" *ngIf="selectedProceso.departamentos.length > 0">
-          <div class="section-header">
+          <div class="section-header-simple">
             <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-              <rect x="3" y="3" width="7" height="7"/>
-              <rect x="14" y="3" width="7" height="7"/>
-              <rect x="14" y="14" width="7" height="7"/>
-              <rect x="3" y="14" width="7" height="7"/>
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+              <line x1="3" y1="9" x2="21" y2="9"/>
             </svg>
             <h3 class="section-title">Departamentos Involucrados</h3>
           </div>
           <div class="badges-list">
-            <span class="badge-blue" *ngFor="let dept of selectedProceso.departamentos">{{ dept.nombre }}</span>
+            <span class="badge-blue" *ngFor="let dep of selectedProceso.departamentos">{{ dep }}</span>
           </div>
         </div>
 
         <!-- Pasos Clave del Proceso -->
-        <div class="modal-section" *ngIf="selectedProceso.plazoClave.length > 0">
-          <div class="section-header">
+        <div class="modal-section" *ngIf="selectedProceso.pasos_clave.length > 0">
+          <div class="section-header-simple">
             <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-              <line x1="8" y1="6" x2="21" y2="6"/>
-              <line x1="8" y1="12" x2="21" y2="12"/>
-              <line x1="8" y1="18" x2="21" y2="18"/>
-              <line x1="3" y1="6" x2="3.01" y2="6"/>
-              <line x1="3" y1="12" x2="3.01" y2="12"/>
-              <line x1="3" y1="18" x2="3.01" y2="18"/>
+              <polyline points="9 11 12 14 22 4"/>
+              <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
             </svg>
             <h3 class="section-title">Pasos Clave del Proceso</h3>
           </div>
           <div class="pasos-list">
-            <div class="paso-item" *ngFor="let paso of selectedProceso.plazoClave; let i = index">
-              <div class="paso-number">{{ i + 1 }}</div>
-              <div class="paso-text">{{ paso }}</div>
+            <div class="paso-item" *ngFor="let paso of selectedProceso.pasos_clave; let i = index">
+              <span class="paso-number">{{ i + 1 }}</span>
+              <span class="paso-text">{{ paso }}</span>
             </div>
           </div>
         </div>
@@ -316,8 +331,24 @@
 
           <!-- Inline add subproceso form in modal -->
           <div class="inline-sub-form-modal" *ngIf="addingSubprocesoModal">
-            <input class="form-input" type="text" [(ngModel)]="subNombre" placeholder="Nombre del subproceso" />
-            <input class="form-input" type="text" [(ngModel)]="subDescripcion" placeholder="Descripción (opcional)" />
+            <div class="inline-sub-header">
+              <h4 class="inline-sub-title-modal">Agregar Subproceso a: {{ selectedProceso.nombre }}</h4>
+            </div>
+            <div class="inline-sub-field">
+              <label class="inline-sub-label">Nombre *</label>
+              <input class="form-input" type="text" [(ngModel)]="subNombre" placeholder="Nombre del subproceso" />
+            </div>
+            <div class="inline-sub-field">
+              <label class="inline-sub-label">Descripción *</label>
+              <textarea class="form-input" [(ngModel)]="subDescripcion" placeholder="Descripción" rows="3"></textarea>
+            </div>
+            <div class="inline-sub-field">
+              <label class="inline-sub-label">Stakeholder (opcional)</label>
+              <select class="form-input" [(ngModel)]="subStakeholderId">
+                <option value="">Seleccionar Stakeholder</option>
+                <option *ngFor="let s of stakeholders" [value]="s.id">{{ s.nombre }} - {{ s.rol }}</option>
+              </select>
+            </div>
             <div class="inline-sub-actions">
               <button class="btn-cancelar btn-sm" (click)="cancelAddSubprocesoModal()">Cancelar</button>
               <button class="btn-guardar btn-sm" (click)="addSubprocesoFromModal()">Agregar</button>
@@ -335,6 +366,13 @@
               <div class="subproceso-modal-content">
                 <div class="subproceso-modal-nombre">{{ sub.nombre }}</div>
                 <div class="subproceso-modal-desc" *ngIf="sub.descripcion">{{ sub.descripcion }}</div>
+                <div class="subproceso-modal-stakeholder" *ngIf="sub.stakeholder_id">
+                  <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                    <circle cx="12" cy="7" r="4"/>
+                  </svg>
+                  {{ getStakeholderNombre(sub.stakeholder_id) }}
+                </div>
               </div>
               <button class="btn-delete-modal" (click)="deleteSubprocesoFromModal(sub.id)" title="Eliminar">
                 <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -348,4 +386,12 @@
       </div>
     </div>
   </div>
+
+<!-- Confirm Modal -->
+<app-confirm-modal
+  [isOpen]="showConfirmModal"
+  [config]="confirmModalConfig"
+  (confirm)="onConfirmModal()"
+  (cancel)="onCancelModal()">
+</app-confirm-modal>
 </div>
