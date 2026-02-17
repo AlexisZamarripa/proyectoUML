@@ -7,6 +7,7 @@ import { ProyectosModule } from './proyectos/proyectos.module';
 import { StakeholdersModule } from './stakeholders/stakeholders.module';
 import { ProcesosModule } from './procesos/procesos.module';
 import { DocumentosModule } from './documentos/documentos.module';
+import { SeguimientoModule } from './seguimiento/seguimiento.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { DocumentosModule } from './documentos/documentos.module';
     StakeholdersModule,
     ProcesosModule,
     DocumentosModule,
+    SeguimientoModule,
   ],
   controllers: [AppController],
   providers: [AppService],
