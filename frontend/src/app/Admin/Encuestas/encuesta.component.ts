@@ -4,24 +4,21 @@ import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { BarraComponent } from '../../components/barra/barra.component';
 import { ProyectoApiService } from '../../services/proyecto-api.service';
+import { EncuestaApiService, Encuesta, TipoPregunta } from '../../services/encuesta-api.service';
+import { ProcesoApiService, Proceso } from '../../services/proceso-api.service';
+import { SubprocesoApiService, Subproceso } from '../../services/subproceso-api.service';
 
-interface Pregunta {
-  id: string;
+interface PreguntaForm {
   texto: string;
-  tipo: string;
+  tipo: TipoPregunta;
 }
 
-interface Encuesta {
-  id: string;
-  titulo: string;
-  descripcion: string;
-  participantesEsperados: number;
-  proceso: string;
-  subproceso: string;
-  preguntas: Pregunta[];
+interface EncuestaUI extends Encuesta {
   estado: 'borrador' | 'activa' | 'cerrada';
   fecha: string;
   participantesReales: number;
+  procesoNombre?: string;
+  subprocesoNombre?: string;
 }
 
 @Component({
@@ -33,17 +30,19 @@ interface Encuesta {
 })
 export class EncuestaComponent implements OnInit {
 
-  proyecto = {
-    id: '',
-    nombre: '',
-    descripcion: '',
-    color: 'blue'
-  };
+  proyecto = { id: 0, nombre: '', descripcion: '', color: 'blue' };
 
   activeTab = 'encuestas';
-
-  encuestas: Encuesta[] = [];
+  encuestas: EncuestaUI[] = [];
   showForm = false;
+  isLoading = false;
+  errorMsg = '';
+
+  // Procesos y subprocesos
+  procesos: Proceso[] = [];
+  subprocesos: Subproceso[] = [];
+  isLoadingProcesos = false;
+  isLoadingSubprocesos = false;
 
   readonly COLORES_PROYECTO: { valor: string; gradient: string }[] = [
     { valor: 'blue', gradient: 'linear-gradient(135deg, #3b82f6, #06b6d4)' },
@@ -58,129 +57,199 @@ export class EncuestaComponent implements OnInit {
   titulo = '';
   descripcion = '';
   participantesEsperados = 0;
-  proceso = '';
-  subproceso = '';
-  preguntas: Pregunta[] = [{ id: this.uid(), texto: '', tipo: 'texto' }];
+  procesoId: number | null = null;
+  subprocesoId: number | null = null;
+  preguntas: PreguntaForm[] = [{ texto: '', tipo: 'texto_abierto' }];
 
-  TIPOS_PREGUNTA = [
-    { valor: 'texto', label: 'Texto abierto' },
-    { valor: 'opcion-multiple', label: 'Opción múltiple' },
+  TIPOS_PREGUNTA: { valor: TipoPregunta; label: string }[] = [
+    { valor: 'texto_abierto', label: 'Texto abierto' },
+    { valor: 'opcion_multiple', label: 'Opción múltiple' },
     { valor: 'escala', label: 'Escala (1-5)' },
-    { valor: 'si-no', label: 'Sí / No' },
-    { valor: 'seleccion', label: 'Selección única' }
+    { valor: 'si_no', label: 'Sí / No' },
   ];
 
   constructor(
     private router: Router,
     private route: ActivatedRoute,
-    private proyectoApiService: ProyectoApiService
-  ) {}
+    private proyectoApiService: ProyectoApiService,
+    private encuestaApiService: EncuestaApiService,
+    private procesoApiService: ProcesoApiService,
+    private subprocesoApiService: SubprocesoApiService
+  ) { }
 
   ngOnInit(): void {
-    const id = this.route.snapshot.paramMap.get('id');
-    if (id) {
-      this.proyectoApiService.getProyecto(id).subscribe({
+    const idParam = this.route.snapshot.paramMap.get('id');
+    if (idParam) {
+      const id = parseInt(idParam, 10);
+      this.proyecto.id = id;
+      this.proyectoApiService.getProyecto(idParam).subscribe({
         next: (p) => {
-          this.proyecto = {
-            id: p.id,
-            nombre: p.nombre,
-            descripcion: p.descripcion,
-            color: p.color
-          };
+          this.proyecto = { id, nombre: p.nombre, descripcion: p.descripcion, color: p.color };
+          this.cargarEncuestas();
+          this.cargarProcesos();
         },
-        error: (error) => console.error('Error al cargar proyecto:', error)
+        error: (err) => console.error('Error al cargar proyecto:', err)
       });
     }
   }
 
-  // Stats
-  get totalEncuestas(): number {
-    return this.encuestas.length;
+  // ─── Carga de datos ────────────────────────────────────────────────────────
+
+  cargarEncuestas(): void {
+    this.isLoading = true;
+    this.encuestaApiService.getEncuestas(this.proyecto.id).subscribe({
+      next: (data) => {
+        this.encuestas = data.map(e => ({
+          ...e,
+          estado: 'activa' as const,
+          fecha: new Date().toISOString().split('T')[0],
+          participantesReales: 0,
+          procesoNombre: undefined,
+          subprocesoNombre: undefined
+        }));
+        this.isLoading = false;
+      },
+      error: (err) => {
+        console.error('Error al cargar encuestas:', err);
+        this.isLoading = false;
+      }
+    });
   }
 
-  get borradores(): number {
-    return this.encuestas.filter(e => e.estado === 'borrador').length;
+  cargarProcesos(): void {
+    this.isLoadingProcesos = true;
+    this.procesoApiService.getProcesos(this.proyecto.id).subscribe({
+      next: (data) => {
+        this.procesos = data;
+        this.isLoadingProcesos = false;
+      },
+      error: (err) => {
+        console.error('Error al cargar procesos:', err);
+        this.isLoadingProcesos = false;
+      }
+    });
   }
 
-  get activas(): number {
-    return this.encuestas.filter(e => e.estado === 'activa').length;
+  onProcesoChange(value: string): void {
+    this.subprocesoId = null;
+    this.subprocesos = [];
+
+    const id = parseInt(value, 10);
+    if (!id) { this.procesoId = null; return; }
+
+    this.procesoId = id;
+    this.isLoadingSubprocesos = true;
+    this.subprocesoApiService.getSubprocesos(id).subscribe({
+      next: (data) => {
+        this.subprocesos = data;
+        this.isLoadingSubprocesos = false;
+      },
+      error: (err) => {
+        console.error('Error al cargar subprocesos:', err);
+        this.isLoadingSubprocesos = false;
+      }
+    });
   }
 
-  get cerradas(): number {
-    return this.encuestas.filter(e => e.estado === 'cerrada').length;
+  // ─── Stats ─────────────────────────────────────────────────────────────────
+
+  get totalEncuestas(): number { return this.encuestas.length; }
+  get borradores(): number { return this.encuestas.filter(e => e.estado === 'borrador').length; }
+  get activas(): number { return this.encuestas.filter(e => e.estado === 'activa').length; }
+  get cerradas(): number { return this.encuestas.filter(e => e.estado === 'cerrada').length; }
+
+  get encuestasBorrador(): EncuestaUI[] { return this.encuestas.filter(e => e.estado === 'borrador'); }
+  get encuestasActivas(): EncuestaUI[] { return this.encuestas.filter(e => e.estado === 'activa'); }
+  get encuestasCerradas(): EncuestaUI[] { return this.encuestas.filter(e => e.estado === 'cerrada'); }
+
+  // ─── Formulario ────────────────────────────────────────────────────────────
+
+  toggleForm(): void {
+    this.showForm = !this.showForm;
+    if (!this.showForm) this.resetForm();
   }
 
-  get encuestasBorrador(): Encuesta[] {
-    return this.encuestas.filter(e => e.estado === 'borrador');
-  }
-
-  get encuestasActivas(): Encuesta[] {
-    return this.encuestas.filter(e => e.estado === 'activa');
-  }
-
-  get encuestasCerradas(): Encuesta[] {
-    return this.encuestas.filter(e => e.estado === 'cerrada');
-  }
-
-  // Form
   handleSubmit(): void {
     if (!this.titulo.trim() || !this.descripcion.trim()) return;
+    if (!this.procesoId || !this.subprocesoId) {
+      this.errorMsg = 'Debes seleccionar un proceso y un subproceso.';
+      return;
+    }
 
-    const nueva: Encuesta = {
-      id: this.uid(),
-      titulo: this.titulo.trim(),
+    const dto = {
+      id_proyecto: this.proyecto.id,
+      id_proceso: this.procesoId,
+      id_subproceso: this.subprocesoId,
+      titulo_encuesta: this.titulo.trim(),
       descripcion: this.descripcion.trim(),
-      participantesEsperados: this.participantesEsperados,
-      proceso: this.proceso.trim(),
-      subproceso: this.subproceso.trim(),
-      preguntas: this.preguntas.filter(p => p.texto.trim() !== ''),
-      estado: 'borrador',
-      fecha: new Date().toISOString().split('T')[0],
-      participantesReales: 0
+      numero_participantes_esperados: this.participantesEsperados,
+      preguntas: this.preguntas
+        .filter(p => p.texto.trim())
+        .map(p => ({ pregunta: p.texto, tipo_pregunta: p.tipo }))
     };
 
-    this.encuestas.push(nueva);
-    this.resetForm();
-    this.showForm = false;
+    this.encuestaApiService.createEncuesta(dto).subscribe({
+      next: (nueva) => {
+        const procesoObj = this.procesos.find(p => p.id === this.procesoId);
+        const subprocesoObj = this.subprocesos.find(s => s.id === this.subprocesoId);
+
+        const nuevaUI: EncuestaUI = {
+          ...nueva,
+          estado: 'borrador',
+          fecha: new Date().toISOString().split('T')[0],
+          participantesReales: 0,
+          procesoNombre: procesoObj?.nombre,
+          subprocesoNombre: subprocesoObj?.nombre,
+        };
+        this.encuestas.push(nuevaUI);
+        this.resetForm();
+        this.showForm = false;
+      },
+      error: (err) => {
+        console.error('Error al crear encuesta:', err);
+        this.errorMsg = 'Error al crear la encuesta. Intenta de nuevo.';
+      }
+    });
   }
 
   resetForm(): void {
     this.titulo = '';
     this.descripcion = '';
     this.participantesEsperados = 0;
-    this.proceso = '';
-    this.subproceso = '';
-    this.preguntas = [{ id: this.uid(), texto: '', tipo: 'texto' }];
+    this.procesoId = null;
+    this.subprocesoId = null;
+    this.subprocesos = [];
+    this.preguntas = [{ texto: '', tipo: 'texto_abierto' }];
+    this.errorMsg = '';
   }
 
   addPregunta(): void {
-    this.preguntas.push({ id: this.uid(), texto: '', tipo: 'texto' });
+    this.preguntas.push({ texto: '', tipo: 'texto_abierto' });
   }
 
   removePregunta(index: number): void {
-    if (this.preguntas.length > 1) {
-      this.preguntas.splice(index, 1);
-    }
+    if (this.preguntas.length > 1) this.preguntas.splice(index, 1);
   }
 
-  deleteEncuesta(id: string): void {
-    this.encuestas = this.encuestas.filter(e => e.id !== id);
+  deleteEncuesta(id: number): void {
+    if (!confirm('¿Eliminar esta encuesta?')) return;
+    this.encuestaApiService.deleteEncuesta(id).subscribe({
+      next: () => { this.encuestas = this.encuestas.filter(e => e.id_encuesta !== id); },
+      error: (err) => console.error('Error al eliminar encuesta:', err)
+    });
   }
 
-  activarEncuesta(id: string): void {
-    const enc = this.encuestas.find(e => e.id === id);
+  activarEncuesta(id: number): void {
+    const enc = this.encuestas.find(e => e.id_encuesta === id);
     if (enc) enc.estado = 'activa';
   }
 
-  cerrarEncuesta(id: string): void {
-    const enc = this.encuestas.find(e => e.id === id);
+  cerrarEncuesta(id: number): void {
+    const enc = this.encuestas.find(e => e.id_encuesta === id);
     if (enc) enc.estado = 'cerrada';
   }
 
-  // Navigation
-  goBack(): void {
-    this.router.navigate(['/proyectos']);
-  }
+  goBack(): void { this.router.navigate(['/proyectos']); }
 
   getProyectoGradient(): string {
     const c = this.COLORES_PROYECTO.find(x => x.valor === this.proyecto.color);
@@ -188,29 +257,8 @@ export class EncuestaComponent implements OnInit {
   }
 
   formatDate(dateStr: string): string {
+    if (!dateStr) return '';
     const d = new Date(dateStr + 'T00:00:00');
     return d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
-  }
-
-  getEstadoBadgeClass(estado: string): string {
-    switch (estado) {
-      case 'borrador': return 'badge-gray';
-      case 'activa': return 'badge-green';
-      case 'cerrada': return 'badge-blue';
-      default: return 'badge-gray';
-    }
-  }
-
-  getEstadoLabel(estado: string): string {
-    switch (estado) {
-      case 'borrador': return 'Borrador';
-      case 'activa': return 'Activa';
-      case 'cerrada': return 'Cerrada';
-      default: return estado;
-    }
-  }
-
-  private uid(): string {
-    return Math.random().toString(36).substring(2, 11);
   }
 }

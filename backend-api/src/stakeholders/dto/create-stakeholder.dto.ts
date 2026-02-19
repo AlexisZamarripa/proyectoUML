@@ -1,3 +1,4 @@
+// create-stakeholder.dto.ts
 import { IsString, IsNotEmpty, IsOptional, IsInt } from 'class-validator';
 
 export class CreateStakeholderDto {

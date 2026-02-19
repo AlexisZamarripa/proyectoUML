@@ -4,11 +4,10 @@ import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { BarraComponent } from '../../components/barra/barra.component';
 import { ProyectoApiService } from '../../services/proyecto-api.service';
+import { EntrevistaApiService, Entrevista } from '../../services/Entrevista-api.service';
 
-interface Pregunta {
-  id: string;
+interface PreguntaForm {
   texto: string;
-  respuesta: string;
 }
 
 interface ArchivoAdjunto {
@@ -17,19 +16,11 @@ interface ArchivoAdjunto {
   tipo: string;
 }
 
-interface Entrevista {
-  id: string;
-  titulo: string;
-  entrevistador: string;
-  entrevistado: string;
-  fecha: string;
-  notas: string;
-  proceso: string;
-  subproceso: string;
-  preguntas: Pregunta[];
-  archivos: ArchivoAdjunto[];
+interface EntrevistaUI extends Entrevista {
   estado: 'pendiente' | 'realizada';
   conRespuestas: boolean;
+  archivos: ArchivoAdjunto[];
+  fecha: string;
 }
 
 @Component({
@@ -41,16 +32,14 @@ interface Entrevista {
 })
 export class EntrevistaComponent implements OnInit {
 
-  proyecto = {
-    id: '',
-    nombre: '',
-    descripcion: '',
-    color: 'blue'
-  };
+  proyecto = { id: '', nombre: '', descripcion: '', color: 'blue' };
 
-  entrevistas: Entrevista[] = [];
-
+  entrevistas: EntrevistaUI[] = [];
   showForm = false;
+  isLoading = false;
+  errorMsg = '';
+  anotandoId: string | null = null;
+  activeTab = 'entrevistas';
 
   // Form fields
   titulo = '';
@@ -59,12 +48,7 @@ export class EntrevistaComponent implements OnInit {
   notas = '';
   proceso = '';
   subproceso = '';
-  preguntas: { texto: string }[] = [{ texto: '' }];
-
-  // Anotar respuestas
-  anotandoId: string | null = null;
-
-  activeTab = 'entrevistas';
+  preguntas: PreguntaForm[] = [{ texto: '' }];
 
   readonly COLORES_PROYECTO: { valor: string; gradient: string }[] = [
     { valor: 'blue', gradient: 'linear-gradient(135deg, #3b82f6, #06b6d4)' },
@@ -78,8 +62,9 @@ export class EntrevistaComponent implements OnInit {
   constructor(
     private router: Router,
     private route: ActivatedRoute,
-    private proyectoApiService: ProyectoApiService
-  ) {}
+    private proyectoApiService: ProyectoApiService,
+    private entrevistaApiService: EntrevistaApiService
+  ) { }
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
@@ -90,67 +75,76 @@ export class EntrevistaComponent implements OnInit {
           this.proyecto.nombre = p.nombre;
           this.proyecto.descripcion = p.descripcion;
           this.proyecto.color = p.color;
+          this.cargarEntrevistas();
         },
-        error: (error) => console.error('Error al cargar proyecto:', error)
+        error: (err) => console.error('Error al cargar proyecto:', err)
       });
     }
   }
 
-  goBack(): void {
-    this.router.navigate(['/proyectos']);
+  cargarEntrevistas(): void {
+    this.isLoading = true;
+    this.entrevistaApiService.getEntrevistas(this.proyecto.id).subscribe({
+      next: (data) => {
+        this.entrevistas = data.map(e => ({
+          ...e,
+          estado: 'pendiente' as const,
+          conRespuestas: false,
+          archivos: [],
+          fecha: new Date().toISOString().split('T')[0]
+        }));
+        this.isLoading = false;
+      },
+      error: (err) => {
+        console.error('Error al cargar entrevistas:', err);
+        this.isLoading = false;
+      }
+    });
   }
 
-  getProyectoGradient(): string {
-    const c = this.COLORES_PROYECTO.find(x => x.valor === this.proyecto.color);
-    return c ? c.gradient : this.COLORES_PROYECTO[0].gradient;
-  }
-
-  // ===== STATS =====
-
-  get totalEntrevistas(): number {
-    return this.entrevistas.length;
-  }
-
-  get realizadas(): number {
-    return this.entrevistas.filter(e => e.estado === 'realizada').length;
-  }
-
-  get pendientes(): number {
-    return this.entrevistas.filter(e => e.estado === 'pendiente').length;
-  }
-
-  get entrevistasRealizadas(): Entrevista[] {
-    return this.entrevistas.filter(e => e.estado === 'realizada');
-  }
-
-  get entrevistasPendientes(): Entrevista[] {
-    return this.entrevistas.filter(e => e.estado === 'pendiente');
-  }
-
-  // ===== FORM =====
+  // Stats
+  get totalEntrevistas(): number { return this.entrevistas.length; }
+  get realizadas(): number { return this.entrevistas.filter(e => e.estado === 'realizada').length; }
+  get pendientes(): number { return this.entrevistas.filter(e => e.estado === 'pendiente').length; }
+  get entrevistasRealizadas(): EntrevistaUI[] { return this.entrevistas.filter(e => e.estado === 'realizada'); }
+  get entrevistasPendientes(): EntrevistaUI[] { return this.entrevistas.filter(e => e.estado === 'pendiente'); }
 
   handleSubmit(): void {
     if (!this.titulo || !this.entrevistador || !this.entrevistado) return;
 
-    const nueva: Entrevista = {
-      id: this.generateUUID(),
-      titulo: this.titulo,
-      entrevistador: this.entrevistador,
-      entrevistado: this.entrevistado,
-      fecha: new Date().toISOString().split('T')[0],
-      notas: this.notas,
-      proceso: this.proceso,
-      subproceso: this.subproceso,
-      preguntas: this.preguntas
-        .filter(p => p.texto.trim())
-        .map(p => ({ id: this.generateUUID(), texto: p.texto, respuesta: '' })),
-      archivos: [],
-      estado: 'pendiente',
-      conRespuestas: false,
-    };
+    const procesoId = (parseInt(this.proceso, 10) || 1).toString();
+    const subprocesoId = (parseInt(this.subproceso, 10) || 1).toString();
 
-    this.entrevistas.push(nueva);
-    this.resetForm();
+    this.entrevistaApiService.createEntrevista(
+      this.proyecto.id,
+      procesoId,
+      subprocesoId,
+      {
+        titulo: this.titulo,
+        entrevistador: this.entrevistador,
+        entrevistado: this.entrevistado,
+        notas: this.notas,
+        preguntas: this.preguntas
+          .filter(p => p.texto.trim())
+          .map(p => ({ id: '', texto: p.texto, respuesta: '' }))
+      }
+    ).subscribe({
+      next: (nueva) => {
+        const nuevaUI: EntrevistaUI = {
+          ...nueva,
+          estado: 'pendiente',
+          conRespuestas: false,
+          archivos: [],
+          fecha: new Date().toISOString().split('T')[0]
+        };
+        this.entrevistas.push(nuevaUI);
+        this.resetForm();
+      },
+      error: (err) => {
+        console.error('Error al crear entrevista:', err);
+        this.errorMsg = 'Error al crear la entrevista. Intenta de nuevo.';
+      }
+    });
   }
 
   resetForm(): void {
@@ -162,38 +156,24 @@ export class EntrevistaComponent implements OnInit {
     this.subproceso = '';
     this.preguntas = [{ texto: '' }];
     this.showForm = false;
+    this.errorMsg = '';
   }
 
-  addPregunta(): void {
-    this.preguntas.push({ texto: '' });
-  }
+  addPregunta(): void { this.preguntas.push({ texto: '' }); }
 
   removePregunta(index: number): void {
-    if (this.preguntas.length > 1) {
-      this.preguntas.splice(index, 1);
-    }
+    if (this.preguntas.length > 1) this.preguntas.splice(index, 1);
   }
 
-  // ===== ANOTAR RESPUESTAS =====
+  startAnotar(entrevistaId: string): void { this.anotandoId = entrevistaId; }
+  cancelAnotar(): void { this.anotandoId = null; }
 
-  startAnotar(entrevistaId: string): void {
-    this.anotandoId = entrevistaId;
-  }
-
-  cancelAnotar(): void {
-    this.anotandoId = null;
-  }
-
-  guardarRespuestas(entrevista: Entrevista): void {
+  guardarRespuestas(entrevista: EntrevistaUI): void {
     const tieneRespuestas = entrevista.preguntas.some(p => p.respuesta.trim());
     entrevista.conRespuestas = tieneRespuestas;
-    if (tieneRespuestas) {
-      entrevista.estado = 'realizada';
-    }
+    if (tieneRespuestas) entrevista.estado = 'realizada';
     this.anotandoId = null;
   }
-
-  // ===== FILES =====
 
   onFileSelect(event: Event, entrevistaId: string): void {
     const input = event.target as HTMLInputElement;
@@ -202,11 +182,7 @@ export class EntrevistaComponent implements OnInit {
       if (entrevista) {
         for (let i = 0; i < input.files.length; i++) {
           const file = input.files[i];
-          entrevista.archivos.push({
-            id: this.generateUUID(),
-            nombre: file.name,
-            tipo: file.type,
-          });
+          entrevista.archivos.push({ id: this.generateUUID(), nombre: file.name, tipo: file.type });
         }
       }
     }
@@ -214,23 +190,29 @@ export class EntrevistaComponent implements OnInit {
 
   removeArchivo(entrevistaId: string, archivoId: string): void {
     const entrevista = this.entrevistas.find(e => e.id === entrevistaId);
-    if (entrevista) {
-      entrevista.archivos = entrevista.archivos.filter(a => a.id !== archivoId);
-    }
+    if (entrevista) entrevista.archivos = entrevista.archivos.filter(a => a.id !== archivoId);
   }
 
   deleteEntrevista(id: string, event: Event): void {
     event.stopPropagation();
-    if (confirm('¿Eliminar esta entrevista?')) {
-      this.entrevistas = this.entrevistas.filter(e => e.id !== id);
-    }
+    if (!confirm('¿Eliminar esta entrevista?')) return;
+    this.entrevistaApiService.deleteEntrevista(id).subscribe({
+      next: () => { this.entrevistas = this.entrevistas.filter(e => e.id !== id); },
+      error: (err) => console.error('Error al eliminar entrevista:', err)
+    });
+  }
+
+  goBack(): void { this.router.navigate(['/proyectos']); }
+
+  getProyectoGradient(): string {
+    const c = this.COLORES_PROYECTO.find(x => x.valor === this.proyecto.color);
+    return c ? c.gradient : this.COLORES_PROYECTO[0].gradient;
   }
 
   formatDate(dateString: string): string {
+    if (!dateString) return '';
     return new Date(dateString).toLocaleDateString('es-ES', {
-      day: 'numeric',
-      month: 'numeric',
-      year: 'numeric'
+      day: 'numeric', month: 'numeric', year: 'numeric'
     });
   }
 

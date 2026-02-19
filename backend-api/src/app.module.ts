@@ -5,6 +5,11 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ProyectosModule } from './proyectos/proyectos.module';
 import { StakeholdersModule } from './stakeholders/stakeholders.module';
+import { EntrevistasModule } from './Entrevista/entrevista.module';
+import { EncuestasModule } from './Encuestas/encuestas.module';
+import { ObservacionesModule } from './Observaciones/observaciones.module';
+import { HistoriasUsuarioModule } from './CasosUso/CU.module';
+import { FocusGroupModule } from './FocusGroup/focusGroup.module';
 
 @Module({
   imports: [
@@ -19,13 +24,18 @@ import { StakeholdersModule } from './stakeholders/stakeholders.module';
       password: process.env.DB_PASSWORD || '',
       database: process.env.DB_DATABASE || 'proyecto_uml',
       entities: [__dirname + '/**/*.entity{.ts,.js}'],
-      synchronize: false, // En producción debe ser false
+      synchronize: false,
       logging: true,
     }),
     ProyectosModule,
     StakeholdersModule,
+    EntrevistasModule,
+    EncuestasModule,
+    ObservacionesModule,
+    HistoriasUsuarioModule,
+    FocusGroupModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule { }
