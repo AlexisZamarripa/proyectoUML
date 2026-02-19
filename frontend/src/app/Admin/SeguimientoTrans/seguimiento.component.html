@@ -49,6 +49,14 @@
       <!-- Form Card -->
       <div class="form-card" *ngIf="showForm">
         <h3 class="form-title">Crear Seguimiento Transaccional</h3>
+        <p style="font-size: 0.85rem; color: var(--text-secondary); margin: -0.5rem 0 1rem 0;">
+          <svg width="14" height="14" style="vertical-align: -2px; margin-right: 4px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="16" x2="12" y2="12"></line>
+            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+          </svg>
+          El ID de transacción se generará automáticamente (formato: TXN-[año]-[número])
+        </p>
         <form (ngSubmit)="handleSubmit()">
           
           <!-- Título -->
@@ -57,27 +65,27 @@
             <input class="form-input" type="text" [(ngModel)]="titulo" name="titulo" placeholder="Ej: Seguimiento de Orden #12345" required />
           </div>
 
-          <!-- ID Transacción + Nombre del Proceso -->
-          <div class="form-grid">
-            <div class="form-group">
-              <label class="form-label">ID de Transacción *</label>
-              <input class="form-input" type="text" [(ngModel)]="idTransaccion" name="idTransaccion" placeholder="Ej: TXN-2025-001" required />
-            </div>
-            <div class="form-group">
-              <label class="form-label">Nombre del Proceso *</label>
-              <input class="form-input" type="text" [(ngModel)]="nombreProceso" name="nombreProceso" placeholder="Ej: Procesamiento de Orden de Compra" required />
-            </div>
+          <!-- Nombre del Proceso (campo único) -->
+          <div class="form-group full-width">
+            <label class="form-label">Nombre del Proceso *</label>
+            <input class="form-input" type="text" [(ngModel)]="nombreProceso" name="nombreProceso" placeholder="Ej: Procesamiento de Orden de Compra" required />
           </div>
 
           <!-- Proceso Vinculado + Subproceso -->
           <div class="form-grid">
             <div class="form-group">
-              <label class="form-label">Proceso Vinculado</label>
-              <input class="form-input" type="text" [(ngModel)]="procesoVinculado" name="procesoVinculado" placeholder="Nombre del proceso" />
+              <label class="form-label">Proceso Vinculado (opcional)</label>
+              <select class="form-input" [(ngModel)]="procesoVinculadoId" name="procesoVinculado" (change)="onProcesoChange()">
+                <option value="">-- Seleccionar proceso --</option>
+                <option *ngFor="let proceso of procesosDisponibles" [value]="proceso.id">{{ proceso.nombre }}</option>
+              </select>
             </div>
             <div class="form-group">
-              <label class="form-label">Subproceso</label>
-              <input class="form-input" type="text" [(ngModel)]="subproceso" name="subproceso" placeholder="Nombre del subproceso" />
+              <label class="form-label">Subproceso (opcional)</label>
+              <select class="form-input" [(ngModel)]="subprocesoId" name="subproceso" [disabled]="!procesoVinculadoId || subprocesosDisponibles.length === 0">
+                <option value="">-- Seleccionar subproceso --</option>
+                <option *ngFor="let subproceso of subprocesosDisponibles" [value]="subproceso.id">{{ subproceso.nombre }}</option>
+              </select>
             </div>
           </div>
 

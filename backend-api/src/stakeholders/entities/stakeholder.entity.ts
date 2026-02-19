@@ -8,10 +8,10 @@ export class Stakeholder {
   @Column({ type: 'int' })
   id_proyecto: number;
 
-  @Column({ type: 'int', nullable: true, default: null })
+  @Column({ type: 'int', nullable: true })
   id_proceso: number | null;
 
-  @Column({ type: 'int', nullable: true, default: null })
+  @Column({ type: 'int', nullable: true })
   id_subproceso: number | null;
 
   @Column({ type: 'varchar', length: 150 })

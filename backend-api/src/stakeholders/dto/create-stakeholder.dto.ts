@@ -8,11 +8,11 @@ export class CreateStakeholderDto {
 
   @IsInt()
   @IsOptional()
-  id_proceso?: number;
+  id_proceso?: number | null;
 
   @IsInt()
   @IsOptional()
-  id_subproceso?: number;
+  id_subproceso?: number | null;
 
   @IsString()
   @IsNotEmpty()

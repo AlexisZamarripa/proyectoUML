@@ -1,16 +1,6 @@
-import { IsString, IsOptional, IsInt, ValidateIf } from 'class-validator';
+import { IsString, IsOptional } from 'class-validator';
 
 export class UpdateStakeholderDto {
-  @ValidateIf((o) => o.id_proceso !== null && o.id_proceso !== undefined)
-  @IsInt()
-  @IsOptional()
-  id_proceso?: number | null;
-
-  @ValidateIf((o) => o.id_subproceso !== null && o.id_subproceso !== undefined)
-  @IsInt()
-  @IsOptional()
-  id_subproceso?: number | null;
-
   @IsString()
   @IsOptional()
   nombre_completo?: string;

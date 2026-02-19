@@ -1,5 +1,5 @@
 /* ============================================
-   SEGUIMIENTO PAGE
+   seguimiento.component.css
    ============================================ */
 .seguimiento-page {
   display: flex;
@@ -140,37 +140,37 @@
    ============================================ */
 
 .empty-state {
-    text-align: center;
-    padding: 4rem 2rem;
-    background: var(--bg-card);
-    border: 2px dashed var(--border-color);
-    border-radius: 0.875rem;
-    margin-top: 1.5rem;
+  text-align: center;
+  padding: 4rem 2rem;
+  background: var(--bg-card);
+  border: 2px dashed var(--border-color);
+  border-radius: 0.875rem;
+  margin-top: 1.5rem;
 }
 
 .empty-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 64px;
-    height: 64px;
-    background: var(--bg-secondary);
-    border-radius: 1rem;
-    margin: 0 auto 1rem;
-    color: var(--text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  background: var(--bg-secondary);
+  border-radius: 1rem;
+  margin: 0 auto 1rem;
+  color: var(--text-secondary);
 }
 
 .empty-title {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: var(--text-primary);
-    margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
 }
 
 .empty-desc {
-    font-size: 0.875rem;
-    color: var(--text-secondary);
-    margin: 0.5rem 0 1.5rem 0;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin: 0.5rem 0 1.5rem 0;
 }
 
 /* ============================================
@@ -178,9 +178,9 @@
    ============================================ */
 
 .seguimientos-list {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1rem;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
 }
 
 .seguimiento-card {
@@ -251,162 +251,162 @@
 
 .btn-icon:hover,
 .btn-delete-icon:hover {
-    background: rgba(239, 68, 68, 0.1);
-    color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
 }
 
 /* Badges */
 .seguimiento-badges {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    margin-bottom: 0.75rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
 }
 
 .badge-proceso-red {
-    padding: 0.3rem 0.75rem;
-    background: rgba(239, 68, 68, 0.15);
-    color: #ef4444;
-    border-radius: 0.375rem;
-    font-size: 0.7rem;
-    font-weight: 600;
+  padding: 0.3rem 0.75rem;
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border-radius: 0.375rem;
+  font-size: 0.7rem;
+  font-weight: 600;
 }
 
 /* Proceso Info */
 .seguimiento-proceso {
-    background: var(--bg-secondary);
-    border: 1px solid var(--border-color);
-    border-radius: 0.5rem;
-    padding: 0.75rem;
-    margin-bottom: 0.75rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  margin-bottom: 0.75rem;
 }
 
 .proceso-info {
-    font-size: 0.8rem;
-    color: var(--text-secondary);
-    margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin: 0;
 }
 
 .proceso-info strong {
-    color: var(--text-primary);
-    font-weight: 600;
+  color: var(--text-primary);
+  font-weight: 600;
 }
 
 /* Pasos */
 .seguimiento-pasos {
-    background: var(--bg-secondary);
-    border: 1px solid var(--border-color);
-    border-radius: 0.5rem;
-    padding: 0.875rem;
-    margin-bottom: 0.875rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 0.5rem;
+  padding: 0.875rem;
+  margin-bottom: 0.875rem;
 }
 
 .pasos-titulo {
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: var(--text-primary);
-    margin: 0 0 0.6rem 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 0.6rem 0;
 }
 
 .pasos-lista-mini {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
 .pasos-lista-mini li {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.8rem;
-    color: var(--text-secondary);
-    line-height: 1.5;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
 }
 
 .check-icon {
-    flex-shrink: 0;
-    color: #10b981;
+  flex-shrink: 0;
+  color: #10b981;
 }
 
 .paso-nombre {
-    flex: 1;
+  flex: 1;
 }
 
 .paso-duracion {
-    color: #10b981;
-    font-size: 0.75rem;
-    font-weight: 600;
+  color: #10b981;
+  font-size: 0.75rem;
+  font-weight: 600;
 }
 
 .pasos-more {
-    display: inline-block;
-    margin-top: 0.5rem;
-    font-size: 0.75rem;
-    color: var(--text-muted);
-    font-style: italic;
+  display: inline-block;
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-style: italic;
 }
 
 /* Métricas */
 .seguimiento-metricas {
-    background: var(--bg-secondary);
-    border: 1px solid var(--border-color);
-    border-radius: 0.5rem;
-    padding: 0.875rem;
-    margin-bottom: 0.875rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 0.5rem;
+  padding: 0.875rem;
+  margin-bottom: 0.875rem;
 }
 
 .metricas-titulo {
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: var(--text-primary);
-    margin: 0 0 0.75rem 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 0.75rem 0;
 }
 
 .metricas-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1rem;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
 }
 
 .metrica-item {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-    text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  text-align: center;
 }
 
 .metrica-label {
-    font-size: 0.7rem;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .metrica-valor {
-    font-size: 1rem;
-    font-weight: 700;
-    color: var(--text-primary);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
 }
 
 /* Footer */
 .seguimiento-footer {
-    padding-top: 0.75rem;
-    border-top: 1px solid var(--border-color);
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border-color);
 }
 
 .problemas-text {
-    font-size: 0.8rem;
-    color: var(--text-secondary);
-    line-height: 1.6;
-    margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 0;
 }
 
 .problemas-text strong {
-    color: var(--text-primary);
-    font-weight: 600;
+  color: var(--text-primary);
+  font-weight: 600;
 }
 
 /* ============================================
@@ -425,6 +425,7 @@
     opacity: 0;
     transform: translateY(-20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -480,6 +481,12 @@
   outline: none;
   border-color: #ef4444;
   box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+.form-input:disabled {
+  background: var(--bg-secondary, #f1f5f9);
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 /* Pasos Box */
@@ -746,7 +753,7 @@
   .seguimientos-list {
     grid-template-columns: 1fr;
   }
-  
+
   .metricas-grid {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -767,7 +774,7 @@
     width: 100%;
     justify-content: center;
   }
-  
+
   .paso-fields {
     grid-template-columns: 1fr;
   }
@@ -805,7 +812,7 @@
   .btn-submit-red {
     width: 100%;
   }
-  
+
   .metricas-grid {
     grid-template-columns: 1fr;
   }

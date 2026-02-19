@@ -3,23 +3,10 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { BarraComponent } from '../../components/barra/barra.component';
+import { ConfirmModalComponent, ConfirmModalConfig } from '../../components/confirm-modal/confirm-modal.component';
 import { ProyectoApiService, Proyecto, EstadoProyecto } from '../../services/proyecto-api.service';
-interface Subproceso {
-  id: string;
-  nombre: string;
-  descripcion: string;
-}
-
-interface Proceso {
-  id: string;
-  nombre: string;
-  descripcion: string;
-  color: string;
-  peso: number;
-  departamentos: string;
-  plazos_clave: string;
-  subprocesos: Subproceso[];
-}
+import { StakeholderApiService, Stakeholder } from '../../services/stakeholder-api.service';
+import { ProcesoApiService, Proceso, Subproceso } from '../../services/proceso-api.service';
 
 interface ColorOption {
   valor: string;
@@ -30,7 +17,7 @@ interface ColorOption {
 @Component({
   selector: 'app-procesos',
   standalone: true,
-  imports: [CommonModule, FormsModule, BarraComponent],
+  imports: [CommonModule, FormsModule, BarraComponent, ConfirmModalComponent],
   templateUrl: './procesos.component.html',
   styleUrls: ['./procesos.component.css']
 })
@@ -45,6 +32,7 @@ export class ProcesosComponent implements OnInit {
   };
 
   procesos: Proceso[] = [];
+  stakeholders: Stakeholder[] = [];
 
   showForm = false;
 
@@ -52,18 +40,35 @@ export class ProcesosComponent implements OnInit {
   nombre = '';
   descripcion = '';
   color = 'blue';
-  peso: number = 1;
-  departamentos = '';
-  plazos_clave = '';
+  stakeholder_id = '';
+  departamentos: string[] = [];
+  pasos_clave: string[] = [];
+  
+  // Temp inputs
+  nuevoDepartamento = '';
+  nuevoPaso = '';
 
   // Subproceso inline form
   addingSubprocesoToId: string | null = null;
   addingSubprocesoModal = false;
   subNombre = '';
   subDescripcion = '';
+  subStakeholderId = '';
 
   // Modal
   selectedProceso: Proceso | null = null;
+
+  // Confirm modal
+  showConfirmModal = false;
+  confirmModalConfig: ConfirmModalConfig = {
+    title: '',
+    message: '',
+    confirmText: 'Eliminar',
+    cancelText: 'Cancelar',
+    type: 'danger',
+    icon: 'trash'
+  };
+  private confirmCallback: (() => void) | null = null;
 
   activeTab = 'procesos';
 
@@ -86,7 +91,9 @@ export class ProcesosComponent implements OnInit {
   constructor(
     private router: Router,
     private route: ActivatedRoute,
-    private proyectoApiService: ProyectoApiService
+    private proyectoApiService: ProyectoApiService,
+    private stakeholderApiService: StakeholderApiService,
+    private procesoApiService: ProcesoApiService
   ) {}
 
   ngOnInit(): void {
@@ -101,7 +108,27 @@ export class ProcesosComponent implements OnInit {
         },
         error: (error) => console.error('Error al cargar proyecto:', error)
       });
+      
+      // Cargar stakeholders del proyecto
+      this.stakeholderApiService.getStakeholders(id).subscribe({
+        next: (stakeholders) => {
+          this.stakeholders = stakeholders;
+        },
+        error: (error) => console.error('Error al cargar stakeholders:', error)
+      });
+
+      // Cargar procesos del proyecto
+      this.loadProcesos(id);
     }
+  }
+
+  loadProcesos(proyectoId: string): void {
+    this.procesoApiService.getProcesosByProyecto(parseInt(proyectoId)).subscribe({
+      next: (procesos) => {
+        this.procesos = procesos;
+      },
+      error: (error) => console.error('Error al cargar procesos:', error)
+    });
   }
 
   goBack(): void {
@@ -126,38 +153,86 @@ export class ProcesosComponent implements OnInit {
   // ===== FORM =====
 
   handleSubmit(): void {
-    if (!this.nombre || !this.descripcion || !this.peso) return;
+    if (!this.nombre || !this.descripcion) return;
 
-    const nuevo: Proceso = {
-      id: this.generateUUID(),
-      nombre: this.nombre,
+    const createDto = {
+      id_proyecto: parseInt(this.proyecto.id),
+      nombre_proceso: this.nombre,
       descripcion: this.descripcion,
       color: this.color,
-      peso: this.peso,
-      departamentos: this.departamentos,
-      plazos_clave: this.plazos_clave,
-      subprocesos: [],
+      id_stakeholder: this.stakeholder_id ? parseInt(this.stakeholder_id) : null,
+      departamentos: [...this.departamentos],
+      pasos_clave: [...this.pasos_clave],
     };
 
-    this.procesos.push(nuevo);
-    this.resetForm();
+    this.procesoApiService.createProceso(createDto).subscribe({
+      next: () => {
+        this.resetForm();
+        this.loadProcesos(this.proyecto.id);
+      },
+      error: (error) => console.error('Error al crear proceso:', error)
+    });
   }
 
   resetForm(): void {
     this.nombre = '';
     this.descripcion = '';
     this.color = 'blue';
-    this.peso = 1;
-    this.departamentos = '';
-    this.plazos_clave = '';
+    this.stakeholder_id = '';
+    this.departamentos = [];
+    this.pasos_clave = [];
+    this.nuevoDepartamento = '';
+    this.nuevoPaso = '';
     this.showForm = false;
+  }
+
+  // ===== DEPARTAMENTOS =====
+
+  addDepartamento(): void {
+    if (this.nuevoDepartamento.trim()) {
+      this.departamentos.push(this.nuevoDepartamento.trim());
+      this.nuevoDepartamento = '';
+    }
+  }
+
+  removeDepartamento(index: number): void {
+    this.departamentos.splice(index, 1);
+  }
+
+  // ===== PASOS CLAVE =====
+
+  addPaso(): void {
+    if (this.nuevoPaso.trim()) {
+      this.pasos_clave.push(this.nuevoPaso.trim());
+      this.nuevoPaso = '';
+    }
+  }
+
+  removePaso(index: number): void {
+    this.pasos_clave.splice(index, 1);
+  }
+
+  // ===== HELPERS =====
+
+  getStakeholderNombre(id: string): string {
+    const stakeholder = this.stakeholders.find(s => s.id === id);
+    return stakeholder ? stakeholder.nombre : 'N/A';
   }
 
   deleteProceso(id: string, event: Event): void {
     event.stopPropagation();
-    if (confirm('¿Eliminar este proceso y todos sus subprocesos?')) {
-      this.procesos = this.procesos.filter(p => p.id !== id);
-    }
+    this.openConfirmModal(
+      '¿Eliminar proceso?',
+      '¿Estás seguro de que deseas eliminar este proceso y todos sus subprocesos? Esta acción no se puede deshacer.',
+      () => {
+        this.procesoApiService.deleteProceso(parseInt(id)).subscribe({
+          next: () => {
+            this.loadProcesos(this.proyecto.id);
+          },
+          error: (error) => console.error('Error al eliminar proceso:', error)
+        });
+      }
+    );
   }
 
   // ===== SUBPROCESOS =====
@@ -166,32 +241,51 @@ export class ProcesosComponent implements OnInit {
     this.addingSubprocesoToId = procesoId;
     this.subNombre = '';
     this.subDescripcion = '';
+    // Pre-seleccionar el stakeholder del proceso
+    const proceso = this.procesos.find(p => p.id === procesoId);
+    this.subStakeholderId = proceso?.stakeholder_id || '';
   }
 
   cancelAddSubproceso(): void {
     this.addingSubprocesoToId = null;
     this.subNombre = '';
     this.subDescripcion = '';
+    this.subStakeholderId = '';
   }
 
   addSubproceso(procesoId: string): void {
     if (!this.subNombre) return;
-    const proceso = this.procesos.find(p => p.id === procesoId);
-    if (proceso) {
-      proceso.subprocesos.push({
-        id: this.generateUUID(),
-        nombre: this.subNombre,
-        descripcion: this.subDescripcion,
-      });
-    }
-    this.cancelAddSubproceso();
+    
+    const createDto = {
+      id_proyecto: parseInt(this.proyecto.id),
+      id_proceso: parseInt(procesoId),
+      nombre_subproceso: this.subNombre,
+      descripcion: this.subDescripcion,
+      id_stakeholder: this.subStakeholderId ? parseInt(this.subStakeholderId) : null,
+    };
+
+    this.procesoApiService.createSubproceso(createDto).subscribe({
+      next: () => {
+        this.cancelAddSubproceso();
+        this.loadProcesos(this.proyecto.id);
+      },
+      error: (error) => console.error('Error al crear subproceso:', error)
+    });
   }
 
   deleteSubproceso(procesoId: string, subId: string): void {
-    const proceso = this.procesos.find(p => p.id === procesoId);
-    if (proceso) {
-      proceso.subprocesos = proceso.subprocesos.filter(s => s.id !== subId);
-    }
+    this.openConfirmModal(
+      '¿Eliminar subproceso?',
+      '¿Estás seguro de que deseas eliminar este subproceso? Esta acción no se puede deshacer.',
+      () => {
+        this.procesoApiService.deleteSubproceso(parseInt(subId)).subscribe({
+          next: () => {
+            this.loadProcesos(this.proyecto.id);
+          },
+          error: (error) => console.error('Error al eliminar subproceso:', error)
+        });
+      }
+    );
   }
 
   // ===== MODAL =====
@@ -206,41 +300,94 @@ export class ProcesosComponent implements OnInit {
     this.addingSubprocesoModal = false;
     this.subNombre = '';
     this.subDescripcion = '';
+    this.subStakeholderId = '';
   }
 
   startAddSubprocesoModal(): void {
     this.addingSubprocesoModal = true;
     this.subNombre = '';
     this.subDescripcion = '';
+    // Pre-seleccion el stakeholder del proceso
+    this.subStakeholderId = this.selectedProceso?.stakeholder_id || '';
   }
 
   cancelAddSubprocesoModal(): void {
     this.addingSubprocesoModal = false;
     this.subNombre = '';
     this.subDescripcion = '';
+    this.subStakeholderId = '';
   }
 
   addSubprocesoFromModal(): void {
     if (!this.subNombre || !this.selectedProceso) return;
-    this.selectedProceso.subprocesos.push({
-      id: this.generateUUID(),
-      nombre: this.subNombre,
+    
+    const createDto = {
+      id_proyecto: parseInt(this.proyecto.id),
+      id_proceso: parseInt(this.selectedProceso.id),
+      nombre_subproceso: this.subNombre,
       descripcion: this.subDescripcion,
+      id_stakeholder: this.subStakeholderId ? parseInt(this.subStakeholderId) : null,
+    };
+
+    this.procesoApiService.createSubproceso(createDto).subscribe({
+      next: () => {
+        this.cancelAddSubprocesoModal();
+        this.loadProcesos(this.proyecto.id);
+        // Actualizar el proceso seleccionado en el modal
+        const procesoActualizado = this.procesos.find(p => p.id === this.selectedProceso?.id);
+        if (procesoActualizado) {
+          this.selectedProceso = procesoActualizado;
+        }
+      },
+      error: (error) => console.error('Error al crear subproceso:', error)
     });
-    this.cancelAddSubprocesoModal();
   }
 
   deleteSubprocesoFromModal(subId: string): void {
-    if (this.selectedProceso) {
-      this.selectedProceso.subprocesos = this.selectedProceso.subprocesos.filter(s => s.id !== subId);
-    }
+    this.openConfirmModal(
+      '¿Eliminar subproceso?',
+      '¿Estás seguro de que deseas eliminar este subproceso? Esta acción no se puede deshacer.',
+      () => {
+        this.procesoApiService.deleteSubproceso(parseInt(subId)).subscribe({
+          next: () => {
+            this.loadProcesos(this.proyecto.id);
+            // Actualizar el proceso seleccionado en el modal
+            const procesoActualizado = this.procesos.find(p => p.id === this.selectedProceso?.id);
+            if (procesoActualizado) {
+              this.selectedProceso = procesoActualizado;
+            }
+          },
+          error: (error) => console.error('Error al eliminar subproceso:', error)
+        });
+      }
+    );
   }
 
-  private generateUUID(): string {
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-      const r = Math.random() * 16 | 0;
-      const v = c === 'x' ? r : (r & 0x3 | 0x8);
-      return v.toString(16);
-    });
+  // ===== CONFIRM MODAL =====
+
+  openConfirmModal(title: string, message: string, callback: () => void): void {
+    this.confirmModalConfig = {
+      title,
+      message,
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar',
+      type: 'danger',
+      icon: 'trash'
+    };
+    this.confirmCallback = callback;
+    this.showConfirmModal = true;
+  }
+
+  onConfirmModal(): void {
+    if (this.confirmCallback) {
+      this.confirmCallback();
+    }
+    this.showConfirmModal = false;
+    this.confirmCallback = null;
+  }
+
+  onCancelModal(): void {
+    this.showConfirmModal = false;
+    this.confirmCallback = null;
   }
 }

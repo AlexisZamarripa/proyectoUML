@@ -72,12 +72,18 @@
           <!-- Proceso + Subproceso -->
           <div class="form-grid">
             <div class="form-group">
-              <label class="form-label">Proceso</label>
-              <input class="form-input" type="text" [(ngModel)]="proceso" name="proceso" placeholder="Nombre del proceso" />
+              <label class="form-label">Proceso *</label>
+              <select class="form-input" [(ngModel)]="procesoId" name="procesoId" (ngModelChange)="onProcesoChange()" required>
+                <option [ngValue]="null" disabled>Seleccione un proceso</option>
+                <option *ngFor="let p of procesos" [ngValue]="+p.id">{{ p.nombre }}</option>
+              </select>
             </div>
             <div class="form-group">
-              <label class="form-label">Subproceso</label>
-              <input class="form-input" type="text" [(ngModel)]="subproceso" name="subproceso" placeholder="Nombre del subproceso" />
+              <label class="form-label">Subproceso *</label>
+              <select class="form-input" [(ngModel)]="subprocesoId" name="subprocesoId" [disabled]="!procesoId" required>
+                <option [ngValue]="null" disabled>{{ procesoId ? 'Seleccione un subproceso' : 'Seleccione un proceso primero' }}</option>
+                <option *ngFor="let s of subprocesos" [ngValue]="+s.id">{{ s.nombre }}</option>
+              </select>
             </div>
           </div>
 
@@ -118,8 +124,50 @@
                 </div>
                 
                 <div class="form-group full-width">
-                  <label class="form-label">URL o ubicación</label>
-                  <input type="text" class="form-input" [(ngModel)]="documentos[i].url" [name]="'doc-url-' + i" placeholder="URL o ruta del documento">
+                  <label class="form-label">Archivo del documento</label>
+                  <div class="file-upload-container"
+                       [class.dragging]="documentos[i].isDragging"
+                       (dragover)="onDragOver($event, i)"
+                       (dragleave)="onDragLeave($event, i)"
+                       (drop)="onDrop($event, i)">
+                    <input type="file" 
+                           [id]="'file-input-' + i" 
+                           class="file-input-hidden"
+                           (change)="onFileSelected($event, i)"
+                           accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.jpg,.jpeg,.png">
+                    
+                    <div class="file-upload-content" *ngIf="!documentos[i].url">
+                      <svg class="upload-icon" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                      </svg>
+                      <p class="upload-text">Arrastra el archivo aquí o haz clic para seleccionar</p>
+                      <button type="button" class="btn-select-file" (click)="triggerFileInput(i)">
+                        Seleccionar archivo
+                      </button>
+                      <p class="upload-hint">PDF, Word, Excel, PowerPoint, imágenes</p>
+                    </div>
+
+                    <div class="file-preview" *ngIf="documentos[i].url">
+                      <div class="file-preview-info">
+                        <svg class="file-preview-icon" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                          <polyline points="14 2 14 8 20 8"></polyline>
+                        </svg>
+                        <div class="file-preview-details">
+                          <p class="file-preview-name">{{ documentos[i].nombre || 'Documento ' + (i + 1) }}</p>
+                          <p class="file-preview-type">{{ documentos[i].tipo }}</p>
+                        </div>
+                      </div>
+                      <button type="button" class="btn-remove-file" (click)="removeFile(i)" title="Quitar archivo">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <line x1="18" y1="6" x2="6" y2="18"></line>
+                          <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
                 </div>
                 
                 <div class="form-group full-width">
@@ -198,7 +246,7 @@
               <span class="analisis-fecha">{{ item.fecha }}</span>
             </div>
             <div class="analisis-header-right">
-              <button class="btn-icon btn-view" title="Ver detalles">
+              <button class="btn-icon btn-view" (click)="verDetalles(item)" title="Ver detalles">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                   <circle cx="12" cy="12" r="3"></circle>
@@ -229,7 +277,9 @@
                   <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                   <polyline points="14 2 14 8 20 8"></polyline>
                 </svg>
-                {{ doc.nombre }} <span class="doc-tipo">({{ doc.tipo }})</span>
+                <span class="doc-name-link" *ngIf="doc.url" (click)="abrirArchivo(doc.url)" title="Abrir archivo">{{ doc.nombre }}</span>
+                <span *ngIf="!doc.url">{{ doc.nombre }}</span>
+                <span class="doc-tipo">({{ doc.tipo }})</span>
               </li>
             </ul>
             <span class="docs-more" *ngIf="item.documentos.length > 3">
@@ -266,5 +316,94 @@
     </div>
 
   </div>
+
+  <!-- Modal de Detalles -->
+  <div class="modal-overlay" *ngIf="showDetailModal" (click)="closeDetailModal()">
+    <div class="modal-detail" (click)="stopPropagation($event)">
+      <button class="modal-close-btn" (click)="closeDetailModal()">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+
+      <div class="modal-header" *ngIf="selectedAnalisis">
+        <h2 class="modal-title">{{ selectedAnalisis.titulo }}</h2>
+        <p class="modal-subtitle">{{ selectedAnalisis.fecha }} • {{ selectedAnalisis.tipoDocumento }}</p>
+      </div>
+
+      <div class="modal-body" *ngIf="selectedAnalisis">
+        
+        <!-- Vinculación -->
+        <div class="modal-section">
+          <h3 class="modal-section-title">Vinculación:</h3>
+          <div class="modal-badges">
+            <span class="modal-badge modal-badge-proceso">{{ selectedAnalisis.proceso }}</span>
+            <span class="modal-badge modal-badge-subproceso">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
+              {{ selectedAnalisis.subproceso }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Fuente -->
+        <div class="modal-section" *ngIf="selectedAnalisis.fuente">
+          <h3 class="modal-section-title">Fuente:</h3>
+          <p class="modal-text">{{ selectedAnalisis.fuente }}</p>
+        </div>
+
+        <!-- Documentos Analizados -->
+        <div class="modal-section" *ngIf="selectedAnalisis.documentos && selectedAnalisis.documentos.length > 0">
+          <h3 class="modal-section-title">Documentos Analizados:</h3>
+          <div class="modal-documentos-list">
+            <div class="modal-documento-item" *ngFor="let doc of selectedAnalisis.documentos">
+              <div class="modal-documento-header">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                  <polyline points="14 2 14 8 20 8"></polyline>
+                </svg>
+                <h4 class="modal-documento-nombre">{{ doc.nombre }}</h4>
+                <span class="modal-documento-tipo">({{ doc.tipo }})</span>
+              </div>
+              <p class="modal-documento-desc" *ngIf="doc.descripcion">{{ doc.descripcion }}</p>
+              <button class="btn-abrir-archivo" *ngIf="doc.url" (click)="abrirArchivo(doc.url)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                  <polyline points="15 3 21 3 21 9"></polyline>
+                  <line x1="10" y1="14" x2="21" y2="3"></line>
+                </svg>
+                Abrir archivo
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Hallazgos -->
+        <div class="modal-section" *ngIf="selectedAnalisis.hallazgos && selectedAnalisis.hallazgos.length > 0 && selectedAnalisis.hallazgos[0].trim() !== ''">
+          <h3 class="modal-section-title">Hallazgos:</h3>
+          <ul class="modal-hallazgos-list">
+            <li *ngFor="let hallazgo of selectedAnalisis.hallazgos">{{ hallazgo }}</li>
+          </ul>
+        </div>
+
+        <!-- Recomendaciones -->
+        <div class="modal-section" *ngIf="selectedAnalisis.recomendaciones">
+          <h3 class="modal-section-title">Recomendaciones:</h3>
+          <p class="modal-text">{{ selectedAnalisis.recomendaciones }}</p>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Confirmación para Eliminar -->
+  <app-confirm-modal
+    [isOpen]="showConfirmModal"
+    [config]="confirmModalConfig"
+    (confirm)="confirmarEliminacion()"
+    (cancel)="cancelarEliminacion()"
+  ></app-confirm-modal>
 
 </div>

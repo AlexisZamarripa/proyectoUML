@@ -41,7 +41,7 @@ export interface CreateEncuestaDto {
 @Injectable({ providedIn: 'root' })
 export class EncuestaApiService {
 
-    private base = 'http://localhost:3000/api';
+    private base = 'http://localhost:3000';
 
     constructor(private http: HttpClient) { }
 

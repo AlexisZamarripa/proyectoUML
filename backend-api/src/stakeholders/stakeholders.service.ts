@@ -14,7 +14,6 @@ export class StakeholdersService {
   ) { }
 
   async create(createStakeholderDto: CreateStakeholderDto): Promise<Stakeholder> {
-    // Establecer NULL explícitamente para campos opcionales no proporcionados
     const data: DeepPartial<Stakeholder> = {
       ...createStakeholderDto,
       id_proceso: createStakeholderDto.id_proceso ?? null,

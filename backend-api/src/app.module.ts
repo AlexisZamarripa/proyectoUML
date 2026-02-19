@@ -5,11 +5,17 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ProyectosModule } from './proyectos/proyectos.module';
 import { StakeholdersModule } from './stakeholders/stakeholders.module';
+
 import { EntrevistasModule } from './Entrevista/entrevista.module';
 import { EncuestasModule } from './Encuestas/encuestas.module';
 import { ObservacionesModule } from './Observaciones/observaciones.module';
 import { HistoriasUsuarioModule } from './CasosUso/CU.module';
 import { FocusGroupModule } from './FocusGroup/focusGroup.module';
+
+import { ProcesosModule } from './procesos/procesos.module';
+import { DocumentosModule } from './documentos/documentos.module';
+import { SeguimientoModule } from './seguimiento/seguimiento.module';
+
 
 @Module({
   imports: [
@@ -29,11 +35,16 @@ import { FocusGroupModule } from './FocusGroup/focusGroup.module';
     }),
     ProyectosModule,
     StakeholdersModule,
+
     EntrevistasModule,
     EncuestasModule,
     ObservacionesModule,
     HistoriasUsuarioModule,
     FocusGroupModule,
+
+    ProcesosModule,
+    DocumentosModule,
+    SeguimientoModule,
   ],
   controllers: [AppController],
   providers: [AppService],

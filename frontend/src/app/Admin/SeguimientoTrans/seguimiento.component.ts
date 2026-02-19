@@ -1,33 +1,12 @@
+// seguimiento.component.ts
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { BarraComponent } from '../../components/barra/barra.component';
 import { ProyectoApiService } from '../../services/proyecto-api.service';
-
-interface Paso {
-    nombre: string;
-    duracion: string;
-    responsable: string;
-}
-
-interface Metrica {
-    nombre: string;
-    valor: string;
-}
-
-interface Seguimiento {
-    id: string;
-    titulo: string;
-    fecha: string;
-    idTransaccion: string;
-    nombreProceso: string;
-    procesoVinculado: string;
-    subproceso: string;
-    pasos: Paso[];
-    problemas: string[];
-    metricas: Metrica[];
-}
+import { SeguimientoApiService, SeguimientoResponse, Paso, Metrica } from '../../services/seguimiento-api.service';
+import { ProcesoApiService, Proceso, Subproceso } from '../../services/proceso-api.service';
 
 @Component({
     selector: 'app-seguimiento',
@@ -38,7 +17,9 @@ interface Seguimiento {
 })
 export class SeguimientoComponent implements OnInit {
     showForm = false;
-    seguimientos: Seguimiento[] = [];
+    seguimientos: SeguimientoResponse[] = [];
+    procesosDisponibles: Proceso[] = [];
+    subprocesosDisponibles: Subproceso[] = [];
 
     // Proyecto actual
     proyecto = {
@@ -53,10 +34,9 @@ export class SeguimientoComponent implements OnInit {
 
     // Campos del formulario
     titulo = '';
-    idTransaccion = '';
     nombreProceso = '';
-    procesoVinculado = '';
-    subproceso = '';
+    procesoVinculadoId = ''; // ID del proceso seleccionado
+    subprocesoId = ''; // ID del subproceso seleccionado
     pasos: Paso[] = [{ nombre: '', duracion: '', responsable: '' }];
     problemas: string[] = [''];
     metricas: Metrica[] = [{ nombre: '', valor: '' }];
@@ -72,7 +52,9 @@ export class SeguimientoComponent implements OnInit {
     constructor(
         private router: Router,
         private route: ActivatedRoute,
-        private proyectoApiService: ProyectoApiService
+        private proyectoApiService: ProyectoApiService,
+        private seguimientoApiService: SeguimientoApiService,
+        private procesoApiService: ProcesoApiService
     ) { }
 
     ngOnInit(): void {
@@ -87,7 +69,44 @@ export class SeguimientoComponent implements OnInit {
                 },
                 error: (error) => console.error('Error al cargar proyecto:', error)
             });
+            this.cargarSeguimientos();
+            this.cargarProcesos();
         }
+    }
+
+    cargarProcesos(): void {
+        const idProyecto = parseInt(this.proyecto.id, 10);
+        if (!idProyecto) return;
+        this.procesoApiService.getProcesosByProyecto(idProyecto).subscribe({
+            next: (data) => {
+                this.procesosDisponibles = data;
+            },
+            error: (error) => console.error('Error al cargar procesos:', error)
+        });
+    }
+
+    onProcesoChange(): void {
+        // Cuando se selecciona un proceso, cargar sus subprocesos
+        this.subprocesoId = '';
+        if (!this.procesoVinculadoId) {
+            this.subprocesosDisponibles = [];
+            return;
+        }
+        const proceso = this.procesosDisponibles.find(p => p.id === this.procesoVinculadoId);
+        if (proceso) {
+            this.subprocesosDisponibles = proceso.subprocesos || [];
+        }
+    }
+
+    cargarSeguimientos(): void {
+        const idProyecto = parseInt(this.proyecto.id, 10);
+        if (!idProyecto) return;
+        this.seguimientoApiService.getByProyecto(idProyecto).subscribe({
+            next: (data) => {
+                this.seguimientos = data;
+            },
+            error: (error) => console.error('Error al cargar seguimientos:', error)
+        });
     }
 
     goBack(): void {
@@ -101,19 +120,18 @@ export class SeguimientoComponent implements OnInit {
 
     isFormValid(): boolean {
         return !!(this.titulo && this.titulo.trim().length > 0 &&
-                  this.idTransaccion && this.idTransaccion.trim().length > 0 &&
-                  this.nombreProceso && this.nombreProceso.trim().length > 0);
+            this.nombreProceso && this.nombreProceso.trim().length > 0);
     }
 
     resetForm() {
         this.titulo = '';
-        this.idTransaccion = '';
         this.nombreProceso = '';
-        this.procesoVinculado = '';
-        this.subproceso = '';
+        this.procesoVinculadoId = '';
+        this.subprocesoId = '';
         this.pasos = [{ nombre: '', duracion: '', responsable: '' }];
         this.problemas = [''];
         this.metricas = [{ nombre: '', valor: '' }];
+        this.subprocesosDisponibles = [];
     }
 
     handleSubmit() {
@@ -126,32 +144,41 @@ export class SeguimientoComponent implements OnInit {
         const problemasLimpios = this.problemas.filter(p => p.trim() !== '');
         const metricasLimpias = this.metricas.filter(m => m.nombre.trim() !== '' && m.valor.trim() !== '');
 
-        // Generar fecha actual
-        const now = new Date();
-        const fecha = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
+        // Obtener nombres de proceso y subproceso seleccionados
+        const procesoSeleccionado = this.procesosDisponibles.find(p => p.id === this.procesoVinculadoId);
+        const subprocesoSeleccionado = this.subprocesosDisponibles.find(s => s.id === this.subprocesoId);
 
-        const nuevo: Seguimiento = {
-            id: this.generateUUID(),
+        const dto = {
+            id_proyecto: parseInt(this.proyecto.id, 10),
+            id_proceso: this.procesoVinculadoId ? parseInt(this.procesoVinculadoId, 10) : undefined,
+            id_subproceso: this.subprocesoId ? parseInt(this.subprocesoId, 10) : undefined,
             titulo: this.titulo.trim(),
-            fecha: fecha,
-            idTransaccion: this.idTransaccion.trim(),
             nombreProceso: this.nombreProceso.trim(),
-            procesoVinculado: this.procesoVinculado.trim(),
-            subproceso: this.subproceso.trim(),
+            procesoVinculado: procesoSeleccionado?.nombre || '',
+            subproceso: subprocesoSeleccionado?.nombre || '',
             pasos: pasosLimpios,
             problemas: problemasLimpios,
             metricas: metricasLimpias
         };
 
-        this.seguimientos.push(nuevo);
-        console.log('Seguimiento creado. Total seguimientos:', this.seguimientos.length, this.seguimientos);
-        this.resetForm();
-        this.showForm = false;
+        this.seguimientoApiService.create(dto).subscribe({
+            next: (nuevo) => {
+                this.seguimientos.unshift(nuevo);
+                this.resetForm();
+                this.showForm = false;
+            },
+            error: (error) => console.error('Error al crear seguimiento:', error)
+        });
     }
 
     eliminarSeguimiento(id: string) {
         if (confirm('¿Está seguro de eliminar este seguimiento?')) {
-            this.seguimientos = this.seguimientos.filter(s => s.id !== id);
+            this.seguimientoApiService.delete(parseInt(id, 10)).subscribe({
+                next: () => {
+                    this.seguimientos = this.seguimientos.filter(s => s.id !== id);
+                },
+                error: (error) => console.error('Error al eliminar seguimiento:', error)
+            });
         }
     }
 
@@ -185,7 +212,7 @@ export class SeguimientoComponent implements OnInit {
         }
     }
 
-    calcularTiempoTotal(seguimiento: Seguimiento): string {
+    calcularTiempoTotal(seguimiento: SeguimientoResponse): string {
         let totalMinutos = 0;
         for (const paso of seguimiento.pasos) {
             const duracion = this.parseDuracion(paso.duracion);
@@ -207,30 +234,22 @@ export class SeguimientoComponent implements OnInit {
         let totalMinutos = 0;
         const horasMatch = duracion.match(/(\d+)\s*h/i);
         const minutosMatch = duracion.match(/(\d+)\s*min/i);
-        
+
         if (horasMatch) {
             totalMinutos += parseInt(horasMatch[1]) * 60;
         }
         if (minutosMatch) {
             totalMinutos += parseInt(minutosMatch[1]);
         }
-        
-        return totalMinutos;
-    }
 
-    private generateUUID(): string {
-        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-            const r = Math.random() * 16 | 0;
-            const v = c === 'x' ? r : (r & 0x3 | 0x8);
-            return v.toString(16);
-        });
+        return totalMinutos;
     }
 
     trackByIndex(index: number): number {
         return index;
     }
 
-    trackBySeguimiento(index: number, item: Seguimiento): string {
+    trackBySeguimiento(index: number, item: SeguimientoResponse): string {
         return item.id;
     }
 }
