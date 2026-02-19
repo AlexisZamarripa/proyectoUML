@@ -5,9 +5,17 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ProyectosModule } from './proyectos/proyectos.module';
 import { StakeholdersModule } from './stakeholders/stakeholders.module';
+
+import { EntrevistasModule } from './Entrevista/entrevista.module';
+import { EncuestasModule } from './Encuestas/encuestas.module';
+import { ObservacionesModule } from './Observaciones/observaciones.module';
+import { HistoriasUsuarioModule } from './CasosUso/CU.module';
+import { FocusGroupModule } from './FocusGroup/focusGroup.module';
+
 import { ProcesosModule } from './procesos/procesos.module';
 import { DocumentosModule } from './documentos/documentos.module';
 import { SeguimientoModule } from './seguimiento/seguimiento.module';
+
 
 @Module({
   imports: [
@@ -22,11 +30,18 @@ import { SeguimientoModule } from './seguimiento/seguimiento.module';
       password: process.env.DB_PASSWORD || '',
       database: process.env.DB_DATABASE || 'proyecto_uml',
       entities: [__dirname + '/**/*.entity{.ts,.js}'],
-      synchronize: false, // En producción debe ser false
+      synchronize: false,
       logging: true,
     }),
     ProyectosModule,
     StakeholdersModule,
+
+    EntrevistasModule,
+    EncuestasModule,
+    ObservacionesModule,
+    HistoriasUsuarioModule,
+    FocusGroupModule,
+
     ProcesosModule,
     DocumentosModule,
     SeguimientoModule,
@@ -34,4 +49,4 @@ import { SeguimientoModule } from './seguimiento/seguimiento.module';
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule { }

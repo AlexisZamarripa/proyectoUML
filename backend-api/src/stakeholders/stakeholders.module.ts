@@ -1,3 +1,4 @@
+// stakeholders.module.ts
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { StakeholdersService } from './stakeholders.service';
@@ -10,4 +11,4 @@ import { Stakeholder } from './entities/stakeholder.entity';
   providers: [StakeholdersService],
   exports: [StakeholdersService],
 })
-export class StakeholdersModule {}
+export class StakeholdersModule { }

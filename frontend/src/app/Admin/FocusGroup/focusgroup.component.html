@@ -2,7 +2,8 @@
 
   <!-- Back link -->
   <button class="back-link" (click)="goBack()">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+      stroke-linecap="round" stroke-linejoin="round">
       <line x1="19" y1="12" x2="5" y2="12"></line>
       <polyline points="12 19 5 12 12 5"></polyline>
     </svg>
@@ -23,13 +24,11 @@
     <p class="project-header-desc">{{ proyecto.descripcion }}</p>
   </div>
 
-  <!-- Main Layout: Sidebar + Content -->
+  <!-- Main Layout -->
   <div class="main-layout">
 
-    <!-- Sidebar -->
     <app-barra [projectId]="proyecto.id" [activeTab]="activeTab"></app-barra>
 
-    <!-- Content Area -->
     <div class="content-area">
 
       <!-- Content Header -->
@@ -49,101 +48,86 @@
         </button>
       </div>
 
-      <!-- ===== FORM: Registrar Nuevo Focus Group ===== -->
+      <!-- Error -->
+      <div class="error-msg" *ngIf="errorMsg">{{ errorMsg }}</div>
+
+      <!-- Form -->
       <div class="form-card" *ngIf="showForm">
         <h3 class="form-title">Registrar Nuevo Focus Group</h3>
 
         <form (ngSubmit)="handleSubmit()">
+
+          <!-- Nombre -->
           <div class="form-group full-width">
-            <label class="form-label">Título del Focus Group *</label>
-            <input class="form-input" type="text" [(ngModel)]="titulo" name="titulo" placeholder="Ej: Focus group sobre usabilidad" required />
+            <label class="form-label">Nombre del Focus Group *</label>
+            <input class="form-input" type="text" [(ngModel)]="nombreFocus" name="nombreFocus"
+              placeholder="Ej: Focus group sobre usabilidad" required />
+          </div>
+
+          <!-- Descripción -->
+          <div class="form-group full-width">
+            <label class="form-label">Descripción</label>
+            <textarea class="form-input form-textarea" [(ngModel)]="descripcion" name="descripcion" rows="3"
+              placeholder="Objetivo o descripción del focus group"></textarea>
           </div>
 
           <div class="form-grid form-grid-2">
+            <!-- Fecha de inicio -->
             <div class="form-group">
-              <label class="form-label">Moderador *</label>
-              <input class="form-input" type="text" [(ngModel)]="moderador" name="moderador" placeholder="Nombre del moderador" required />
+              <label class="form-label">Fecha de Inicio</label>
+              <input class="form-input" type="date" [(ngModel)]="fechaInicio" name="fechaInicio" />
             </div>
+            <!-- Estado -->
             <div class="form-group">
-              <label class="form-label">Tipo de Media</label>
-              <input class="form-input" type="text" [(ngModel)]="tipoMedia" name="tipoMedia" placeholder="Audio, Video, etc." />
+              <label class="form-label">Estado</label>
+              <select class="form-input" [(ngModel)]="estado" name="estado">
+                <option *ngFor="let e of ESTADOS" [value]="e.valor">{{ e.label }}</option>
+              </select>
             </div>
           </div>
 
-          <div class="form-group full-width">
-            <label class="form-label">Objetivo *</label>
-            <textarea class="form-input form-textarea" [(ngModel)]="objetivo" name="objetivo" rows="3" placeholder="Objetivo del focus group" required></textarea>
-          </div>
-
-          <div class="form-group full-width">
-            <label class="form-label">Transcripción / Notas</label>
-            <textarea class="form-input form-textarea" [(ngModel)]="transcripcion" name="transcripcion" rows="4" placeholder="Transcripción de la sesión o notas principales"></textarea>
-          </div>
-
+          <!-- Selects en cascada: Proceso → Subproceso -->
           <div class="form-grid form-grid-2">
             <div class="form-group">
-              <label class="form-label">Proceso</label>
-              <input class="form-input" type="text" [(ngModel)]="proceso" name="proceso" placeholder="" />
+              <label class="form-label">Proceso *</label>
+              <select class="form-input" [(ngModel)]="procesoVinculadoId" name="procesoVinculado"
+                (change)="onProcesoChange()" required>
+                <option value="">-- Seleccionar proceso --</option>
+                <option *ngFor="let proceso of procesosDisponibles" [value]="proceso.id">{{ proceso.nombre }}</option>
+              </select>
             </div>
             <div class="form-group">
-              <label class="form-label">Subproceso</label>
-              <input class="form-input" type="text" [(ngModel)]="subproceso" name="subproceso" placeholder="" />
+              <label class="form-label">Subproceso *</label>
+              <select class="form-input" [(ngModel)]="subprocesoId" name="subproceso"
+                [disabled]="!procesoVinculadoId || subprocesosDisponibles.length === 0" required>
+                <option value="">{{ procesoVinculadoId ? '-- Seleccionar subproceso --' : 'Primero selecciona un
+                  proceso' }}</option>
+                <option *ngFor="let subproceso of subprocesosDisponibles" [value]="subproceso.id">{{ subproceso.nombre
+                  }}</option>
+              </select>
             </div>
           </div>
 
-          <!-- Participantes -->
-          <div class="participantes-section">
-            <div class="participantes-header">
-              <label class="form-label">Participantes</label>
-              <button type="button" class="btn-add-item" (click)="addParticipante()">
-                + Añadir Participante
-              </button>
-            </div>
-            <div class="participantes-list">
-              <div class="participante-row" *ngFor="let p of participantes; let i = index">
-                <input class="form-input" type="text" [(ngModel)]="participantes[i]" [name]="'participante_' + i" [placeholder]="'Participante ' + (i + 1)" />
-                <button type="button" class="btn-remove-item" *ngIf="participantes.length > 1" (click)="removeParticipante(i)">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                  </svg>
-                </button>
-              </div>
-            </div>
+          <div class="form-actions">
+            <button type="submit" class="btn-submit" [disabled]="!nombreFocus.trim()">
+              Guardar Focus Group
+            </button>
           </div>
-
-          <!-- Conclusiones -->
-          <div class="conclusiones-section">
-            <div class="conclusiones-header">
-              <label class="form-label">Conclusiones</label>
-              <button type="button" class="btn-add-item" (click)="addConclusion()">
-                + Añadir Conclusión
-              </button>
-            </div>
-            <div class="conclusiones-list">
-              <div class="conclusion-row" *ngFor="let c of conclusiones; let i = index">
-                <input class="form-input" type="text" [(ngModel)]="conclusiones[i]" [name]="'conclusion_' + i" [placeholder]="'Conclusión ' + (i + 1)" />
-                <button type="button" class="btn-remove-item" *ngIf="conclusiones.length > 1" (click)="removeConclusion(i)">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                  </svg>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <button type="submit" class="btn-submit">Guardar Focus Group</button>
         </form>
       </div>
 
-      <!-- ===== LISTA: Focus Groups Creados ===== -->
-      <div class="focusgroups-list" *ngIf="!showForm">
+      <!-- Loading -->
+      <div class="loading-state" *ngIf="isLoading">
+        <p>Cargando focus groups...</p>
+      </div>
+
+      <!-- Lista -->
+      <div class="focusgroups-list" *ngIf="!showForm && !isLoading">
         <div class="focusgroup-card" *ngFor="let fg of focusGroups">
           <div class="focusgroup-header">
-            <h3 class="focusgroup-title">{{ fg.titulo }}</h3>
+            <h3 class="focusgroup-title">{{ fg.nombre_focus }}</h3>
             <div class="focusgroup-actions">
-              <button class="btn-icon" (click)="deleteFocusGroup(fg.id)" title="Eliminar">
+              <button class="btn-icon" (click)="deleteFocusGroup(fg.id_focus)" title="Eliminar">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polyline points="3 6 5 6 21 6"></polyline>
                   <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -152,32 +136,22 @@
             </div>
           </div>
 
-          <p class="focusgroup-objetivo">{{ fg.objetivo }}</p>
+          <p class="focusgroup-objetivo" *ngIf="fg.descripcion">{{ fg.descripcion }}</p>
 
           <div class="focusgroup-meta">
-            <div class="meta-item">
+            <div class="meta-item" *ngIf="fg.fecha_inicio">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
                 <line x1="16" y1="2" x2="16" y2="6"></line>
                 <line x1="8" y1="2" x2="8" y2="6"></line>
                 <line x1="3" y1="10" x2="21" y2="10"></line>
               </svg>
-              <span>{{ formatDate(fg.fecha) }}</span>
-            </div>
-            
-            <div class="meta-item">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                <circle cx="12" cy="7" r="4"></circle>
-              </svg>
-              <span>{{ fg.moderador }}</span>
+              <span>{{ formatDate(fg.fecha_inicio) }}</span>
             </div>
           </div>
 
           <div class="focusgroup-stats">
-            <span class="stat-badge">Participantes: {{ fg.participantes.length }}</span>
-            <span class="stat-badge">•</span>
-            <span class="stat-badge">Conclusiones: {{ fg.conclusiones.length }}</span>
+            <span class="badge" [ngClass]="getEstadoBadgeClass(fg.estado)">{{ getEstadoLabel(fg.estado) }}</span>
           </div>
         </div>
 
@@ -204,7 +178,5 @@
       </div>
 
     </div>
-
   </div>
-
 </div>

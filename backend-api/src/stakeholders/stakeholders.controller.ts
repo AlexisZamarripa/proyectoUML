@@ -1,3 +1,4 @@
+// stakeholders.controller.ts
 import {
   Controller,
   Get,
@@ -15,7 +16,7 @@ import { UpdateStakeholderDto } from './dto/update-stakeholder.dto';
 
 @Controller('stakeholders')
 export class StakeholdersController {
-  constructor(private readonly stakeholdersService: StakeholdersService) {}
+  constructor(private readonly stakeholdersService: StakeholdersService) { }
 
   @Post()
   create(@Body() createStakeholderDto: CreateStakeholderDto) {

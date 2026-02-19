@@ -1,3 +1,4 @@
+// seguimiento.component.ts
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -136,7 +137,7 @@ export class SeguimientoComponent implements OnInit {
 
     isFormValid(): boolean {
         return !!(this.titulo && this.titulo.trim().length > 0 &&
-                  this.nombreProceso && this.nombreProceso.trim().length > 0);
+            this.nombreProceso && this.nombreProceso.trim().length > 0);
     }
 
     resetForm() {
@@ -327,14 +328,14 @@ export class SeguimientoComponent implements OnInit {
         let totalMinutos = 0;
         const horasMatch = duracion.match(/(\d+)\s*h/i);
         const minutosMatch = duracion.match(/(\d+)\s*min/i);
-        
+
         if (horasMatch) {
             totalMinutos += parseInt(horasMatch[1]) * 60;
         }
         if (minutosMatch) {
             totalMinutos += parseInt(minutosMatch[1]);
         }
-        
+
         return totalMinutos;
     }
 

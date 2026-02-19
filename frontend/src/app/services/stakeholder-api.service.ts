@@ -1,3 +1,4 @@
+// stakeholder-api.service.ts
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
@@ -40,7 +41,7 @@ export interface CreateStakeholderRequest {
 export class StakeholderApiService {
   private apiUrl = 'http://localhost:3000/stakeholders';
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
 
   /**
    * Convertir stakeholder del backend al formato del frontend
@@ -62,10 +63,10 @@ export class StakeholderApiService {
    * Obtener todos los stakeholders o filtrar por proyecto
    */
   getStakeholders(proyectoId?: string): Observable<Stakeholder[]> {
-    const url = proyectoId 
-      ? `${this.apiUrl}?proyectoId=${proyectoId}` 
+    const url = proyectoId
+      ? `${this.apiUrl}?proyectoId=${proyectoId}`
       : this.apiUrl;
-    
+
     return new Observable(observer => {
       this.http.get<StakeholderBackend[]>(url).subscribe({
         next: (stakeholders) => {
@@ -96,7 +97,7 @@ export class StakeholderApiService {
    * Crear un nuevo stakeholder
    */
   createStakeholder(
-    proyectoId: string, 
+    proyectoId: string,
     stakeholder: Omit<Stakeholder, 'id' | 'idProyecto'>
   ): Observable<Stakeholder> {
     const request: CreateStakeholderRequest = {

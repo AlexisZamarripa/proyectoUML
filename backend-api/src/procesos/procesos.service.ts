@@ -15,7 +15,19 @@ export class ProcesosService {
     private procesosRepository: Repository<Proceso>,
     @InjectRepository(Subproceso)
     private subprocesosRepository: Repository<Subproceso>,
-  ) {}
+  ) { }
+
+  // ========== HELPER ==========
+
+  private safeJsonParse(value: any, fallback: any[] = []): any[] {
+    if (!value) return fallback;
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : fallback;
+    } catch {
+      return fallback;
+    }
+  }
 
   // ========== PROCESOS ==========
 
@@ -39,7 +51,6 @@ export class ProcesosService {
 
     const proceso = this.procesosRepository.create(procesoData);
     const saved = await this.procesosRepository.save(proceso);
-    // TypeORM save puede devolver array o single, forzamos el tipo
     return saved as unknown as Proceso;
   }
 
@@ -53,17 +64,14 @@ export class ProcesosService {
       order: { id_proceso: 'ASC' },
     });
 
-    // Parsear JSON de departamentos y pasos_clave
     return procesos.map((proceso) => ({
       id: proceso.id_proceso.toString(),
       nombre: proceso.nombre_proceso,
       descripcion: proceso.descripcion,
       color: proceso.color,
       stakeholder_id: proceso.id_stakeholder?.toString(),
-      departamentos: proceso.departamentos
-        ? JSON.parse(proceso.departamentos)
-        : [],
-      pasos_clave: proceso.pasos_clave ? JSON.parse(proceso.pasos_clave) : [],
+      departamentos: this.safeJsonParse(proceso.departamentos),
+      pasos_clave: this.safeJsonParse(proceso.pasos_clave),
       subprocesos: (proceso.subprocesos || []).map((sub) => ({
         id: sub.id_subproceso.toString(),
         nombre: sub.nombre_subproceso,
@@ -92,10 +100,8 @@ export class ProcesosService {
       descripcion: proceso.descripcion,
       color: proceso.color,
       stakeholder_id: proceso.id_stakeholder?.toString(),
-      departamentos: proceso.departamentos
-        ? JSON.parse(proceso.departamentos)
-        : [],
-      pasos_clave: proceso.pasos_clave ? JSON.parse(proceso.pasos_clave) : [],
+      departamentos: this.safeJsonParse(proceso.departamentos),
+      pasos_clave: this.safeJsonParse(proceso.pasos_clave),
       subprocesos: (proceso.subprocesos || []).map((sub) => ({
         id: sub.id_subproceso.toString(),
         nombre: sub.nombre_subproceso,
@@ -128,11 +134,11 @@ export class ProcesosService {
 
     await this.procesosRepository.update(id, updateData);
     const updated = await this.procesosRepository.findOne({ where: { id_proceso: id } });
-    
+
     if (!updated) {
       throw new NotFoundException(`Proceso con ID ${id} no encontrado después de actualizar`);
     }
-    
+
     return updated;
   }
 
@@ -199,15 +205,15 @@ export class ProcesosService {
   ): Promise<Subproceso> {
     await this.findOneSubproceso(id);
     await this.subprocesosRepository.update(id, updateSubprocesoDto);
-    
+
     const updated = await this.subprocesosRepository.findOne({
       where: { id_subproceso: id },
     });
-    
+
     if (!updated) {
       throw new NotFoundException(`Subproceso con ID ${id} no encontrado después de actualizar`);
     }
-    
+
     return updated;
   }
 

@@ -1,15 +1,14 @@
 <div class="entrevista-page">
 
-  <!-- Back link -->
   <button class="back-link" (click)="goBack()">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+      stroke-linecap="round" stroke-linejoin="round">
       <line x1="19" y1="12" x2="5" y2="12"></line>
       <polyline points="12 19 5 12 12 5"></polyline>
     </svg>
     Volver a Proyectos
   </button>
 
-  <!-- Project Header Card -->
   <div class="project-header-card" [style.background]="getProyectoGradient()">
     <div class="project-header-watermark">
       <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="0.5">
@@ -20,16 +19,12 @@
     <p class="project-header-desc">{{ proyecto.descripcion }}</p>
   </div>
 
-  <!-- Main Layout: Sidebar + Content -->
   <div class="main-layout">
 
-    <!-- Sidebar -->
     <app-barra [projectId]="proyecto.id" [activeTab]="activeTab"></app-barra>
 
-    <!-- Content Area -->
     <div class="content-area">
 
-      <!-- Content Header -->
       <div class="content-header">
         <div class="content-header-text">
           <h2 class="content-title">Entrevistas</h2>
@@ -46,55 +41,10 @@
         </button>
       </div>
 
-      <!-- Stats Row -->
-      <div class="stats-row" *ngIf="!showForm">
-        <div class="stat-card">
-          <div class="stat-header">
-            <span class="stat-label">Total</span>
-            <div class="stat-icon stat-icon-blue">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                <line x1="16" y1="2" x2="16" y2="6"></line>
-                <line x1="8" y1="2" x2="8" y2="6"></line>
-                <line x1="3" y1="10" x2="21" y2="10"></line>
-              </svg>
-            </div>
-          </div>
-          <span class="stat-value">{{ totalEntrevistas }}</span>
-        </div>
+      <!-- Error -->
+      <div class="error-msg" *ngIf="errorMsg">{{ errorMsg }}</div>
 
-        <div class="stat-card">
-          <div class="stat-header">
-            <span class="stat-label">Realizadas</span>
-            <div class="stat-icon stat-icon-green">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                <line x1="16" y1="2" x2="16" y2="6"></line>
-                <line x1="8" y1="2" x2="8" y2="6"></line>
-                <line x1="3" y1="10" x2="21" y2="10"></line>
-              </svg>
-            </div>
-          </div>
-          <span class="stat-value stat-green">{{ realizadas }}</span>
-        </div>
-
-        <div class="stat-card">
-          <div class="stat-header">
-            <span class="stat-label">Pendientes</span>
-            <div class="stat-icon stat-icon-orange">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                <line x1="16" y1="2" x2="16" y2="6"></line>
-                <line x1="8" y1="2" x2="8" y2="6"></line>
-                <line x1="3" y1="10" x2="21" y2="10"></line>
-              </svg>
-            </div>
-          </div>
-          <span class="stat-value stat-orange">{{ pendientes }}</span>
-        </div>
-      </div>
-
-      <!-- ===== FORM: Crear Nueva Entrevista ===== -->
+      <!-- Form -->
       <div class="form-card" *ngIf="showForm">
         <h3 class="form-title">Crear Nueva Entrevista</h3>
         <p class="form-desc">Primero crea la entrevista. Luego podrás anotar las respuestas y subir archivos.</p>
@@ -103,31 +53,46 @@
           <div class="form-grid form-grid-3">
             <div class="form-group">
               <label class="form-label">Título de la Entrevista *</label>
-              <input class="form-input" type="text" [(ngModel)]="titulo" name="titulo" placeholder="Ej: Entrevista con usuario final" required />
+              <input class="form-input" type="text" [(ngModel)]="titulo" name="titulo"
+                placeholder="Ej: Entrevista con usuario final" required />
             </div>
             <div class="form-group">
               <label class="form-label">Entrevistador *</label>
-              <input class="form-input" type="text" [(ngModel)]="entrevistador" name="entrevistador" placeholder="Tu nombre" required />
+              <input class="form-input" type="text" [(ngModel)]="entrevistador" name="entrevistador"
+                placeholder="Tu nombre" required />
             </div>
             <div class="form-group">
               <label class="form-label">Entrevistado *</label>
-              <input class="form-input" type="text" [(ngModel)]="entrevistado" name="entrevistado" placeholder="Nombre del entrevistado" required />
+              <input class="form-input" type="text" [(ngModel)]="entrevistado" name="entrevistado"
+                placeholder="Nombre del entrevistado" required />
             </div>
           </div>
 
           <div class="form-group full-width">
             <label class="form-label">Notas / Contexto</label>
-            <textarea class="form-input form-textarea" [(ngModel)]="notas" name="notas" rows="3" placeholder="Contexto o notas adicionales sobre la entrevista"></textarea>
+            <textarea class="form-input form-textarea" [(ngModel)]="notas" name="notas" rows="3"
+              placeholder="Contexto o notas adicionales sobre la entrevista"></textarea>
           </div>
 
+          <!-- Selects en cascada: Proceso → Subproceso -->
           <div class="form-grid form-grid-2">
             <div class="form-group">
-              <label class="form-label">Proceso</label>
-              <input class="form-input" type="text" [(ngModel)]="proceso" name="proceso" placeholder="" />
+              <label class="form-label">Proceso Vinculado *</label>
+              <select class="form-input" [(ngModel)]="procesoVinculadoId" name="procesoVinculado"
+                (change)="onProcesoChange()" required>
+                <option value="">-- Seleccionar proceso --</option>
+                <option *ngFor="let proceso of procesosDisponibles" [value]="proceso.id">{{ proceso.nombre }}</option>
+              </select>
             </div>
             <div class="form-group">
-              <label class="form-label">Subproceso</label>
-              <input class="form-input" type="text" [(ngModel)]="subproceso" name="subproceso" placeholder="" />
+              <label class="form-label">Subproceso *</label>
+              <select class="form-input" [(ngModel)]="subprocesoId" name="subproceso"
+                [disabled]="!procesoVinculadoId || subprocesosDisponibles.length === 0" required>
+                <option value="">{{ procesoVinculadoId ? '-- Seleccionar subproceso --' : 'Primero selecciona un
+                  proceso' }}</option>
+                <option *ngFor="let subproceso of subprocesosDisponibles" [value]="subproceso.id">{{ subproceso.nombre
+                  }}</option>
+              </select>
             </div>
           </div>
 
@@ -135,14 +100,14 @@
           <div class="preguntas-section">
             <div class="preguntas-header">
               <label class="form-label">Preguntas de la Entrevista *</label>
-              <button type="button" class="btn-add-pregunta" (click)="addPregunta()">
-                + Añadir Pregunta
-              </button>
+              <button type="button" class="btn-add-pregunta" (click)="addPregunta()">+ Añadir Pregunta</button>
             </div>
             <div class="preguntas-list">
               <div class="pregunta-row" *ngFor="let p of preguntas; let i = index">
-                <input class="form-input" type="text" [(ngModel)]="p.texto" [name]="'pregunta_' + i" [placeholder]="'Pregunta ' + (i + 1)" />
-                <button type="button" class="btn-remove-pregunta" *ngIf="preguntas.length > 1" (click)="removePregunta(i)">
+                <input class="form-input" type="text" [(ngModel)]="p.texto" [name]="'pregunta_' + i"
+                  [placeholder]="'Pregunta ' + (i + 1)" />
+                <button type="button" class="btn-remove-pregunta" *ngIf="preguntas.length > 1"
+                  (click)="removePregunta(i)">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <line x1="18" y1="6" x2="6" y2="18"></line>
                     <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -160,8 +125,13 @@
         </form>
       </div>
 
-      <!-- ===== ENTREVISTAS REALIZADAS ===== -->
-      <div class="section" *ngIf="entrevistasRealizadas.length > 0 && !showForm">
+      <!-- Loading -->
+      <div class="loading-state" *ngIf="isLoading">
+        <p>Cargando entrevistas...</p>
+      </div>
+
+      <!-- Entrevistas Realizadas -->
+      <div class="section" *ngIf="entrevistasRealizadas.length > 0 && !showForm && !isLoading">
         <h3 class="section-title">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2">
             <polyline points="20 6 9 17 4 12"></polyline>
@@ -170,11 +140,10 @@
         </h3>
         <div class="entrevistas-grid">
           <div class="entrevista-card" *ngFor="let e of entrevistasRealizadas">
-            <!-- Card Header -->
             <div class="card-top">
-              <h4 class="card-title">{{ e.titulo }}</h4>
+              <h4 class="card-title">{{ e.titulo_entrevista }}</h4>
               <div class="card-actions">
-                <button class="btn-icon" (click)="deleteEntrevista(e.id, $event)" title="Eliminar">
+                <button class="btn-icon" (click)="deleteEntrevista(e.id_entrevista, $event)" title="Eliminar">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <polyline points="3 6 5 6 21 6"></polyline>
                     <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -182,8 +151,6 @@
                 </button>
               </div>
             </div>
-
-            <!-- Card Meta -->
             <div class="card-meta">
               <span class="meta-item">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -196,22 +163,18 @@
               </span>
               <span class="meta-item">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0-4 4v2"></path>
                   <circle cx="12" cy="7" r="4"></circle>
                 </svg>
                 {{ e.entrevistador }}
               </span>
             </div>
-
             <p class="card-entrevistado">Entrevistados: {{ e.entrevistado }}</p>
-
             <div class="card-info-row">
               <span class="card-preguntas">Preguntas: {{ e.preguntas.length }}</span>
               <span class="badge badge-green" *ngIf="e.conRespuestas">Con respuestas</span>
               <span class="badge badge-gray" *ngIf="!e.conRespuestas">Sin respuestas</span>
             </div>
-
-            <!-- File upload area -->
             <div class="file-upload-area">
               <div class="archivos-list" *ngIf="e.archivos.length > 0">
                 <div class="archivo-item" *ngFor="let a of e.archivos">
@@ -220,7 +183,7 @@
                     <polyline points="14 2 14 8 20 8"></polyline>
                   </svg>
                   <span>{{ a.nombre }}</span>
-                  <button class="btn-remove-file" (click)="removeArchivo(e.id, a.id)">&times;</button>
+                  <button class="btn-remove-file" (click)="removeArchivo(e.id_entrevista, a.id)">&times;</button>
                 </div>
               </div>
               <label class="file-upload-btn">
@@ -229,31 +192,27 @@
                   <polyline points="17 8 12 3 7 8"></polyline>
                   <line x1="12" y1="3" x2="12" y2="15"></line>
                 </svg>
-                Subir archivo (grabación/documento)
-                <input type="file" (change)="onFileSelect($event, e.id)" multiple hidden />
+                Subir archivo
+                <input type="file" (change)="onFileSelect($event, e.id_entrevista)" multiple hidden />
               </label>
             </div>
-
-            <!-- Card Footer -->
             <div class="card-footer">
-              <button class="btn-anotar" (click)="startAnotar(e.id)">
+              <button class="btn-anotar" (click)="startAnotar(e.id_entrevista)">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                   <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                 </svg>
                 Anotar Respuestas
               </button>
-              <span class="badge" [class.badge-green]="e.estado === 'realizada'" [class.badge-gray]="e.estado === 'pendiente'">
-                {{ e.estado === 'realizada' ? 'Realizada' : 'Pendiente' }}
-              </span>
+              <span class="badge badge-green">Realizada</span>
             </div>
-
-            <!-- Anotar Respuestas Panel -->
-            <div class="respuestas-panel" *ngIf="anotandoId === e.id">
+            <div class="respuestas-panel" *ngIf="anotandoId === e.id_entrevista">
               <h4 class="respuestas-title">Anotar Respuestas</h4>
               <div class="respuesta-group" *ngFor="let p of e.preguntas; let i = index">
-                <label class="respuesta-label">{{ i + 1 }}. {{ p.texto }}</label>
-                <textarea class="form-input form-textarea" [(ngModel)]="p.respuesta" [name]="'resp_' + p.id" rows="2" placeholder="Escribe la respuesta..."></textarea>
+                <!-- ✅ Corregido: p.pregunta en lugar de p.texto -->
+                <label class="respuesta-label">{{ i + 1 }}. {{ p.pregunta }}</label>
+                <textarea class="form-input form-textarea" [(ngModel)]="p.respuesta" [name]="'resp_' + p.id_pregunta"
+                  rows="2" placeholder="Escribe la respuesta..."></textarea>
               </div>
               <div class="respuestas-actions">
                 <button class="btn-cancelar" (click)="cancelAnotar()">Cancelar</button>
@@ -264,8 +223,8 @@
         </div>
       </div>
 
-      <!-- ===== ENTREVISTAS PENDIENTES ===== -->
-      <div class="section" *ngIf="entrevistasPendientes.length > 0 && !showForm">
+      <!-- Entrevistas Pendientes -->
+      <div class="section" *ngIf="entrevistasPendientes.length > 0 && !showForm && !isLoading">
         <h3 class="section-title">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2">
             <circle cx="12" cy="12" r="10"></circle>
@@ -276,9 +235,9 @@
         <div class="entrevistas-grid">
           <div class="entrevista-card" *ngFor="let e of entrevistasPendientes">
             <div class="card-top">
-              <h4 class="card-title">{{ e.titulo }}</h4>
+              <h4 class="card-title">{{ e.titulo_entrevista }}</h4>
               <div class="card-actions">
-                <button class="btn-icon" (click)="deleteEntrevista(e.id, $event)" title="Eliminar">
+                <button class="btn-icon" (click)="deleteEntrevista(e.id_entrevista, $event)" title="Eliminar">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <polyline points="3 6 5 6 21 6"></polyline>
                     <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -286,7 +245,6 @@
                 </button>
               </div>
             </div>
-
             <div class="card-meta">
               <span class="meta-item">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -299,20 +257,17 @@
               </span>
               <span class="meta-item">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0-4 4v2"></path>
                   <circle cx="12" cy="7" r="4"></circle>
                 </svg>
                 {{ e.entrevistador }}
               </span>
             </div>
-
             <p class="card-entrevistado">Entrevistados: {{ e.entrevistado }}</p>
-
             <div class="card-info-row">
               <span class="card-preguntas">Preguntas: {{ e.preguntas.length }}</span>
               <span class="badge badge-gray">Sin respuestas</span>
             </div>
-
             <div class="file-upload-area">
               <div class="archivos-list" *ngIf="e.archivos.length > 0">
                 <div class="archivo-item" *ngFor="let a of e.archivos">
@@ -321,7 +276,7 @@
                     <polyline points="14 2 14 8 20 8"></polyline>
                   </svg>
                   <span>{{ a.nombre }}</span>
-                  <button class="btn-remove-file" (click)="removeArchivo(e.id, a.id)">&times;</button>
+                  <button class="btn-remove-file" (click)="removeArchivo(e.id_entrevista, a.id)">&times;</button>
                 </div>
               </div>
               <label class="file-upload-btn">
@@ -330,13 +285,12 @@
                   <polyline points="17 8 12 3 7 8"></polyline>
                   <line x1="12" y1="3" x2="12" y2="15"></line>
                 </svg>
-                Subir archivo (grabación/documento)
-                <input type="file" (change)="onFileSelect($event, e.id)" multiple hidden />
+                Subir archivo
+                <input type="file" (change)="onFileSelect($event, e.id_entrevista)" multiple hidden />
               </label>
             </div>
-
             <div class="card-footer">
-              <button class="btn-anotar" (click)="startAnotar(e.id)">
+              <button class="btn-anotar" (click)="startAnotar(e.id_entrevista)">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                   <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
@@ -345,13 +299,13 @@
               </button>
               <span class="badge badge-gray">Pendiente</span>
             </div>
-
-            <!-- Anotar Respuestas Panel -->
-            <div class="respuestas-panel" *ngIf="anotandoId === e.id">
+            <div class="respuestas-panel" *ngIf="anotandoId === e.id_entrevista">
               <h4 class="respuestas-title">Anotar Respuestas</h4>
               <div class="respuesta-group" *ngFor="let p of e.preguntas; let i = index">
-                <label class="respuesta-label">{{ i + 1 }}. {{ p.texto }}</label>
-                <textarea class="form-input form-textarea" [(ngModel)]="p.respuesta" [name]="'resp_' + p.id" rows="2" placeholder="Escribe la respuesta..."></textarea>
+                <!-- ✅ Corregido: p.pregunta en lugar de p.texto -->
+                <label class="respuesta-label">{{ i + 1 }}. {{ p.pregunta }}</label>
+                <textarea class="form-input form-textarea" [(ngModel)]="p.respuesta" [name]="'resp_' + p.id_pregunta"
+                  rows="2" placeholder="Escribe la respuesta..."></textarea>
               </div>
               <div class="respuestas-actions">
                 <button class="btn-cancelar" (click)="cancelAnotar()">Cancelar</button>
@@ -362,8 +316,8 @@
         </div>
       </div>
 
-      <!-- ===== EMPTY STATE ===== -->
-      <div class="empty-state" *ngIf="entrevistas.length === 0 && !showForm">
+      <!-- Empty State -->
+      <div class="empty-state" *ngIf="entrevistas.length === 0 && !showForm && !isLoading">
         <div class="empty-icon">
           <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>

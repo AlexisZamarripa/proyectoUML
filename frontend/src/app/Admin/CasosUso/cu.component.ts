@@ -4,21 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { BarraComponent } from '../../components/barra/barra.component';
 import { ProyectoApiService } from '../../services/proyecto-api.service';
-
-interface HistoriaUsuario {
-    id: string;
-    titulo: string;
-    fecha?: string;
-    proyecto_nombre?: string;
-    proyecto: string;
-    subproyecto: string;
-    como: string;
-    quiero: string;
-    paraque: string;
-    prioridad: 'Alta' | 'Media' | 'Baja';
-    estimacion: string;
-    criteriosAceptacion: string[];
-}
+import { HistoriaUsuarioApiService, HistoriaUsuario, CreateHistoriaUsuarioDto } from '../../services/HistoriasUsuario-api.service';
+import { ProcesoApiService, Proceso, Subproceso } from '../../services/proceso-api.service';
 
 @Component({
     selector: 'app-casos-uso',
@@ -28,28 +15,27 @@ interface HistoriaUsuario {
     styleUrls: ['./cu.component.css']
 })
 export class CasosUsoComponent implements OnInit {
+
     showForm = false;
     historias: HistoriaUsuario[] = [];
+    isLoading = false;
+    errorMsg = '';
 
-    // Proyecto actual
-    proyecto = {
-        id: '',
-        nombre: '',
-        descripcion: '',
-        color: 'blue'
-    };
-
-    // Active tab in project sidebar
+    proyecto = { id: '', nombre: '', descripcion: '', color: 'blue' };
     activeTab = 'historias';
+
+    // Procesos y subprocesos
+    procesosDisponibles: Proceso[] = [];
+    subprocesosDisponibles: Subproceso[] = [];
+    procesoVinculadoId = '';
+    subprocesoId = '';
 
     // Campos del formulario
     titulo = '';
-    proyecto_nombre = '';
-    subproyecto = '';
     como = '';
     quiero = '';
     paraque = '';
-    prioridad: 'Alta' | 'Media' | 'Baja' = 'Media';
+    prioridad: 'baja' | 'media' | 'alta' = 'media';
     estimacion = '';
     criteriosAceptacion: string[] = [''];
 
@@ -62,7 +48,13 @@ export class CasosUsoComponent implements OnInit {
         { valor: 'indigo', gradient: 'linear-gradient(135deg, #6366f1, #818cf8)' },
     ];
 
-    constructor(private router: Router, private route: ActivatedRoute, private proyectoApiService: ProyectoApiService) {}
+    constructor(
+        private router: Router,
+        private route: ActivatedRoute,
+        private proyectoApiService: ProyectoApiService,
+        private historiaApiService: HistoriaUsuarioApiService,
+        private procesoApiService: ProcesoApiService
+    ) { }
 
     ngOnInit(): void {
         const id = this.route.snapshot.paramMap.get('id');
@@ -70,14 +62,123 @@ export class CasosUsoComponent implements OnInit {
             this.proyecto.id = id;
             this.proyectoApiService.getProyecto(id).subscribe({
                 next: (p) => {
-                    this.proyecto.nombre = p.nombre;
-                    this.proyecto.descripcion = p.descripcion;
-                    this.proyecto.color = p.color;
+                    this.proyecto = { id, nombre: p.nombre, descripcion: p.descripcion, color: p.color };
+                    this.cargarHistorias();
+                    this.cargarProcesos();
                 },
-                error: (error) => console.error('Error al cargar proyecto:', error)
+                error: (err) => console.error('Error al cargar proyecto:', err)
             });
         }
     }
+
+    // ─── Carga de datos ────────────────────────────────────────────────────────
+
+    cargarHistorias(): void {
+        this.isLoading = true;
+        const idProyecto = parseInt(this.proyecto.id, 10);
+        this.historiaApiService.getHistorias(idProyecto).subscribe({
+            next: (data) => {
+                this.historias = data;
+                this.isLoading = false;
+            },
+            error: (err) => {
+                console.error('Error al cargar historias:', err);
+                this.isLoading = false;
+            }
+        });
+    }
+
+    cargarProcesos(): void {
+        const idProyecto = parseInt(this.proyecto.id, 10);
+        if (!idProyecto) return;
+        this.procesoApiService.getProcesosByProyecto(idProyecto).subscribe({
+            next: (data) => { this.procesosDisponibles = data; },
+            error: (err) => console.error('Error al cargar procesos:', err)
+        });
+    }
+
+    onProcesoChange(): void {
+        this.subprocesoId = '';
+        if (!this.procesoVinculadoId) {
+            this.subprocesosDisponibles = [];
+            return;
+        }
+        const proceso = this.procesosDisponibles.find(p => p.id === this.procesoVinculadoId);
+        this.subprocesosDisponibles = proceso?.subprocesos || [];
+    }
+
+    // ─── Formulario ────────────────────────────────────────────────────────────
+
+    isFormValid(): boolean {
+        return !!(this.titulo.trim() && this.como.trim() && this.quiero.trim() && this.paraque.trim()
+            && this.procesoVinculadoId && this.subprocesoId);
+    }
+
+    handleSubmit(): void {
+        if (!this.isFormValid()) {
+            this.errorMsg = 'Completa todos los campos obligatorios incluyendo proceso y subproceso.';
+            return;
+        }
+
+        const criterios = this.criteriosAceptacion.filter(c => c.trim());
+
+        const dto: CreateHistoriaUsuarioDto = {
+            id_proyecto: parseInt(this.proyecto.id, 10),
+            id_proceso: parseInt(this.procesoVinculadoId, 10),
+            id_subproceso: parseInt(this.subprocesoId, 10),
+            titulo_historia: this.titulo.trim(),
+            rol: this.como.trim(),
+            quiero: this.quiero.trim(),
+            para_que: this.paraque.trim(),
+            prioridad: this.prioridad,
+            estimacion: this.estimacion.trim() || undefined,
+            criterios_aceptacion: criterios.length > 0 ? criterios.join(' | ') : undefined
+        };
+
+        this.historiaApiService.createHistoria(dto).subscribe({
+            next: (nueva) => {
+                this.historias.push(nueva);
+                this.resetForm();
+                this.showForm = false;
+            },
+            error: (err) => {
+                console.error('Error al crear historia:', err);
+                this.errorMsg = 'Error al crear la historia. Intenta de nuevo.';
+            }
+        });
+    }
+
+    resetForm(): void {
+        this.titulo = '';
+        this.como = '';
+        this.quiero = '';
+        this.paraque = '';
+        this.prioridad = 'media';
+        this.estimacion = '';
+        this.criteriosAceptacion = [''];
+        this.procesoVinculadoId = '';
+        this.subprocesoId = '';
+        this.subprocesosDisponibles = [];
+        this.errorMsg = '';
+    }
+
+    eliminarHistoria(id: number): void {
+        if (!confirm('¿Está seguro de eliminar esta historia?')) return;
+        this.historiaApiService.deleteHistoria(id).subscribe({
+            next: () => {
+                this.historias = this.historias.filter(h => h.id_historia !== id);
+            },
+            error: (err) => console.error('Error al eliminar historia:', err)
+        });
+    }
+
+    // Parsear criterios del string del backend para mostrarlos como lista
+    getCriterios(historia: HistoriaUsuario): string[] {
+        if (!historia.criterios_aceptacion) return [];
+        return historia.criterios_aceptacion.split(' | ').filter(c => c.trim());
+    }
+
+    // ─── Utilidades ────────────────────────────────────────────────────────────
 
     goBack(): void {
         this.router.navigate(['/proyectos']);
@@ -88,92 +189,11 @@ export class CasosUsoComponent implements OnInit {
         return c ? c.gradient : this.COLORES_PROYECTO[0].gradient;
     }
 
-    getEmptyHistoria(): HistoriaUsuario {
-        return {
-            id: '',
-            titulo: '',
-            proyecto: '',
-            subproyecto: '',
-            como: '',
-            quiero: '',
-            paraque: '',
-            prioridad: 'Media',
-            estimacion: '',
-            criteriosAceptacion: ['']
-        };
-    }
-
-    isFormValid(): boolean {
-        return !!(this.titulo && this.titulo.trim().length > 0 &&
-                  this.como && this.como.trim().length > 0 &&
-                  this.quiero && this.quiero.trim().length > 0 &&
-                  this.paraque && this.paraque.trim().length > 0);
-    }
-
-    resetForm() {
-        this.titulo = '';
-        this.proyecto_nombre = '';
-        this.subproyecto = '';
-        this.como = '';
-        this.quiero = '';
-        this.paraque = '';
-        this.prioridad = 'Media';
-        this.estimacion = '';
-        this.criteriosAceptacion = [''];
-    }
-
-    handleSubmit() {
-        if (!this.titulo.trim() || !this.como.trim() || !this.quiero.trim() || !this.paraque.trim()) {
-            return;
-        }
-
-        // Limpiar criterios vacíos
-        const criterios = this.criteriosAceptacion.filter(c => c.trim() !== '');
-
-        // Generar fecha actual
-        const now = new Date();
-        const fecha = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
-
-        const nueva: HistoriaUsuario = {
-            id: this.generateUUID(),
-            titulo: this.titulo.trim(),
-            fecha: fecha,
-            proyecto_nombre: this.proyecto_nombre.trim(),
-            proyecto: this.proyecto_nombre.trim(),
-            subproyecto: this.subproyecto.trim(),
-            como: this.como.trim(),
-            quiero: this.quiero.trim(),
-            paraque: this.paraque.trim(),
-            prioridad: this.prioridad,
-            estimacion: this.estimacion.trim(),
-            criteriosAceptacion: criterios.length > 0 ? criterios : []
-        };
-
-        this.historias.push(nueva);
-        console.log('Historia creada. Total historias:', this.historias.length, this.historias);
-        this.resetForm();
-        this.showForm = false;
-    }
-
-    eliminarHistoria(id: string) {
-        if (confirm('¿Está seguro de eliminar esta historia?')) {
-            this.historias = this.historias.filter(h => h.id !== id);
-        }
-    }
-
-    private generateUUID(): string {
-        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-            const r = Math.random() * 16 | 0;
-            const v = c === 'x' ? r : (r & 0x3 | 0x8);
-            return v.toString(16);
-        });
-    }
-
     trackByIndex(index: number): number {
         return index;
     }
 
-    trackByHistoria(index: number, item: HistoriaUsuario): string {
-        return item.id;
+    trackByHistoria(index: number, item: HistoriaUsuario): number {
+        return item.id_historia;
     }
 }

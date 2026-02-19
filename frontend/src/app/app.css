@@ -1,6 +1,47 @@
- :host {
-     display: block;
-     width: 100%;
-     margin: 0;
-     padding: 0;
- }
+:host {
+    display: block;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+/* Contenedor principal */
+.app-container {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Wrapper del contenido */
+.content-wrapper {
+    display: flex;
+    flex: 1;
+    margin-top: 70px;
+    /* Altura del header */
+    margin-left: 70px;
+    /* Ancho de la barra colapsada */
+    transition: margin-left 0.3s ease;
+}
+
+/* el contenido se recorre */
+.app-container.barra-expanded .content-wrapper {
+    margin-left: 280px;
+}
+
+/* Contenido principal */
+.main-content {
+    flex: 1;
+    width: 100%;
+    padding: 2rem 2.5rem 2rem 1.5rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .content-wrapper {
+        margin-left: 0;
+    }
+
+    .app-container.barra-expanded .content-wrapper {
+        margin-left: 0;
+    }
+}

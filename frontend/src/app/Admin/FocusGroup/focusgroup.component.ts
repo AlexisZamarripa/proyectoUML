@@ -4,20 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { BarraComponent } from '../../components/barra/barra.component';
 import { ProyectoApiService } from '../../services/proyecto-api.service';
-
-interface FocusGroup {
-  id: string;
-  titulo: string;
-  moderador: string;
-  tipoMedia: string;
-  objetivo: string;
-  transcripcion: string;
-  fecha: string;
-  proceso: string;
-  subproceso: string;
-  participantes: string[];
-  conclusiones: string[];
-}
+import { FocusGroupApiService, FocusGroup, CreateFocusGroupDto } from '../../services/FocusGroup.service';
+import { ProcesoApiService, Proceso, Subproceso } from '../../services/proceso-api.service';
 
 @Component({
   selector: 'app-focusgroup',
@@ -28,29 +16,33 @@ interface FocusGroup {
 })
 export class FocusGroupComponent implements OnInit {
 
-  proyecto = {
-    id: '',
-    nombre: '',
-    descripcion: '',
-    color: 'blue'
-  };
+  proyecto = { id: '', nombre: '', descripcion: '', color: 'blue' };
 
   focusGroups: FocusGroup[] = [];
-
   showForm = false;
-
-  // Form fields
-  titulo = '';
-  moderador = '';
-  tipoMedia = '';
-  objetivo = '';
-  transcripcion = '';
-  proceso = '';
-  subproceso = '';
-  participantes: string[] = [''];
-  conclusiones: string[] = [''];
+  isLoading = false;
+  errorMsg = '';
 
   activeTab = 'focus-groups';
+
+  // Procesos y subprocesos
+  procesosDisponibles: Proceso[] = [];
+  subprocesosDisponibles: Subproceso[] = [];
+  procesoVinculadoId = '';
+  subprocesoId = '';
+
+  // Form fields
+  nombreFocus = '';
+  descripcion = '';
+  fechaInicio = '';
+  estado: 'planificacion' | 'en_progreso' | 'pausado' | 'completado' = 'planificacion';
+
+  readonly ESTADOS = [
+    { valor: 'planificacion', label: 'Planificación' },
+    { valor: 'en_progreso', label: 'En Progreso' },
+    { valor: 'pausado', label: 'Pausado' },
+    { valor: 'completado', label: 'Completado' },
+  ];
 
   readonly COLORES_PROYECTO: { valor: string; gradient: string }[] = [
     { valor: 'blue', gradient: 'linear-gradient(135deg, #3b82f6, #06b6d4)' },
@@ -64,8 +56,10 @@ export class FocusGroupComponent implements OnInit {
   constructor(
     private router: Router,
     private route: ActivatedRoute,
-    private proyectoApiService: ProyectoApiService
-  ) {}
+    private proyectoApiService: ProyectoApiService,
+    private focusGroupApiService: FocusGroupApiService,
+    private procesoApiService: ProcesoApiService
+  ) { }
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
@@ -73,14 +67,105 @@ export class FocusGroupComponent implements OnInit {
       this.proyecto.id = id;
       this.proyectoApiService.getProyecto(id).subscribe({
         next: (p) => {
-          this.proyecto.nombre = p.nombre;
-          this.proyecto.descripcion = p.descripcion;
-          this.proyecto.color = p.color;
+          this.proyecto = { id, nombre: p.nombre, descripcion: p.descripcion, color: p.color };
+          this.cargarFocusGroups();
+          this.cargarProcesos();
         },
-        error: (error) => console.error('Error al cargar proyecto:', error)
+        error: (err) => console.error('Error al cargar proyecto:', err)
       });
     }
   }
+
+  // ─── Carga de datos ────────────────────────────────────────────────────────
+
+  cargarFocusGroups(): void {
+    this.isLoading = true;
+    const idProyecto = parseInt(this.proyecto.id, 10);
+    this.focusGroupApiService.getFocusGroups(idProyecto).subscribe({
+      next: (data) => {
+        this.focusGroups = data;
+        this.isLoading = false;
+      },
+      error: (err) => {
+        console.error('Error al cargar focus groups:', err);
+        this.isLoading = false;
+      }
+    });
+  }
+
+  cargarProcesos(): void {
+    const idProyecto = parseInt(this.proyecto.id, 10);
+    if (!idProyecto) return;
+    this.procesoApiService.getProcesosByProyecto(idProyecto).subscribe({
+      next: (data) => { this.procesosDisponibles = data; },
+      error: (err) => console.error('Error al cargar procesos:', err)
+    });
+  }
+
+  onProcesoChange(): void {
+    this.subprocesoId = '';
+    if (!this.procesoVinculadoId) {
+      this.subprocesosDisponibles = [];
+      return;
+    }
+    const proceso = this.procesosDisponibles.find(p => p.id === this.procesoVinculadoId);
+    this.subprocesosDisponibles = proceso?.subprocesos || [];
+  }
+
+  // ─── Formulario ────────────────────────────────────────────────────────────
+
+  handleSubmit(): void {
+    if (!this.nombreFocus.trim()) return;
+    if (!this.procesoVinculadoId || !this.subprocesoId) {
+      this.errorMsg = 'Debes seleccionar un proceso y un subproceso.';
+      return;
+    }
+
+    const dto: CreateFocusGroupDto = {
+      id_proyecto: parseInt(this.proyecto.id, 10),
+      id_proceso: parseInt(this.procesoVinculadoId, 10),
+      id_subproceso: parseInt(this.subprocesoId, 10),
+      nombre_focus: this.nombreFocus.trim(),
+      descripcion: this.descripcion.trim() || undefined,
+      fecha_inicio: this.fechaInicio || undefined,
+      estado: this.estado
+    };
+
+    this.focusGroupApiService.createFocusGroup(dto).subscribe({
+      next: (nuevo) => {
+        this.focusGroups.push(nuevo);
+        this.resetForm();
+        this.showForm = false;
+      },
+      error: (err) => {
+        console.error('Error al crear focus group:', err);
+        this.errorMsg = 'Error al guardar el focus group. Intenta de nuevo.';
+      }
+    });
+  }
+
+  resetForm(): void {
+    this.nombreFocus = '';
+    this.descripcion = '';
+    this.fechaInicio = '';
+    this.estado = 'planificacion';
+    this.procesoVinculadoId = '';
+    this.subprocesoId = '';
+    this.subprocesosDisponibles = [];
+    this.errorMsg = '';
+  }
+
+  deleteFocusGroup(id: number): void {
+    if (!confirm('¿Eliminar este focus group?')) return;
+    this.focusGroupApiService.deleteFocusGroup(id).subscribe({
+      next: () => {
+        this.focusGroups = this.focusGroups.filter(fg => fg.id_focus !== id);
+      },
+      error: (err) => console.error('Error al eliminar focus group:', err)
+    });
+  }
+
+  // ─── Utilidades ────────────────────────────────────────────────────────────
 
   goBack(): void {
     this.router.navigate(['/proyectos']);
@@ -91,82 +176,23 @@ export class FocusGroupComponent implements OnInit {
     return c ? c.gradient : this.COLORES_PROYECTO[0].gradient;
   }
 
-  // ===== FORM =====
+  getEstadoLabel(estado?: string): string {
+    return this.ESTADOS.find(e => e.valor === estado)?.label ?? 'Planificación';
+  }
 
-  handleSubmit(): void {
-    if (!this.titulo || !this.moderador || !this.objetivo) return;
-
-    const nuevo: FocusGroup = {
-      id: this.generateUUID(),
-      titulo: this.titulo,
-      moderador: this.moderador,
-      tipoMedia: this.tipoMedia,
-      objetivo: this.objetivo,
-      transcripcion: this.transcripcion,
-      fecha: new Date().toISOString().split('T')[0],
-      proceso: this.proceso,
-      subproceso: this.subproceso,
-      participantes: this.participantes.filter(p => p.trim()),
-      conclusiones: this.conclusiones.filter(c => c.trim())
+  getEstadoBadgeClass(estado?: string): string {
+    const map: Record<string, string> = {
+      planificacion: 'badge-gray',
+      en_progreso: 'badge-blue',
+      pausado: 'badge-orange',
+      completado: 'badge-green'
     };
-
-    this.focusGroups.push(nuevo);
-    this.resetForm();
+    return map[estado ?? ''] ?? 'badge-gray';
   }
 
-  resetForm(): void {
-    this.titulo = '';
-    this.moderador = '';
-    this.tipoMedia = '';
-    this.objetivo = '';
-    this.transcripcion = '';
-    this.proceso = '';
-    this.subproceso = '';
-    this.participantes = [''];
-    this.conclusiones = [''];
-    this.showForm = false;
-  }
-
-  addParticipante(): void {
-    this.participantes.push('');
-  }
-
-  removeParticipante(index: number): void {
-    if (this.participantes.length > 1) {
-      this.participantes.splice(index, 1);
-    }
-  }
-
-  addConclusion(): void {
-    this.conclusiones.push('');
-  }
-
-  removeConclusion(index: number): void {
-    if (this.conclusiones.length > 1) {
-      this.conclusiones.splice(index, 1);
-    }
-  }
-
-  deleteFocusGroup(id: string): void {
-    if (confirm('¿Eliminar este focus group?')) {
-      const idx = this.focusGroups.findIndex(fg => fg.id === id);
-      if (idx !== -1) {
-        this.focusGroups.splice(idx, 1);
-      }
-    }
-  }
-
-  formatDate(fecha: string): string {
+  formatDate(fecha?: string): string {
     if (!fecha) return '';
-    const d = new Date(fecha);
-    return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'numeric', year: 'numeric' });
-  }
-
-  private generateUUID(): string {
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-      const r = (Math.random() * 16) | 0;
-      const v = c === 'x' ? r : (r & 0x3) | 0x8;
-      return v.toString(16);
-    });
+    const d = new Date(fecha + 'T00:00:00');
+    return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
   }
 }
