@@ -5,6 +5,8 @@ import { CreateEncuestaDto } from './dto/crearEncuesta.dto';
 import { UpdateEncuestaDto } from './dto/actualizarEncuesta.dto';
 import { Encuesta } from './entities/encuesta.entity';
 import { PreguntaEncuesta } from './entities/pregunta.entity';
+import { RespuestaEncuesta } from './entities/respuestas.entity';
+import { CreateRespuestasDto } from './dto/respuestas.dto';
 
 @Injectable()
 export class EncuestasService {
@@ -13,6 +15,8 @@ export class EncuestasService {
         private encuestasRepository: Repository<Encuesta>,
         @InjectRepository(PreguntaEncuesta)
         private preguntasRepository: Repository<PreguntaEncuesta>,
+        @InjectRepository(RespuestaEncuesta)
+        private respuestasRepository: Repository<RespuestaEncuesta>,
     ) { }
 
     async create(createEncuestaDto: CreateEncuestaDto): Promise<Encuesta> {
@@ -112,5 +116,36 @@ export class EncuestasService {
     async remove(id: number): Promise<void> {
         const encuesta = await this.findOne(id);
         await this.encuestasRepository.remove(encuesta);
+    }
+
+    // Método para guardar respuestas (reemplaza si ya existen para ese subproceso+encuesta)
+    async saveRespuestas(dto: CreateRespuestasDto): Promise<RespuestaEncuesta[]> {
+        // Eliminar respuestas previas del mismo subproceso para esta encuesta
+        await this.respuestasRepository.delete({
+            id_encuesta: dto.id_encuesta,
+            id_subproceso: dto.id_subproceso,
+        });
+
+        // Guardar las nuevas
+        const entidades = dto.respuestas.map(r =>
+            this.respuestasRepository.create({
+                id_pregunta: r.id_pregunta,
+                id_encuesta: dto.id_encuesta,
+                id_subproceso: dto.id_subproceso,
+                respuesta: r.respuesta ?? '',
+            })
+        );
+
+        return await this.respuestasRepository.save(entidades);
+    }
+
+    // Método para obtener respuestas de una encuesta en un subproceso específico
+    async getRespuestas(idEncuesta: number, idSubproceso: number): Promise<RespuestaEncuesta[]> {
+        return await this.respuestasRepository.find({
+            where: {
+                id_encuesta: idEncuesta,
+                id_subproceso: idSubproceso,
+            },
+        });
     }
 }

@@ -18,10 +18,10 @@ export class Encuesta {
     @Column({ type: 'int' })
     id_proyecto: number;
 
-    @Column({ type: 'int' })
+    @Column({ type: 'int', nullable: true })
     id_proceso: number;
 
-    @Column({ type: 'int' })
+    @Column({ type: 'int', nullable: true })
     id_subproceso: number;
 
     @OneToMany(() => PreguntaEncuesta, (pregunta) => pregunta.encuesta, {

@@ -17,4 +17,12 @@ export class CreateSubprocesoDto {
   @IsString()
   @IsOptional()
   descripcion?: string;
+
+  @IsString()
+  @IsOptional()
+  tipo_herramienta?: string | null;
+
+  @IsInt()
+  @IsOptional()
+  id_herramienta?: number | null;
 }
