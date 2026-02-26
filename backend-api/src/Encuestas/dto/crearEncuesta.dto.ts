@@ -17,12 +17,12 @@ export class CreateEncuestaDto {
     id_proyecto: number;
 
     @IsInt()
-    @IsNotEmpty()
-    id_proceso: number;
+    @IsOptional()        // ← cambiar
+    id_proceso?: number; // ← cambiar
 
     @IsInt()
-    @IsNotEmpty()
-    id_subproceso: number;
+    @IsOptional()           // ← cambiar
+    id_subproceso?: number; // ← cambiar
 
     @IsString()
     @IsOptional()
