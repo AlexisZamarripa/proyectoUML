@@ -88,27 +88,10 @@ export class EncuestasService {
 
     async update(id: number, updateEncuestaDto: UpdateEncuestaDto): Promise<Encuesta> {
         const encuesta = await this.findOne(id);
-        const { preguntas, ...encuestaData } = updateEncuestaDto;
 
-        // Actualizar datos de la encuesta
-        Object.assign(encuesta, encuestaData);
+        // Actualizar solo los datos básicos de la encuesta (no las preguntas)
+        Object.assign(encuesta, updateEncuestaDto);
         await this.encuestasRepository.save(encuesta);
-
-        // Si se envían preguntas, eliminar las existentes y crear las nuevas
-        if (preguntas) {
-            await this.preguntasRepository.delete({ id_encuesta: id });
-
-            if (preguntas.length > 0) {
-                const preguntasEntidades = preguntas.map(p =>
-                    this.preguntasRepository.create({
-                        id_encuesta: id,
-                        pregunta: p.pregunta,
-                        tipo_pregunta: p.tipo_pregunta || 'texto_abierto',
-                    })
-                );
-                await this.preguntasRepository.save(preguntasEntidades);
-            }
-        }
 
         return this.findOne(id);
     }

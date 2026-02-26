@@ -78,6 +78,11 @@ export class EncuestaApiService {
         return this.http.post<Encuesta>(`${this.base}/encuestas`, dto);
     }
 
+    /** PATCH /encuestas/:id */
+    updateEncuesta(id: number, dto: Partial<CreateEncuestaDto>): Observable<Encuesta> {
+        return this.http.patch<Encuesta>(`${this.base}/encuestas/${id}`, dto);
+    }
+
     /** DELETE /encuestas/:id ← NUEVO */
     deleteEncuesta(id: number): Observable<void> {
         return this.http.delete<void>(`${this.base}/encuestas/${id}`);
