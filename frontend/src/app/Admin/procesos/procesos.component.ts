@@ -10,6 +10,7 @@ import { ProcesoApiService, Proceso, Subproceso } from '../../services/proceso-a
 import { HerramientaApiService } from '../../services/herramienta-api.service';
 import { EncuestaApiService, Encuesta, RespuestaEncuesta } from '../../services/Encuesta-api.service';
 import { EntrevistaApiService, Entrevista } from '../../services/Entrevista-api.service';
+import { DocumentoApiService, AnalisisDocumento } from '../../services/documento-api.service';
 
 interface ColorOption {
   valor: string;
@@ -141,6 +142,12 @@ export class ProcesosComponent implements OnInit {
   savingRespuestasEntrevista = false;
   entrevistaGuardada = false;
 
+  // ===== MODAL DOCUMENTO =====
+  documentoModal = false;
+  loadingDocumento = false;
+  documentoDetalle: AnalisisDocumento | null = null;
+  documentoSubprocesoNombre: string = '';
+
   // Modal proceso
   selectedProceso: Proceso | null = null;
 
@@ -178,6 +185,7 @@ export class ProcesosComponent implements OnInit {
     private herramientaApiService: HerramientaApiService,
     private encuestaApiService: EncuestaApiService,
     private entrevistaApiService: EntrevistaApiService,
+    private documentoApiService: DocumentoApiService,
   ) { }
 
   ngOnInit(): void {
@@ -422,6 +430,29 @@ export class ProcesosComponent implements OnInit {
       },
       error: (e) => { console.error('Error al guardar respuestas:', e); this.savingRespuestasEntrevista = false; }
     });
+  }
+
+  // ===== MODAL DOCUMENTO =====
+
+  openDocumentoModal(sub: Subproceso): void {
+    if (!sub.herramienta) return;
+    this.documentoModal = true;
+    this.loadingDocumento = true;
+    this.documentoDetalle = null;
+    this.documentoSubprocesoNombre = sub.nombre;
+    this.documentoApiService.getOne(sub.herramienta.id).subscribe({
+      next: (doc) => { this.documentoDetalle = doc; this.loadingDocumento = false; },
+      error: (e) => { console.error('Error al cargar documento:', e); this.loadingDocumento = false; }
+    });
+  }
+
+  closeDocumentoModal(): void {
+    this.documentoModal = false;
+    this.documentoDetalle = null;
+  }
+
+  getDocFileUrl(url: string): string {
+    return this.documentoApiService.getFileUrl(url);
   }
 
   // ===== SUBPROCESOS =====
