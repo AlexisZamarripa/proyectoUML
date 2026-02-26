@@ -16,10 +16,7 @@
 .content-wrapper {
     display: flex;
     flex: 1;
-    margin-top: 70px;
-    /* Altura del header */
-    margin-left: 70px;
-    /* Ancho de la barra colapsada */
+    margin-top: 0;
     transition: margin-left 0.3s ease;
 }
 
@@ -32,7 +29,9 @@
 .main-content {
     flex: 1;
     width: 100%;
-    padding: 2rem 2.5rem 2rem 1.5rem;
+    max-width: 1800px;
+    margin: 0 auto;
+    padding: 1.5rem 2rem;
 }
 
 /* Responsive */

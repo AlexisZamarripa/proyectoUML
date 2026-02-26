@@ -8,7 +8,7 @@ import { ProyectoApiService } from '../../services/proyecto-api.service';
 import { StakeholderApiService, Stakeholder } from '../../services/stakeholder-api.service';
 import { ProcesoApiService, Proceso, Subproceso } from '../../services/proceso-api.service';
 import { HerramientaApiService } from '../../services/herramienta-api.service';
-import { EncuestaApiService, Encuesta, RespuestaEncuesta } from '../../services/encuesta-api.service';
+import { EncuestaApiService, Encuesta, RespuestaEncuesta } from '../../services/Encuesta-api.service';
 import { EntrevistaApiService, Entrevista } from '../../services/Entrevista-api.service';
 
 interface ColorOption {
