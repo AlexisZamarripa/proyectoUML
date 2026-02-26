@@ -7,6 +7,11 @@ export interface Subproceso {
   nombre: string;
   descripcion: string;
   stakeholder_id?: string;
+  herramienta?: {
+    id: number;      // ← AGREGAR ESTO
+    tipo: string;
+    nombre: string;
+  };
 }
 
 export interface Proceso {
@@ -45,6 +50,8 @@ export interface CreateSubprocesoDto {
   id_stakeholder?: number | null;
   nombre_subproceso: string;
   descripcion?: string;
+  tipo_herramienta?: string | null;
+  id_herramienta?: number | null;
 }
 
 export interface UpdateSubprocesoDto {
@@ -59,7 +66,7 @@ export interface UpdateSubprocesoDto {
 export class ProcesoApiService {
   private apiUrl = 'http://localhost:3000/procesos';
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
 
   // ========== PROCESOS ==========
 

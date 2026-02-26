@@ -18,11 +18,9 @@ export class EntrevistasService {
     async create(createEntrevistaDto: CreateEntrevistaDto): Promise<Entrevista> {
         const { preguntas, ...entrevistaData } = createEntrevistaDto;
 
-        // Crear la entrevista
         const entrevista = this.entrevistasRepository.create(entrevistaData);
         const entrevistaGuardada = await this.entrevistasRepository.save(entrevista);
 
-        // Crear las preguntas si existen
         if (preguntas && preguntas.length > 0) {
             const preguntasEntidades = preguntas.map(p =>
                 this.preguntasRepository.create({
@@ -33,7 +31,6 @@ export class EntrevistasService {
             await this.preguntasRepository.save(preguntasEntidades);
         }
 
-        // Retornar la entrevista con las preguntas
         return this.findOne(entrevistaGuardada.id_entrevista);
     }
 
@@ -85,11 +82,9 @@ export class EntrevistasService {
         const entrevista = await this.findOne(id);
         const { preguntas, ...entrevistaData } = updateEntrevistaDto;
 
-        // Actualizar datos de la entrevista
         Object.assign(entrevista, entrevistaData);
         await this.entrevistasRepository.save(entrevista);
 
-        // Si se envían preguntas, eliminar las existentes y crear las nuevas
         if (preguntas) {
             await this.preguntasRepository.delete({ id_entrevista: id });
 
@@ -98,6 +93,7 @@ export class EntrevistasService {
                     this.preguntasRepository.create({
                         id_entrevista: id,
                         pregunta: p.pregunta,
+                        respuesta: p.respuesta ?? null,
                     })
                 );
                 await this.preguntasRepository.save(preguntasEntidades);

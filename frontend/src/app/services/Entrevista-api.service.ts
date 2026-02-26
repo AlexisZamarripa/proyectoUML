@@ -29,8 +29,8 @@ export interface CreatePreguntaDto {
 
 export interface CreateEntrevistaDto {
     id_proyecto: number;
-    id_proceso: number;
-    id_subproceso: number;
+    id_proceso?: number;       // opcional — la vinculación se hace desde procesos
+    id_subproceso?: number;    // opcional — la vinculación se hace desde procesos
     titulo_entrevista?: string;
     entrevistador?: string;
     entrevistado?: string;

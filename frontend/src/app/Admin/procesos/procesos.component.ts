@@ -4,14 +4,38 @@ import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { BarraComponent } from '../../components/barra/barra.component';
 import { ConfirmModalComponent, ConfirmModalConfig } from '../../components/confirm-modal/confirm-modal.component';
-import { ProyectoApiService, Proyecto, EstadoProyecto } from '../../services/proyecto-api.service';
+import { ProyectoApiService } from '../../services/proyecto-api.service';
 import { StakeholderApiService, Stakeholder } from '../../services/stakeholder-api.service';
 import { ProcesoApiService, Proceso, Subproceso } from '../../services/proceso-api.service';
+import { HerramientaApiService } from '../../services/herramienta-api.service';
+import { EncuestaApiService, Encuesta, RespuestaEncuesta } from '../../services/encuesta-api.service';
+import { EntrevistaApiService, Entrevista } from '../../services/Entrevista-api.service';
 
 interface ColorOption {
   valor: string;
   hex: string;
   gradient: string;
+}
+
+export interface HerramientaOpcion {
+  id: string;
+  nombre: string;
+  detalle?: string;
+}
+
+export type TipoHerramienta =
+  | 'encuesta'
+  | 'entrevista'
+  | 'documento'
+  | 'focus_group'
+  | 'historia_usuario'
+  | 'observacion'
+  | 'seguimiento';
+
+interface TipoHerramientaConfig {
+  valor: TipoHerramienta;
+  label: string;
+  icono: string;
 }
 
 @Component({
@@ -23,17 +47,9 @@ interface ColorOption {
 })
 export class ProcesosComponent implements OnInit {
 
-  // Proyecto actual
-  proyecto = {
-    id: '',
-    nombre: '',
-    descripcion: '',
-    color: 'blue'
-  };
-
+  proyecto = { id: '', nombre: '', descripcion: '', color: 'blue' };
   procesos: Proceso[] = [];
   stakeholders: Stakeholder[] = [];
-
   showForm = false;
 
   // Form fields
@@ -43,8 +59,6 @@ export class ProcesosComponent implements OnInit {
   stakeholder_id = '';
   departamentos: string[] = [];
   pasos_clave: string[] = [];
-  
-  // Temp inputs
   nuevoDepartamento = '';
   nuevoPaso = '';
 
@@ -55,18 +69,85 @@ export class ProcesosComponent implements OnInit {
   subDescripcion = '';
   subStakeholderId = '';
 
-  // Modal
+  // ===== HERRAMIENTAS =====
+  subTipoHerramienta: TipoHerramienta | '' = '';
+  subHerramientaId = '';
+  herramientasDisponibles: HerramientaOpcion[] = [];
+  loadingHerramientas = false;
+
+  readonly TIPOS_HERRAMIENTA: TipoHerramientaConfig[] = [
+    {
+      valor: 'encuesta', label: 'Encuesta',
+      icono: `<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+      </svg>`
+    },
+    {
+      valor: 'entrevista', label: 'Entrevista',
+      icono: `<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+      </svg>`
+    },
+    {
+      valor: 'documento', label: 'Documento',
+      icono: `<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+      </svg>`
+    },
+    {
+      valor: 'focus_group', label: 'Focus Group',
+      icono: `<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <circle cx="12" cy="7" r="4"/><path d="M5.5 20a9 9 0 0 1 13 0"/>
+        <circle cx="5" cy="14" r="3"/><circle cx="19" cy="14" r="3"/>
+      </svg>`
+    },
+    {
+      valor: 'historia_usuario', label: 'Historia',
+      icono: `<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+      </svg>`
+    },
+    {
+      valor: 'observacion', label: 'Observación',
+      icono: `<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+      </svg>`
+    },
+    {
+      valor: 'seguimiento', label: 'Seguimiento',
+      icono: `<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+      </svg>`
+    },
+  ];
+
+  // ===== MODAL ENCUESTA =====
+  encuestaModal = false;
+  loadingEncuesta = false;
+  encuestaDetalle: Encuesta | null = null;
+  encuestaSubprocesoId: string = '';
+  encuestaSubprocesoNombre: string = '';
+  respuestasMap: Record<number, string> = {};
+  savingRespuestas = false;
+  encuestaGuardada = false;
+
+  // ===== MODAL ENTREVISTA =====
+  entrevistaModal = false;
+  loadingEntrevista = false;
+  entrevistaDetalle: Entrevista | null = null;
+  entrevistaSubprocesoId: string = '';
+  entrevistaSubprocesoNombre: string = '';
+  respuestasEntrevistaMap: Record<number, string> = {};
+  savingRespuestasEntrevista = false;
+  entrevistaGuardada = false;
+
+  // Modal proceso
   selectedProceso: Proceso | null = null;
 
   // Confirm modal
   showConfirmModal = false;
   confirmModalConfig: ConfirmModalConfig = {
-    title: '',
-    message: '',
-    confirmText: 'Eliminar',
-    cancelText: 'Cancelar',
-    type: 'danger',
-    icon: 'trash'
+    title: '', message: '', confirmText: 'Eliminar', cancelText: 'Cancelar', type: 'danger', icon: 'trash'
   };
   private confirmCallback: (() => void) | null = null;
 
@@ -93,8 +174,11 @@ export class ProcesosComponent implements OnInit {
     private route: ActivatedRoute,
     private proyectoApiService: ProyectoApiService,
     private stakeholderApiService: StakeholderApiService,
-    private procesoApiService: ProcesoApiService
-  ) {}
+    private procesoApiService: ProcesoApiService,
+    private herramientaApiService: HerramientaApiService,
+    private encuestaApiService: EncuestaApiService,
+    private entrevistaApiService: EntrevistaApiService,
+  ) { }
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
@@ -106,34 +190,24 @@ export class ProcesosComponent implements OnInit {
           this.proyecto.descripcion = p.descripcion;
           this.proyecto.color = p.color;
         },
-        error: (error) => console.error('Error al cargar proyecto:', error)
+        error: (e) => console.error('Error al cargar proyecto:', e)
       });
-      
-      // Cargar stakeholders del proyecto
       this.stakeholderApiService.getStakeholders(id).subscribe({
-        next: (stakeholders) => {
-          this.stakeholders = stakeholders;
-        },
-        error: (error) => console.error('Error al cargar stakeholders:', error)
+        next: (s) => this.stakeholders = s,
+        error: (e) => console.error('Error al cargar stakeholders:', e)
       });
-
-      // Cargar procesos del proyecto
       this.loadProcesos(id);
     }
   }
 
   loadProcesos(proyectoId: string): void {
     this.procesoApiService.getProcesosByProyecto(parseInt(proyectoId)).subscribe({
-      next: (procesos) => {
-        this.procesos = procesos;
-      },
-      error: (error) => console.error('Error al cargar procesos:', error)
+      next: (p) => this.procesos = p,
+      error: (e) => console.error('Error al cargar procesos:', e)
     });
   }
 
-  goBack(): void {
-    this.router.navigate(['/proyectos']);
-  }
+  goBack(): void { this.router.navigate(['/proyectos']); }
 
   getProyectoGradient(): string {
     const c = this.COLORES_PROYECTO.find(x => x.valor === this.proyecto.color);
@@ -154,8 +228,7 @@ export class ProcesosComponent implements OnInit {
 
   handleSubmit(): void {
     if (!this.nombre || !this.descripcion) return;
-
-    const createDto = {
+    this.procesoApiService.createProceso({
       id_proyecto: parseInt(this.proyecto.id),
       nombre_proceso: this.nombre,
       descripcion: this.descripcion,
@@ -163,132 +236,245 @@ export class ProcesosComponent implements OnInit {
       id_stakeholder: this.stakeholder_id ? parseInt(this.stakeholder_id) : null,
       departamentos: [...this.departamentos],
       pasos_clave: [...this.pasos_clave],
-    };
-
-    this.procesoApiService.createProceso(createDto).subscribe({
-      next: () => {
-        this.resetForm();
-        this.loadProcesos(this.proyecto.id);
-      },
-      error: (error) => console.error('Error al crear proceso:', error)
+    }).subscribe({
+      next: () => { this.resetForm(); this.loadProcesos(this.proyecto.id); },
+      error: (e) => console.error('Error al crear proceso:', e)
     });
   }
 
   resetForm(): void {
-    this.nombre = '';
-    this.descripcion = '';
-    this.color = 'blue';
-    this.stakeholder_id = '';
-    this.departamentos = [];
-    this.pasos_clave = [];
-    this.nuevoDepartamento = '';
-    this.nuevoPaso = '';
-    this.showForm = false;
+    this.nombre = ''; this.descripcion = ''; this.color = 'blue';
+    this.stakeholder_id = ''; this.departamentos = []; this.pasos_clave = [];
+    this.nuevoDepartamento = ''; this.nuevoPaso = ''; this.showForm = false;
   }
-
-  // ===== DEPARTAMENTOS =====
 
   addDepartamento(): void {
-    if (this.nuevoDepartamento.trim()) {
-      this.departamentos.push(this.nuevoDepartamento.trim());
-      this.nuevoDepartamento = '';
-    }
+    if (this.nuevoDepartamento.trim()) { this.departamentos.push(this.nuevoDepartamento.trim()); this.nuevoDepartamento = ''; }
   }
-
-  removeDepartamento(index: number): void {
-    this.departamentos.splice(index, 1);
-  }
-
-  // ===== PASOS CLAVE =====
-
+  removeDepartamento(index: number): void { this.departamentos.splice(index, 1); }
   addPaso(): void {
-    if (this.nuevoPaso.trim()) {
-      this.pasos_clave.push(this.nuevoPaso.trim());
-      this.nuevoPaso = '';
-    }
+    if (this.nuevoPaso.trim()) { this.pasos_clave.push(this.nuevoPaso.trim()); this.nuevoPaso = ''; }
   }
-
-  removePaso(index: number): void {
-    this.pasos_clave.splice(index, 1);
-  }
-
-  // ===== HELPERS =====
+  removePaso(index: number): void { this.pasos_clave.splice(index, 1); }
 
   getStakeholderNombre(id: string): string {
-    const stakeholder = this.stakeholders.find(s => s.id === id);
-    return stakeholder ? stakeholder.nombre : 'N/A';
+    return this.stakeholders.find(s => s.id === id)?.nombre ?? 'N/A';
   }
 
-  deleteProceso(id: string, event: Event): void {
-    event.stopPropagation();
-    this.openConfirmModal(
-      '¿Eliminar proceso?',
-      '¿Estás seguro de que deseas eliminar este proceso y todos sus subprocesos? Esta acción no se puede deshacer.',
-      () => {
-        this.procesoApiService.deleteProceso(parseInt(id)).subscribe({
-          next: () => {
-            this.loadProcesos(this.proyecto.id);
+  // ===== HERRAMIENTAS =====
+
+  getLabelTipoHerramienta(tipo: string): string {
+    return this.TIPOS_HERRAMIENTA.find(t => t.valor === tipo)?.label ?? tipo;
+  }
+
+  getIconoTipoHerramienta(tipo: string): string {
+    return this.TIPOS_HERRAMIENTA.find(t => t.valor === tipo)?.icono ?? '';
+  }
+
+  getTipoPreguntaLabel(tipo: string): string {
+    const labels: Record<string, string> = {
+      texto_abierto: 'Texto abierto',
+      opcion_multiple: 'Opción múltiple',
+      escala: 'Escala 1-5',
+      si_no: 'Sí / No',
+    };
+    return labels[tipo] ?? tipo;
+  }
+
+  onSelectTipoHerramienta(tipo: TipoHerramienta): void {
+    if (this.subTipoHerramienta === tipo) {
+      this.subTipoHerramienta = '';
+      this.subHerramientaId = '';
+      this.herramientasDisponibles = [];
+      return;
+    }
+    this.subTipoHerramienta = tipo;
+    this.subHerramientaId = '';
+    this.herramientasDisponibles = [];
+    this.loadingHerramientas = true;
+    this.herramientaApiService.getHerramientasByTipo(tipo, parseInt(this.proyecto.id)).subscribe({
+      next: (h) => { this.herramientasDisponibles = h; this.loadingHerramientas = false; },
+      error: (e) => { console.error('Error al cargar herramientas:', e); this.loadingHerramientas = false; }
+    });
+  }
+
+  private resetHerramienta(): void {
+    this.subTipoHerramienta = ''; this.subHerramientaId = '';
+    this.herramientasDisponibles = []; this.loadingHerramientas = false;
+  }
+
+  // ===== MODAL ENCUESTA =====
+
+  openEncuestaModal(sub: Subproceso): void {
+    if (!sub.herramienta) return;
+    this.encuestaModal = true;
+    this.loadingEncuesta = true;
+    this.encuestaDetalle = null;
+    this.respuestasMap = {};
+    this.encuestaGuardada = false;
+    this.encuestaSubprocesoId = sub.id;
+    this.encuestaSubprocesoNombre = sub.nombre;
+
+    const encuestaId = sub.herramienta.id;
+    const subprocesoId = parseInt(sub.id);
+
+    this.encuestaApiService.getEncuesta(encuestaId).subscribe({
+      next: (encuesta) => {
+        this.encuestaDetalle = encuesta;
+        this.encuestaApiService.getRespuestas(encuestaId, subprocesoId).subscribe({
+          next: (respuestas) => {
+            respuestas.forEach(r => {
+              this.respuestasMap[r.id_pregunta] = r.respuesta;
+            });
+            this.loadingEncuesta = false;
           },
-          error: (error) => console.error('Error al eliminar proceso:', error)
+          error: () => { this.loadingEncuesta = false; }
         });
-      }
-    );
+      },
+      error: (e) => { console.error('Error al cargar encuesta:', e); this.loadingEncuesta = false; }
+    });
+  }
+
+  closeEncuestaModal(): void {
+    this.encuestaModal = false;
+    this.encuestaDetalle = null;
+    this.respuestasMap = {};
+    this.encuestaGuardada = false;
+    this.savingRespuestas = false;
+  }
+
+  saveRespuestas(): void {
+    if (!this.encuestaDetalle) return;
+    this.savingRespuestas = true;
+    this.encuestaGuardada = false;
+
+    const respuestas = this.encuestaDetalle.preguntas.map(p => ({
+      id_pregunta: p.id_pregunta,
+      respuesta: this.respuestasMap[p.id_pregunta] ?? '',
+    }));
+
+    this.encuestaApiService.saveRespuestas({
+      id_encuesta: this.encuestaDetalle.id_encuesta,
+      id_subproceso: parseInt(this.encuestaSubprocesoId),
+      respuestas,
+    }).subscribe({
+      next: () => {
+        this.savingRespuestas = false;
+        this.encuestaGuardada = true;
+        setTimeout(() => this.encuestaGuardada = false, 3000);
+      },
+      error: (e) => { console.error('Error al guardar respuestas:', e); this.savingRespuestas = false; }
+    });
+  }
+
+  // ===== MODAL ENTREVISTA =====
+
+  openEntrevistaModal(sub: Subproceso): void {
+    if (!sub.herramienta) return;
+    this.entrevistaModal = true;
+    this.loadingEntrevista = true;
+    this.entrevistaDetalle = null;
+    this.respuestasEntrevistaMap = {};
+    this.entrevistaGuardada = false;
+    this.entrevistaSubprocesoId = sub.id;
+    this.entrevistaSubprocesoNombre = sub.nombre;
+
+    const entrevistaId = sub.herramienta.id;
+
+    this.entrevistaApiService.getEntrevista(entrevistaId).subscribe({
+      next: (entrevista) => {
+        this.entrevistaDetalle = entrevista;
+        // Pre-cargar respuestas existentes si las hay
+        entrevista.preguntas.forEach(p => {
+          if (p.respuesta) this.respuestasEntrevistaMap[p.id_pregunta] = p.respuesta;
+        });
+        this.loadingEntrevista = false;
+      },
+      error: (e) => { console.error('Error al cargar entrevista:', e); this.loadingEntrevista = false; }
+    });
+  }
+
+  closeEntrevistaModal(): void {
+    this.entrevistaModal = false;
+    this.entrevistaDetalle = null;
+    this.respuestasEntrevistaMap = {};
+    this.entrevistaGuardada = false;
+    this.savingRespuestasEntrevista = false;
+  }
+
+  saveRespuestasEntrevista(): void {
+    if (!this.entrevistaDetalle) return;
+    this.savingRespuestasEntrevista = true;
+    this.entrevistaGuardada = false;
+
+    const dto = {
+      preguntas: this.entrevistaDetalle.preguntas.map(p => ({
+        pregunta: p.pregunta,
+        respuesta: this.respuestasEntrevistaMap[p.id_pregunta] ?? '',
+      }))
+    };
+
+    this.entrevistaApiService.updateEntrevista(this.entrevistaDetalle.id_entrevista, dto).subscribe({
+      next: () => {
+        this.savingRespuestasEntrevista = false;
+        this.entrevistaGuardada = true;
+        setTimeout(() => this.entrevistaGuardada = false, 3000);
+      },
+      error: (e) => { console.error('Error al guardar respuestas:', e); this.savingRespuestasEntrevista = false; }
+    });
   }
 
   // ===== SUBPROCESOS =====
 
   startAddSubproceso(procesoId: string): void {
     this.addingSubprocesoToId = procesoId;
-    this.subNombre = '';
-    this.subDescripcion = '';
-    // Pre-seleccionar el stakeholder del proceso
-    const proceso = this.procesos.find(p => p.id === procesoId);
-    this.subStakeholderId = proceso?.stakeholder_id || '';
+    this.subNombre = ''; this.subDescripcion = '';
+    this.resetHerramienta();
+    this.subStakeholderId = this.procesos.find(p => p.id === procesoId)?.stakeholder_id || '';
   }
 
   cancelAddSubproceso(): void {
     this.addingSubprocesoToId = null;
-    this.subNombre = '';
-    this.subDescripcion = '';
-    this.subStakeholderId = '';
+    this.subNombre = ''; this.subDescripcion = ''; this.subStakeholderId = '';
+    this.resetHerramienta();
   }
 
   addSubproceso(procesoId: string): void {
     if (!this.subNombre) return;
-    
-    const createDto = {
+    this.procesoApiService.createSubproceso({
       id_proyecto: parseInt(this.proyecto.id),
       id_proceso: parseInt(procesoId),
       nombre_subproceso: this.subNombre,
       descripcion: this.subDescripcion,
       id_stakeholder: this.subStakeholderId ? parseInt(this.subStakeholderId) : null,
-    };
-
-    this.procesoApiService.createSubproceso(createDto).subscribe({
-      next: () => {
-        this.cancelAddSubproceso();
-        this.loadProcesos(this.proyecto.id);
-      },
-      error: (error) => console.error('Error al crear subproceso:', error)
+      tipo_herramienta: this.subTipoHerramienta || null,
+      id_herramienta: this.subHerramientaId ? parseInt(this.subHerramientaId) : null,
+    }).subscribe({
+      next: () => { this.cancelAddSubproceso(); this.loadProcesos(this.proyecto.id); },
+      error: (e) => console.error('Error al crear subproceso:', e)
     });
   }
 
   deleteSubproceso(procesoId: string, subId: string): void {
-    this.openConfirmModal(
-      '¿Eliminar subproceso?',
-      '¿Estás seguro de que deseas eliminar este subproceso? Esta acción no se puede deshacer.',
-      () => {
-        this.procesoApiService.deleteSubproceso(parseInt(subId)).subscribe({
-          next: () => {
-            this.loadProcesos(this.proyecto.id);
-          },
-          error: (error) => console.error('Error al eliminar subproceso:', error)
-        });
-      }
-    );
+    this.openConfirmModal('¿Eliminar subproceso?', '¿Estás seguro? Esta acción no se puede deshacer.', () => {
+      this.procesoApiService.deleteSubproceso(parseInt(subId)).subscribe({
+        next: () => this.loadProcesos(this.proyecto.id),
+        error: (e) => console.error('Error al eliminar subproceso:', e)
+      });
+    });
   }
 
-  // ===== MODAL =====
+  deleteProceso(id: string, event: Event): void {
+    event.stopPropagation();
+    this.openConfirmModal('¿Eliminar proceso?', '¿Estás seguro? Se eliminarán todos sus subprocesos.', () => {
+      this.procesoApiService.deleteProceso(parseInt(id)).subscribe({
+        next: () => this.loadProcesos(this.proyecto.id),
+        error: (e) => console.error('Error al eliminar proceso:', e)
+      });
+    });
+  }
+
+  // ===== MODAL PROCESO =====
 
   viewProceso(proceso: Proceso): void {
     this.selectedProceso = proceso;
@@ -298,90 +484,71 @@ export class ProcesosComponent implements OnInit {
   closeModal(): void {
     this.selectedProceso = null;
     this.addingSubprocesoModal = false;
-    this.subNombre = '';
-    this.subDescripcion = '';
-    this.subStakeholderId = '';
+    this.subNombre = ''; this.subDescripcion = ''; this.subStakeholderId = '';
+    this.resetHerramienta();
   }
 
   startAddSubprocesoModal(): void {
     this.addingSubprocesoModal = true;
-    this.subNombre = '';
-    this.subDescripcion = '';
-    // Pre-seleccion el stakeholder del proceso
+    this.subNombre = ''; this.subDescripcion = '';
+    this.resetHerramienta();
     this.subStakeholderId = this.selectedProceso?.stakeholder_id || '';
   }
 
   cancelAddSubprocesoModal(): void {
     this.addingSubprocesoModal = false;
-    this.subNombre = '';
-    this.subDescripcion = '';
-    this.subStakeholderId = '';
+    this.subNombre = ''; this.subDescripcion = ''; this.subStakeholderId = '';
+    this.resetHerramienta();
   }
 
   addSubprocesoFromModal(): void {
     if (!this.subNombre || !this.selectedProceso) return;
-    
-    const createDto = {
+    this.procesoApiService.createSubproceso({
       id_proyecto: parseInt(this.proyecto.id),
       id_proceso: parseInt(this.selectedProceso.id),
       nombre_subproceso: this.subNombre,
       descripcion: this.subDescripcion,
       id_stakeholder: this.subStakeholderId ? parseInt(this.subStakeholderId) : null,
-    };
-
-    this.procesoApiService.createSubproceso(createDto).subscribe({
+      tipo_herramienta: this.subTipoHerramienta || null,
+      id_herramienta: this.subHerramientaId ? parseInt(this.subHerramientaId) : null,
+    }).subscribe({
       next: () => {
         this.cancelAddSubprocesoModal();
         this.loadProcesos(this.proyecto.id);
-        // Actualizar el proceso seleccionado en el modal
-        const procesoActualizado = this.procesos.find(p => p.id === this.selectedProceso?.id);
-        if (procesoActualizado) {
-          this.selectedProceso = procesoActualizado;
-        }
+        setTimeout(() => {
+          const actualizado = this.procesos.find(p => p.id === this.selectedProceso?.id);
+          if (actualizado) this.selectedProceso = actualizado;
+        }, 300);
       },
-      error: (error) => console.error('Error al crear subproceso:', error)
+      error: (e) => console.error('Error al crear subproceso:', e)
     });
   }
 
   deleteSubprocesoFromModal(subId: string): void {
-    this.openConfirmModal(
-      '¿Eliminar subproceso?',
-      '¿Estás seguro de que deseas eliminar este subproceso? Esta acción no se puede deshacer.',
-      () => {
-        this.procesoApiService.deleteSubproceso(parseInt(subId)).subscribe({
-          next: () => {
-            this.loadProcesos(this.proyecto.id);
-            // Actualizar el proceso seleccionado en el modal
-            const procesoActualizado = this.procesos.find(p => p.id === this.selectedProceso?.id);
-            if (procesoActualizado) {
-              this.selectedProceso = procesoActualizado;
-            }
-          },
-          error: (error) => console.error('Error al eliminar subproceso:', error)
-        });
-      }
-    );
+    this.openConfirmModal('¿Eliminar subproceso?', '¿Estás seguro? Esta acción no se puede deshacer.', () => {
+      this.procesoApiService.deleteSubproceso(parseInt(subId)).subscribe({
+        next: () => {
+          this.loadProcesos(this.proyecto.id);
+          setTimeout(() => {
+            const actualizado = this.procesos.find(p => p.id === this.selectedProceso?.id);
+            if (actualizado) this.selectedProceso = actualizado;
+          }, 300);
+        },
+        error: (e) => console.error('Error al eliminar subproceso:', e)
+      });
+    });
   }
 
   // ===== CONFIRM MODAL =====
 
   openConfirmModal(title: string, message: string, callback: () => void): void {
-    this.confirmModalConfig = {
-      title,
-      message,
-      confirmText: 'Eliminar',
-      cancelText: 'Cancelar',
-      type: 'danger',
-      icon: 'trash'
-    };
+    this.confirmModalConfig = { title, message, confirmText: 'Eliminar', cancelText: 'Cancelar', type: 'danger', icon: 'trash' };
     this.confirmCallback = callback;
     this.showConfirmModal = true;
   }
 
   onConfirmModal(): void {
-    if (this.confirmCallback) {
-      this.confirmCallback();
-    }
+    if (this.confirmCallback) this.confirmCallback();
     this.showConfirmModal = false;
     this.confirmCallback = null;
   }

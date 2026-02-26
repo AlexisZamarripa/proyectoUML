@@ -5,6 +5,10 @@ export class CreatePreguntaDto {
     @IsString()
     @IsNotEmpty()
     pregunta: string;
+
+    @IsString()
+    @IsOptional()
+    respuesta?: string;
 }
 
 export class CreateEntrevistaDto {
@@ -13,12 +17,12 @@ export class CreateEntrevistaDto {
     id_proyecto: number;
 
     @IsInt()
-    @IsNotEmpty()
-    id_proceso: number;
+    @IsOptional()
+    id_proceso?: number;
 
     @IsInt()
-    @IsNotEmpty()
-    id_subproceso: number;
+    @IsOptional()
+    id_subproceso?: number;
 
     @IsString()
     @IsOptional()

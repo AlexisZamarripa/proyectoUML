@@ -12,6 +12,9 @@ export class PreguntaEntrevista {
     @Column({ type: 'text', nullable: true })
     pregunta: string;
 
+    @Column({ type: 'text', nullable: true })
+    respuesta: string | null;
+
     @ManyToOne(() => Entrevista, (entrevista) => entrevista.preguntas, {
         onDelete: 'CASCADE',
     })

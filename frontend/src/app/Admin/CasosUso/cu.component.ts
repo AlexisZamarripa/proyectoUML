@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { BarraComponent } from '../../components/barra/barra.component';
 import { ProyectoApiService } from '../../services/proyecto-api.service';
-import { HistoriaUsuarioApiService, HistoriaUsuario, CreateHistoriaUsuarioDto } from '../../services/HistoriasUsuario-api.service';
+import { HistoriaUsuarioApiService, HistoriaUsuario, CreateHistoriaUsuarioDto, UpdateHistoriaUsuarioDto } from '../../services/HistoriasUsuario-api.service';
 import { ProcesoApiService, Proceso, Subproceso } from '../../services/proceso-api.service';
 
 @Component({
@@ -30,7 +30,7 @@ export class CasosUsoComponent implements OnInit {
     procesoVinculadoId = '';
     subprocesoId = '';
 
-    // Campos del formulario
+    // Campos del formulario crear
     titulo = '';
     como = '';
     quiero = '';
@@ -38,6 +38,19 @@ export class CasosUsoComponent implements OnInit {
     prioridad: 'baja' | 'media' | 'alta' = 'media';
     estimacion = '';
     criteriosAceptacion: string[] = [''];
+
+    // ─── Drawer de edición ─────────────────────────────────────────────────────
+    drawerOpen = false;
+    editandoHistoria: HistoriaUsuario | null = null;
+    editErrorMsg = '';
+
+    editTitulo = '';
+    editComo = '';
+    editQuiero = '';
+    editParaque = '';
+    editPrioridad: 'baja' | 'media' | 'alta' = 'media';
+    editEstimacion = '';
+    editCriteriosAceptacion: string[] = [''];
 
     readonly COLORES_PROYECTO: { valor: string; gradient: string }[] = [
         { valor: 'blue', gradient: 'linear-gradient(135deg, #3b82f6, #06b6d4)' },
@@ -77,14 +90,8 @@ export class CasosUsoComponent implements OnInit {
         this.isLoading = true;
         const idProyecto = parseInt(this.proyecto.id, 10);
         this.historiaApiService.getHistorias(idProyecto).subscribe({
-            next: (data) => {
-                this.historias = data;
-                this.isLoading = false;
-            },
-            error: (err) => {
-                console.error('Error al cargar historias:', err);
-                this.isLoading = false;
-            }
+            next: (data) => { this.historias = data; this.isLoading = false; },
+            error: (err) => { console.error('Error al cargar historias:', err); this.isLoading = false; }
         });
     }
 
@@ -99,15 +106,12 @@ export class CasosUsoComponent implements OnInit {
 
     onProcesoChange(): void {
         this.subprocesoId = '';
-        if (!this.procesoVinculadoId) {
-            this.subprocesosDisponibles = [];
-            return;
-        }
+        if (!this.procesoVinculadoId) { this.subprocesosDisponibles = []; return; }
         const proceso = this.procesosDisponibles.find(p => p.id === this.procesoVinculadoId);
         this.subprocesosDisponibles = proceso?.subprocesos || [];
     }
 
-    // ─── Formulario ────────────────────────────────────────────────────────────
+    // ─── Formulario crear ──────────────────────────────────────────────────────
 
     isFormValid(): boolean {
         return !!(this.titulo.trim() && this.como.trim() && this.quiero.trim() && this.paraque.trim()
@@ -119,9 +123,7 @@ export class CasosUsoComponent implements OnInit {
             this.errorMsg = 'Completa todos los campos obligatorios incluyendo proceso y subproceso.';
             return;
         }
-
         const criterios = this.criteriosAceptacion.filter(c => c.trim());
-
         const dto: CreateHistoriaUsuarioDto = {
             id_proyecto: parseInt(this.proyecto.id, 10),
             id_proceso: parseInt(this.procesoVinculadoId, 10),
@@ -134,66 +136,90 @@ export class CasosUsoComponent implements OnInit {
             estimacion: this.estimacion.trim() || undefined,
             criterios_aceptacion: criterios.length > 0 ? criterios.join(' | ') : undefined
         };
-
         this.historiaApiService.createHistoria(dto).subscribe({
-            next: (nueva) => {
-                this.historias.push(nueva);
-                this.resetForm();
-                this.showForm = false;
-            },
-            error: (err) => {
-                console.error('Error al crear historia:', err);
-                this.errorMsg = 'Error al crear la historia. Intenta de nuevo.';
-            }
+            next: (nueva) => { this.historias.push(nueva); this.resetForm(); this.showForm = false; },
+            error: (err) => { console.error('Error al crear historia:', err); this.errorMsg = 'Error al crear la historia. Intenta de nuevo.'; }
         });
     }
 
     resetForm(): void {
-        this.titulo = '';
-        this.como = '';
-        this.quiero = '';
-        this.paraque = '';
-        this.prioridad = 'media';
-        this.estimacion = '';
-        this.criteriosAceptacion = [''];
-        this.procesoVinculadoId = '';
-        this.subprocesoId = '';
-        this.subprocesosDisponibles = [];
+        this.titulo = ''; this.como = ''; this.quiero = ''; this.paraque = '';
+        this.prioridad = 'media'; this.estimacion = ''; this.criteriosAceptacion = [''];
+        this.procesoVinculadoId = ''; this.subprocesoId = ''; this.subprocesosDisponibles = [];
         this.errorMsg = '';
     }
+
+    // ─── Drawer edición ────────────────────────────────────────────────────────
+
+    abrirDrawer(historia: HistoriaUsuario): void {
+        this.editandoHistoria = historia;
+        this.editTitulo = historia.titulo_historia || '';
+        this.editComo = historia.rol || '';
+        this.editQuiero = historia.quiero || '';
+        this.editParaque = historia.para_que || '';
+        this.editPrioridad = historia.prioridad || 'media';
+        this.editEstimacion = historia.estimacion || '';
+        this.editCriteriosAceptacion = this.getCriterios(historia).length > 0 ? this.getCriterios(historia) : [''];
+        this.editErrorMsg = '';
+        this.drawerOpen = true;
+    }
+
+    cerrarDrawer(): void {
+        this.drawerOpen = false;
+        this.editandoHistoria = null;
+        this.editErrorMsg = '';
+    }
+
+    guardarEdicion(): void {
+        if (!this.editandoHistoria) return;
+        if (!this.editTitulo.trim() || !this.editComo.trim() || !this.editQuiero.trim() || !this.editParaque.trim()) {
+            this.editErrorMsg = 'Completa todos los campos obligatorios.';
+            return;
+        }
+        const criterios = this.editCriteriosAceptacion.filter(c => c.trim());
+        const dto: UpdateHistoriaUsuarioDto = {
+            titulo_historia: this.editTitulo.trim(),
+            rol: this.editComo.trim(),
+            quiero: this.editQuiero.trim(),
+            para_que: this.editParaque.trim(),
+            prioridad: this.editPrioridad,
+            estimacion: this.editEstimacion.trim() || undefined,
+            criterios_aceptacion: criterios.length > 0 ? criterios.join(' | ') : undefined
+        };
+        this.historiaApiService.updateHistoria(this.editandoHistoria.id_historia, dto).subscribe({
+            next: (actualizada) => {
+                const idx = this.historias.findIndex(h => h.id_historia === actualizada.id_historia);
+                if (idx !== -1) this.historias[idx] = actualizada;
+                this.cerrarDrawer();
+            },
+            error: (err) => { console.error('Error al actualizar historia:', err); this.editErrorMsg = 'Error al guardar los cambios. Intenta de nuevo.'; }
+        });
+    }
+
+    // ─── Eliminar ──────────────────────────────────────────────────────────────
 
     eliminarHistoria(id: number): void {
         if (!confirm('¿Está seguro de eliminar esta historia?')) return;
         this.historiaApiService.deleteHistoria(id).subscribe({
-            next: () => {
-                this.historias = this.historias.filter(h => h.id_historia !== id);
-            },
+            next: () => { this.historias = this.historias.filter(h => h.id_historia !== id); },
             error: (err) => console.error('Error al eliminar historia:', err)
         });
     }
 
-    // Parsear criterios del string del backend para mostrarlos como lista
+    // ─── Utilidades ────────────────────────────────────────────────────────────
+
     getCriterios(historia: HistoriaUsuario): string[] {
         if (!historia.criterios_aceptacion) return [];
         return historia.criterios_aceptacion.split(' | ').filter(c => c.trim());
     }
 
-    // ─── Utilidades ────────────────────────────────────────────────────────────
-
-    goBack(): void {
-        this.router.navigate(['/proyectos']);
-    }
+    goBack(): void { this.router.navigate(['/proyectos']); }
 
     getProyectoGradient(): string {
         const c = this.COLORES_PROYECTO.find(x => x.valor === this.proyecto.color);
         return c ? c.gradient : this.COLORES_PROYECTO[0].gradient;
     }
 
-    trackByIndex(index: number): number {
-        return index;
-    }
-
-    trackByHistoria(index: number, item: HistoriaUsuario): number {
-        return item.id_historia;
-    }
+    trackByIndex(index: number): number { return index; }
+    trackByHistoria(index: number, item: HistoriaUsuario): number { return item.id_historia; }
 }
