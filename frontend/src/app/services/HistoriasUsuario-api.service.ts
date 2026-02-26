@@ -29,6 +29,16 @@ export interface CreateHistoriaUsuarioDto {
     criterios_aceptacion?: string;
 }
 
+export interface UpdateHistoriaUsuarioDto {
+    titulo_historia?: string;
+    rol?: string;
+    quiero?: string;
+    para_que?: string;
+    prioridad?: 'baja' | 'media' | 'alta';
+    estimacion?: string;
+    criterios_aceptacion?: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class HistoriaUsuarioApiService {
 
@@ -44,6 +54,10 @@ export class HistoriaUsuarioApiService {
 
     createHistoria(dto: CreateHistoriaUsuarioDto): Observable<HistoriaUsuario> {
         return this.http.post<HistoriaUsuario>(`${this.base}/historias-usuario`, dto);
+    }
+
+    updateHistoria(id: number, dto: UpdateHistoriaUsuarioDto): Observable<HistoriaUsuario> {
+        return this.http.patch<HistoriaUsuario>(`${this.base}/historias-usuario/${id}`, dto);
     }
 
     deleteHistoria(id: number): Observable<void> {

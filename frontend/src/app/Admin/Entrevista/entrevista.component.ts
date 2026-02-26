@@ -5,7 +5,6 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { BarraComponent } from '../../components/barra/barra.component';
 import { ProyectoApiService } from '../../services/proyecto-api.service';
 import { EntrevistaApiService, Entrevista } from '../../services/Entrevista-api.service';
-import { ProcesoApiService, Proceso, Subproceso } from '../../services/proceso-api.service';
 
 interface PreguntaForm {
   texto: string;
@@ -23,8 +22,6 @@ interface EntrevistaUI extends Entrevista {
   conRespuestas: boolean;
   archivos: ArchivoAdjunto[];
   fecha: string;
-  procesoNombre?: string;
-  subprocesoNombre?: string;
 }
 
 @Component({
@@ -45,17 +42,11 @@ export class EntrevistaComponent implements OnInit {
   anotandoId: number | null = null;
   activeTab = 'entrevistas';
 
-  // Procesos y subprocesos
-  procesosDisponibles: Proceso[] = [];
-  subprocesosDisponibles: Subproceso[] = [];
-
   // Form fields
   titulo = '';
   entrevistador = '';
   entrevistado = '';
   notas = '';
-  procesoVinculadoId = '';
-  subprocesoId = '';
   preguntas: PreguntaForm[] = [{ texto: '', respuesta: '' }];
 
   readonly COLORES_PROYECTO: { valor: string; gradient: string }[] = [
@@ -72,7 +63,6 @@ export class EntrevistaComponent implements OnInit {
     private route: ActivatedRoute,
     private proyectoApiService: ProyectoApiService,
     private entrevistaApiService: EntrevistaApiService,
-    private procesoApiService: ProcesoApiService
   ) { }
 
   ngOnInit(): void {
@@ -83,7 +73,6 @@ export class EntrevistaComponent implements OnInit {
         next: (p) => {
           this.proyecto = { id, nombre: p.nombre, descripcion: p.descripcion, color: p.color };
           this.cargarEntrevistas();
-          this.cargarProcesos();
         },
         error: (err) => console.error('Error al cargar proyecto:', err)
       });
@@ -103,10 +92,7 @@ export class EntrevistaComponent implements OnInit {
           conRespuestas: e.preguntas.some(p => p.respuesta && p.respuesta.trim()),
           archivos: [],
           fecha: new Date().toISOString().split('T')[0],
-          procesoNombre: undefined,
-          subprocesoNombre: undefined
         }));
-        // Marcar como realizada si tiene respuestas
         this.entrevistas.forEach(e => {
           if (e.conRespuestas) e.estado = 'realizada';
         });
@@ -117,30 +103,6 @@ export class EntrevistaComponent implements OnInit {
         this.isLoading = false;
       }
     });
-  }
-
-  cargarProcesos(): void {
-    const idProyecto = parseInt(this.proyecto.id, 10);
-    if (!idProyecto) return;
-    this.procesoApiService.getProcesosByProyecto(idProyecto).subscribe({
-      next: (data) => {
-        // La interfaz Proceso ya tiene id, nombre y subprocesos con id y nombre
-        this.procesosDisponibles = data;
-      },
-      error: (err: unknown) => console.error('Error al cargar procesos:', err)
-    });
-  }
-
-  onProcesoChange(): void {
-    this.subprocesoId = '';
-    if (!this.procesoVinculadoId) {
-      this.subprocesosDisponibles = [];
-      return;
-    }
-    const proceso = this.procesosDisponibles.find(p => p.id === this.procesoVinculadoId);
-    if (proceso) {
-      this.subprocesosDisponibles = proceso.subprocesos || [];
-    }
   }
 
   // ─── Stats ─────────────────────────────────────────────────────────────────
@@ -160,18 +122,9 @@ export class EntrevistaComponent implements OnInit {
 
   handleSubmit(): void {
     if (!this.titulo || !this.entrevistador || !this.entrevistado) return;
-    if (!this.procesoVinculadoId || !this.subprocesoId) {
-      this.errorMsg = 'Debes seleccionar un proceso y un subproceso.';
-      return;
-    }
-
-    const procesoSeleccionado = this.procesosDisponibles.find(p => p.id === this.procesoVinculadoId);
-    const subprocesoSeleccionado = this.subprocesosDisponibles.find(s => s.id === this.subprocesoId);
 
     const dto = {
       id_proyecto: parseInt(this.proyecto.id, 10),
-      id_proceso: parseInt(this.procesoVinculadoId, 10),
-      id_subproceso: parseInt(this.subprocesoId, 10),
       titulo_entrevista: this.titulo.trim(),
       entrevistador: this.entrevistador.trim(),
       entrevistado: this.entrevistado.trim(),
@@ -189,8 +142,6 @@ export class EntrevistaComponent implements OnInit {
           conRespuestas: false,
           archivos: [],
           fecha: new Date().toISOString().split('T')[0],
-          procesoNombre: procesoSeleccionado?.nombre,
-          subprocesoNombre: subprocesoSeleccionado?.nombre
         };
         this.entrevistas.push(nuevaUI);
         this.resetForm();
@@ -208,9 +159,6 @@ export class EntrevistaComponent implements OnInit {
     this.entrevistador = '';
     this.entrevistado = '';
     this.notas = '';
-    this.procesoVinculadoId = '';
-    this.subprocesoId = '';
-    this.subprocesosDisponibles = [];
     this.preguntas = [{ texto: '', respuesta: '' }];
     this.errorMsg = '';
   }
@@ -238,9 +186,6 @@ export class EntrevistaComponent implements OnInit {
     entrevista.conRespuestas = tieneRespuestas;
     if (tieneRespuestas) entrevista.estado = 'realizada';
     this.anotandoId = null;
-
-    // Aquí podrías hacer un PATCH al backend para guardar las respuestas
-    // this.entrevistaApiService.updateEntrevista(entrevista.id_entrevista, { preguntas: ... })
   }
 
   // ─── Archivos ──────────────────────────────────────────────────────────────

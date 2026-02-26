@@ -54,29 +54,24 @@
         <h3 class="form-title">Crear Nueva Historia de Usuario</h3>
         <form (ngSubmit)="handleSubmit()">
 
-          <!-- Título -->
           <div class="form-group full-width">
             <label class="form-label">Título de la Historia *</label>
             <input class="form-input" type="text" [(ngModel)]="titulo" name="titulo"
               placeholder="Ej: Registro de un sistema externo" required />
           </div>
 
-          <!-- Formato Como/Quiero/Para que -->
           <div class="formato-box">
             <p class="formato-label">Formato: Como [rol], quiero [acción] para que [beneficio]</p>
-
             <div class="form-group">
               <label class="form-label">Como... *</label>
               <input class="form-input" type="text" [(ngModel)]="como" name="como"
                 placeholder="Ej: Usuario administrador" required />
             </div>
-
             <div class="form-group">
               <label class="form-label">Quiero... *</label>
               <input class="form-input" type="text" [(ngModel)]="quiero" name="quiero"
                 placeholder="Ej: Crear nuevos usuarios en el sistema" required />
             </div>
-
             <div class="form-group">
               <label class="form-label">Para que... *</label>
               <input class="form-input" type="text" [(ngModel)]="paraque" name="paraque"
@@ -84,7 +79,6 @@
             </div>
           </div>
 
-          <!-- Prioridad + Estimación -->
           <div class="form-grid form-grid-2">
             <div class="form-group">
               <label class="form-label">Prioridad</label>
@@ -101,7 +95,6 @@
             </div>
           </div>
 
-          <!-- Selects en cascada: Proceso → Subproceso -->
           <div class="form-grid form-grid-2">
             <div class="form-group">
               <label class="form-label">Proceso *</label>
@@ -123,7 +116,6 @@
             </div>
           </div>
 
-          <!-- Criterios de Aceptación -->
           <div class="criterios-box">
             <div class="criterios-header">
               <label class="form-label">Criterios de Aceptación</label>
@@ -141,7 +133,7 @@
                 <input type="text" class="form-input" [(ngModel)]="criteriosAceptacion[i]" [name]="'criterio-' + i"
                   [placeholder]="'Criterio ' + (i + 1)" />
                 <button type="button" class="btn-remove-criterio" *ngIf="criteriosAceptacion.length > 1"
-                  (click)="criteriosAceptacion.length > 1 && criteriosAceptacion.splice(i, 1)">
+                  (click)="criteriosAceptacion.splice(i, 1)">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <line x1="18" y1="6" x2="6" y2="18"></line>
                     <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -151,7 +143,6 @@
             </div>
           </div>
 
-          <!-- Submit -->
           <div class="form-actions">
             <button type="submit" class="btn-submit-green" [disabled]="!isFormValid()">Crear Historia</button>
           </div>
@@ -186,7 +177,6 @@
       <div class="historias-list" *ngIf="historias.length > 0 && !showForm && !isLoading">
         <div class="historia-card" *ngFor="let historia of historias; trackBy: trackByHistoria">
 
-          <!-- Header -->
           <div class="historia-header">
             <div class="historia-header-left">
               <h3 class="historia-titulo">{{ historia.titulo_historia }}</h3>
@@ -195,9 +185,17 @@
               <span class="badge-prioridad" [class]="'prioridad-' + historia.prioridad">
                 {{ historia.prioridad }}
               </span>
+              <!-- Botón Editar -->
+              <button class="btn-icon btn-edit-icon" (click)="abrirDrawer(historia)" title="Editar">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                </svg>
+              </button>
+              <!-- Botón Eliminar -->
               <button class="btn-icon btn-delete-icon" (click)="eliminarHistoria(historia.id_historia)"
                 title="Eliminar">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polyline points="3 6 5 6 21 6"></polyline>
                   <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
                 </svg>
@@ -205,7 +203,6 @@
             </div>
           </div>
 
-          <!-- Formato Como/Quiero/Para que -->
           <div class="historia-body">
             <p class="historia-formato">
               <strong>Como</strong> {{ historia.rol }},
@@ -214,7 +211,6 @@
             </p>
           </div>
 
-          <!-- Criterios de Aceptación -->
           <div class="historia-criterios" *ngIf="getCriterios(historia).length > 0">
             <p class="criterios-titulo">Criterios de Aceptación:</p>
             <ul class="criterios-lista">
@@ -231,7 +227,6 @@
             </span>
           </div>
 
-          <!-- Estimación -->
           <div class="historia-footer" *ngIf="historia.estimacion">
             <span class="historia-estimacion"><strong>Estimación:</strong> {{ historia.estimacion }}</span>
           </div>
@@ -241,4 +236,108 @@
 
     </div>
   </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     DRAWER DE EDICIÓN
+     ═══════════════════════════════════════════ -->
+
+<!-- Overlay -->
+<div class="drawer-overlay" [class.open]="drawerOpen" (click)="cerrarDrawer()"></div>
+
+<!-- Drawer -->
+<div class="drawer" [class.open]="drawerOpen">
+
+  <div class="drawer-header">
+    <h3 class="drawer-title">Editar Historia de Usuario</h3>
+    <button class="drawer-close" (click)="cerrarDrawer()">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
+    </button>
+  </div>
+
+  <div class="drawer-body">
+
+    <!-- Error edición -->
+    <div class="error-msg" *ngIf="editErrorMsg">{{ editErrorMsg }}</div>
+
+    <!-- Título -->
+    <div class="form-group">
+      <label class="form-label">Título de la Historia *</label>
+      <input class="form-input" type="text" [(ngModel)]="editTitulo" name="editTitulo"
+        placeholder="Título de la historia" />
+    </div>
+
+    <!-- Formato -->
+    <div class="formato-box">
+      <p class="formato-label">Formato: Como [rol], quiero [acción] para que [beneficio]</p>
+      <div class="form-group">
+        <label class="form-label">Como... *</label>
+        <input class="form-input" type="text" [(ngModel)]="editComo" name="editComo" placeholder="Rol del usuario" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Quiero... *</label>
+        <input class="form-input" type="text" [(ngModel)]="editQuiero" name="editQuiero" placeholder="Acción deseada" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Para que... *</label>
+        <input class="form-input" type="text" [(ngModel)]="editParaque" name="editParaque"
+          placeholder="Beneficio esperado" />
+      </div>
+    </div>
+
+    <!-- Prioridad + Estimación -->
+    <div class="form-grid form-grid-2">
+      <div class="form-group">
+        <label class="form-label">Prioridad</label>
+        <select class="form-input" [(ngModel)]="editPrioridad" name="editPrioridad">
+          <option value="alta">Alta</option>
+          <option value="media">Media</option>
+          <option value="baja">Baja</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Estimación</label>
+        <input class="form-input" type="text" [(ngModel)]="editEstimacion" name="editEstimacion"
+          placeholder="5 puntos, 2 días, etc." />
+      </div>
+    </div>
+
+    <!-- Criterios -->
+    <div class="criterios-box">
+      <div class="criterios-header">
+        <label class="form-label">Criterios de Aceptación</label>
+        <button type="button" class="btn-add-criterio" (click)="editCriteriosAceptacion.push('')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          Agregar
+        </button>
+      </div>
+      <div class="criterios-inputs">
+        <div class="criterio-input-item"
+          *ngFor="let c of editCriteriosAceptacion; let i = index; trackBy: trackByIndex">
+          <input type="text" class="form-input" [(ngModel)]="editCriteriosAceptacion[i]" [name]="'editCriterio-' + i"
+            [placeholder]="'Criterio ' + (i + 1)" />
+          <button type="button" class="btn-remove-criterio" *ngIf="editCriteriosAceptacion.length > 1"
+            (click)="editCriteriosAceptacion.splice(i, 1)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="drawer-footer">
+    <button class="btn-cancelar" (click)="cerrarDrawer()">Cancelar</button>
+    <button class="btn-submit-green" (click)="guardarEdicion()">Guardar Cambios</button>
+  </div>
+
 </div>

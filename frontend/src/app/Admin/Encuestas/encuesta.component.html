@@ -71,27 +71,6 @@
               min="0" placeholder="0" />
           </div>
 
-          <!-- Proceso Vinculado + Subproceso — mismo patrón que seguimiento -->
-          <div class="form-grid">
-            <div class="form-group">
-              <label class="form-label">Proceso Vinculado (opcional)</label>
-              <select class="form-input" [(ngModel)]="procesoVinculadoId" name="procesoVinculado"
-                (change)="onProcesoChange()">
-                <option value="">-- Seleccionar proceso --</option>
-                <option *ngFor="let proceso of procesosDisponibles" [value]="proceso.id">{{ proceso.nombre }}</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Subproceso (opcional)</label>
-              <select class="form-input" [(ngModel)]="subprocesoId" name="subproceso"
-                [disabled]="!procesoVinculadoId || subprocesosDisponibles.length === 0">
-                <option value="">-- Seleccionar subproceso --</option>
-                <option *ngFor="let subproceso of subprocesosDisponibles" [value]="subproceso.id">{{ subproceso.nombre
-                  }}</option>
-              </select>
-            </div>
-          </div>
-
           <!-- Preguntas -->
           <div class="preguntas-section">
             <div class="preguntas-header">
@@ -179,18 +158,6 @@
                 {{ enc.participantesReales }} participantes
               </span>
             </div>
-            <div class="card-proceso-row" *ngIf="enc.procesoNombre || enc.subprocesoNombre">
-              <span class="card-proceso-badge" *ngIf="enc.procesoNombre">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <circle cx="12" cy="12" r="3"></circle>
-                  <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
-                  <path d="M4.93 4.93a10 10 0 0 0 0 14.14"></path>
-                </svg>
-                {{ enc.procesoNombre }}
-              </span>
-              <span class="card-proceso-arrow" *ngIf="enc.procesoNombre && enc.subprocesoNombre">›</span>
-              <span class="card-subproceso-badge" *ngIf="enc.subprocesoNombre">{{ enc.subprocesoNombre }}</span>
-            </div>
             <div class="card-info-row">
               <span class="card-preguntas">Preguntas: {{ enc.preguntas.length }}</span>
             </div>
@@ -250,18 +217,6 @@
                 {{ enc.numero_participantes_esperados }} esperados
               </span>
             </div>
-            <div class="card-proceso-row" *ngIf="enc.procesoNombre || enc.subprocesoNombre">
-              <span class="card-proceso-badge" *ngIf="enc.procesoNombre">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <circle cx="12" cy="12" r="3"></circle>
-                  <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
-                  <path d="M4.93 4.93a10 10 0 0 0 0 14.14"></path>
-                </svg>
-                {{ enc.procesoNombre }}
-              </span>
-              <span class="card-proceso-arrow" *ngIf="enc.procesoNombre && enc.subprocesoNombre">›</span>
-              <span class="card-subproceso-badge" *ngIf="enc.subprocesoNombre">{{ enc.subprocesoNombre }}</span>
-            </div>
             <div class="card-info-row">
               <span class="card-preguntas">Preguntas: {{ enc.preguntas.length }}</span>
             </div>
@@ -319,18 +274,6 @@
                 </svg>
                 {{ enc.numero_participantes_esperados }} esperados
               </span>
-            </div>
-            <div class="card-proceso-row" *ngIf="enc.procesoNombre || enc.subprocesoNombre">
-              <span class="card-proceso-badge" *ngIf="enc.procesoNombre">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <circle cx="12" cy="12" r="3"></circle>
-                  <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
-                  <path d="M4.93 4.93a10 10 0 0 0 0 14.14"></path>
-                </svg>
-                {{ enc.procesoNombre }}
-              </span>
-              <span class="card-proceso-arrow" *ngIf="enc.procesoNombre && enc.subprocesoNombre">›</span>
-              <span class="card-subproceso-badge" *ngIf="enc.subprocesoNombre">{{ enc.subprocesoNombre }}</span>
             </div>
             <div class="card-info-row">
               <span class="card-preguntas">Preguntas: {{ enc.preguntas.length }}</span>

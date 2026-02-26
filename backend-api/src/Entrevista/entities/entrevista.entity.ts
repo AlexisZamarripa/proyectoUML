@@ -21,11 +21,11 @@ export class Entrevista {
     @Column({ type: 'int' })
     id_proyecto: number;
 
-    @Column({ type: 'int' })
-    id_proceso: number;
+    @Column({ type: 'int', nullable: true })
+    id_proceso: number | null;
 
-    @Column({ type: 'int' })
-    id_subproceso: number;
+    @Column({ type: 'int', nullable: true })
+    id_subproceso: number | null;
 
     @OneToMany(() => PreguntaEntrevista, (pregunta) => pregunta.entrevista, {
         cascade: true,
