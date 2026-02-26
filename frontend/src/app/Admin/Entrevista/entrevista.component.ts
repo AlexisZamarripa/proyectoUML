@@ -5,6 +5,7 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { BarraComponent } from '../../components/barra/barra.component';
 import { ProyectoApiService } from '../../services/proyecto-api.service';
 import { EntrevistaApiService, Entrevista } from '../../services/Entrevista-api.service';
+import { ConfirmModalComponent, ConfirmModalConfig } from '../../components/confirm-modal/confirm-modal.component';
 
 interface PreguntaForm {
   texto: string;
@@ -27,7 +28,7 @@ interface EntrevistaUI extends Entrevista {
 @Component({
   selector: 'app-entrevista',
   standalone: true,
-  imports: [CommonModule, FormsModule, BarraComponent],
+  imports: [CommonModule, FormsModule, BarraComponent, ConfirmModalComponent],
   templateUrl: './entrevista.component.html',
   styleUrls: ['./entrevista.component.css']
 })
@@ -41,6 +42,24 @@ export class EntrevistaComponent implements OnInit {
   errorMsg = '';
   anotandoId: number | null = null;
   activeTab = 'entrevistas';
+
+  // Confirm modal state
+  showConfirmModal = false;
+  confirmModalConfig: ConfirmModalConfig = {
+    title: '',
+    message: '',
+    confirmText: 'Eliminar',
+    cancelText: 'Cancelar',
+    type: 'danger',
+    icon: 'trash'
+  };
+  entrevistaToDelete: number | null = null;
+
+  // Entrevista being edited
+  entrevistaEditando: number | null = null;
+
+  // Vista de detalles
+  entrevistaViendo: number | null = null;
 
   // Form fields
   titulo = '';
@@ -117,41 +136,85 @@ export class EntrevistaComponent implements OnInit {
 
   toggleForm(): void {
     this.showForm = !this.showForm;
-    if (!this.showForm) this.resetForm();
+    if (!this.showForm) {
+      this.resetForm();
+    }
   }
 
   handleSubmit(): void {
     if (!this.titulo || !this.entrevistador || !this.entrevistado) return;
 
-    const dto = {
-      id_proyecto: parseInt(this.proyecto.id, 10),
-      titulo_entrevista: this.titulo.trim(),
-      entrevistador: this.entrevistador.trim(),
-      entrevistado: this.entrevistado.trim(),
-      notas_contexto: this.notas.trim(),
-      preguntas: this.preguntas
-        .filter((p: PreguntaForm) => p.texto.trim())
-        .map((p: PreguntaForm) => ({ pregunta: p.texto }))
-    };
-
-    this.entrevistaApiService.createEntrevista(dto).subscribe({
-      next: (nueva: Entrevista) => {
-        const nuevaUI: EntrevistaUI = {
-          ...nueva,
-          estado: 'pendiente',
-          conRespuestas: false,
-          archivos: [],
-          fecha: new Date().toISOString().split('T')[0],
+    const preguntasLimpias = this.preguntas
+      .filter((p: PreguntaForm) => p.texto.trim())
+      .map((p: PreguntaForm) => {
+        const item: { pregunta: string; respuesta?: string } = {
+          pregunta: p.texto.trim()
         };
-        this.entrevistas.push(nuevaUI);
-        this.resetForm();
-        this.showForm = false;
-      },
-      error: (err: unknown) => {
-        console.error('Error al crear entrevista:', err);
-        this.errorMsg = 'Error al crear la entrevista. Intenta de nuevo.';
-      }
-    });
+        if (p.respuesta && p.respuesta.trim()) {
+          item.respuesta = p.respuesta.trim();
+        }
+        return item;
+      });
+
+    if (this.entrevistaEditando) {
+      // Actualizar entrevista existente
+      const updateDto = {
+        titulo_entrevista: this.titulo.trim(),
+        entrevistador: this.entrevistador.trim(),
+        entrevistado: this.entrevistado.trim(),
+        notas_contexto: this.notas.trim(),
+        preguntas: preguntasLimpias
+      };
+      this.entrevistaApiService.updateEntrevista(this.entrevistaEditando, updateDto).subscribe({
+        next: (actualizada: Entrevista) => {
+          const index = this.entrevistas.findIndex(e => e.id_entrevista === this.entrevistaEditando);
+          if (index !== -1) {
+            const entrevistaUI: EntrevistaUI = {
+              ...actualizada,
+              estado: actualizada.preguntas.some(p => p.respuesta && p.respuesta.trim()) ? 'realizada' : 'pendiente',
+              conRespuestas: actualizada.preguntas.some(p => p.respuesta && p.respuesta.trim()),
+              archivos: this.entrevistas[index].archivos,
+              fecha: this.entrevistas[index].fecha,
+            };
+            this.entrevistas[index] = entrevistaUI;
+          }
+          this.resetForm();
+          this.showForm = false;
+        },
+        error: (err: unknown) => {
+          console.error('Error al actualizar entrevista:', err);
+          this.errorMsg = 'Error al actualizar la entrevista. Intenta de nuevo.';
+        }
+      });
+    } else {
+      // Crear nueva entrevista
+      const createDto = {
+        id_proyecto: parseInt(this.proyecto.id, 10),
+        titulo_entrevista: this.titulo.trim(),
+        entrevistador: this.entrevistador.trim(),
+        entrevistado: this.entrevistado.trim(),
+        notas_contexto: this.notas.trim(),
+        preguntas: preguntasLimpias
+      };
+      this.entrevistaApiService.createEntrevista(createDto).subscribe({
+        next: (nueva: Entrevista) => {
+          const nuevaUI: EntrevistaUI = {
+            ...nueva,
+            estado: 'pendiente',
+            conRespuestas: false,
+            archivos: [],
+            fecha: new Date().toISOString().split('T')[0],
+          };
+          this.entrevistas.push(nuevaUI);
+          this.resetForm();
+          this.showForm = false;
+        },
+        error: (err: unknown) => {
+          console.error('Error al crear entrevista:', err);
+          this.errorMsg = 'Error al crear la entrevista. Intenta de nuevo.';
+        }
+      });
+    }
   }
 
   resetForm(): void {
@@ -161,6 +224,7 @@ export class EntrevistaComponent implements OnInit {
     this.notas = '';
     this.preguntas = [{ texto: '', respuesta: '' }];
     this.errorMsg = '';
+    this.entrevistaEditando = null;
   }
 
   addPregunta(): void {
@@ -216,13 +280,62 @@ export class EntrevistaComponent implements OnInit {
 
   deleteEntrevista(id: number, event: Event): void {
     event.stopPropagation();
-    if (!confirm('¿Eliminar esta entrevista?')) return;
-    this.entrevistaApiService.deleteEntrevista(id).subscribe({
-      next: () => {
-        this.entrevistas = this.entrevistas.filter(e => e.id_entrevista !== id);
-      },
-      error: (err: unknown) => console.error('Error al eliminar entrevista:', err)
-    });
+    const entrevista = this.entrevistas.find(e => e.id_entrevista === id);
+    
+    this.entrevistaToDelete = id;
+    this.confirmModalConfig = {
+      title: '¿Eliminar entrevista?',
+      message: `¿Estás seguro de que deseas eliminar "${entrevista?.titulo_entrevista}"? Esta acción no se puede deshacer.`,
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar',
+      type: 'danger',
+      icon: 'trash'
+    };
+    this.showConfirmModal = true;
+  }
+
+  confirmDelete(): void {
+    if (this.entrevistaToDelete) {
+      this.entrevistaApiService.deleteEntrevista(this.entrevistaToDelete).subscribe({
+        next: () => {
+          this.entrevistas = this.entrevistas.filter(e => e.id_entrevista !== this.entrevistaToDelete);
+          this.showConfirmModal = false;
+          this.entrevistaToDelete = null;
+        },
+        error: (err: unknown) => {
+          console.error('Error al eliminar entrevista:', err);
+          this.showConfirmModal = false;
+          this.entrevistaToDelete = null;
+        }
+      });
+    }
+  }
+
+  cancelDelete(): void {
+    this.showConfirmModal = false;
+    this.entrevistaToDelete = null;
+  }
+
+  editEntrevista(entrevista: EntrevistaUI): void {
+    this.entrevistaEditando = entrevista.id_entrevista;
+    this.titulo = entrevista.titulo_entrevista;
+    this.entrevistador = entrevista.entrevistador;
+    this.entrevistado = entrevista.entrevistado;
+    this.notas = entrevista.notas_contexto || '';
+    this.preguntas = entrevista.preguntas.map(p => ({
+      texto: p.pregunta,
+      respuesta: p.respuesta || ''
+    }));
+    this.showForm = true;
+
+    // Scroll to form
+    setTimeout(() => {
+      document.querySelector('.form-card')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 100);
+  }
+
+  verEntrevista(id: number): void {
+    this.entrevistaViendo = this.entrevistaViendo === id ? null : id;
   }
 
   // ─── Utilidades ────────────────────────────────────────────────────────────

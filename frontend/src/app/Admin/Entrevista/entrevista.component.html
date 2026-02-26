@@ -46,8 +46,8 @@
 
       <!-- Form -->
       <div class="form-card" *ngIf="showForm">
-        <h3 class="form-title">Crear Nueva Entrevista</h3>
-        <p class="form-desc">Primero crea la entrevista. Luego podrás anotar las respuestas y subir archivos.</p>
+        <h3 class="form-title">{{ entrevistaEditando ? 'Editar Entrevista' : 'Crear Nueva Entrevista' }}</h3>
+        <p class="form-desc">{{ entrevistaEditando ? 'Modifica los datos de la entrevista.' : 'Primero crea la entrevista. Luego podrás anotar las respuestas y subir archivos.' }}</p>
 
         <form (ngSubmit)="handleSubmit()">
           <div class="form-grid form-grid-3">
@@ -96,8 +96,16 @@
           </div>
 
           <div class="form-actions">
+            <button 
+              type="button" 
+              class="btn-cancelar" 
+              *ngIf="entrevistaEditando"
+              (click)="toggleForm()"
+            >
+              Cancelar
+            </button>
             <button type="submit" class="btn-submit" [disabled]="!titulo || !entrevistador || !entrevistado">
-              Crear Entrevista
+              {{ entrevistaEditando ? 'Actualizar Entrevista' : 'Crear Entrevista' }}
             </button>
           </div>
         </form>
@@ -121,6 +129,18 @@
             <div class="card-top">
               <h4 class="card-title">{{ e.titulo_entrevista }}</h4>
               <div class="card-actions">
+                <button class="btn-icon" (click)="verEntrevista(e.id_entrevista)" title="Ver detalles">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                </button>
+                <button class="btn-icon" (click)="editEntrevista(e)" title="Editar">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                  </svg>
+                </button>
                 <button class="btn-icon" (click)="deleteEntrevista(e.id_entrevista, $event)" title="Eliminar">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <polyline points="3 6 5 6 21 6"></polyline>
@@ -141,7 +161,7 @@
               </span>
               <span class="meta-item">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0-4 4v2"></path>
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                   <circle cx="12" cy="7" r="4"></circle>
                 </svg>
                 {{ e.entrevistador }}
@@ -184,6 +204,42 @@
               </button>
               <span class="badge badge-green">Realizada</span>
             </div>
+            
+            <!-- Panel de detalles -->
+            <div class="detalles-panel" *ngIf="entrevistaViendo === e.id_entrevista">
+              <h4 class="detalles-title">Detalles de la Entrevista</h4>
+              
+              <div class="detalle-section" *ngIf="e.notas_contexto">
+                <label class="detalle-label">Notas / Contexto:</label>
+                <p class="detalle-texto">{{ e.notas_contexto }}</p>
+              </div>
+              
+              <div class="detalle-section">
+                <label class="detalle-label">Preguntas y Respuestas:</label>
+                <div class="pregunta-detalle" *ngFor="let p of e.preguntas; let i = index">
+                  <div class="pregunta-detalle-header">
+                    <span class="pregunta-numero">{{ i + 1 }}.</span>
+                    <span class="pregunta-texto">{{ p.pregunta }}</span>
+                  </div>
+                  <div class="respuesta-detalle" *ngIf="p.respuesta">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <polyline points="9 11 12 14 22 4"></polyline>
+                      <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+                    </svg>
+                    <span>{{ p.respuesta }}</span>
+                  </div>
+                  <div class="respuesta-detalle sin-respuesta" *ngIf="!p.respuesta">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <line x1="12" y1="8" x2="12" y2="12"></line>
+                      <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                    </svg>
+                    <span>Sin respuesta aún</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
             <div class="respuestas-panel" *ngIf="anotandoId === e.id_entrevista">
               <h4 class="respuestas-title">Anotar Respuestas</h4>
               <div class="respuesta-group" *ngFor="let p of e.preguntas; let i = index">
@@ -214,6 +270,18 @@
             <div class="card-top">
               <h4 class="card-title">{{ e.titulo_entrevista }}</h4>
               <div class="card-actions">
+                <button class="btn-icon" (click)="verEntrevista(e.id_entrevista)" title="Ver detalles">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                </button>
+                <button class="btn-icon" (click)="editEntrevista(e)" title="Editar">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                  </svg>
+                </button>
                 <button class="btn-icon" (click)="deleteEntrevista(e.id_entrevista, $event)" title="Eliminar">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <polyline points="3 6 5 6 21 6"></polyline>
@@ -234,7 +302,7 @@
               </span>
               <span class="meta-item">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0-4 4v2"></path>
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                   <circle cx="12" cy="7" r="4"></circle>
                 </svg>
                 {{ e.entrevistador }}
@@ -276,6 +344,42 @@
               </button>
               <span class="badge badge-gray">Pendiente</span>
             </div>
+            
+            <!-- Panel de detalles -->
+            <div class="detalles-panel" *ngIf="entrevistaViendo === e.id_entrevista">
+              <h4 class="detalles-title">Detalles de la Entrevista</h4>
+              
+              <div class="detalle-section" *ngIf="e.notas_contexto">
+                <label class="detalle-label">Notas / Contexto:</label>
+                <p class="detalle-texto">{{ e.notas_contexto }}</p>
+              </div>
+              
+              <div class="detalle-section">
+                <label class="detalle-label">Preguntas y Respuestas:</label>
+                <div class="pregunta-detalle" *ngFor="let p of e.preguntas; let i = index">
+                  <div class="pregunta-detalle-header">
+                    <span class="pregunta-numero">{{ i + 1 }}.</span>
+                    <span class="pregunta-texto">{{ p.pregunta }}</span>
+                  </div>
+                  <div class="respuesta-detalle" *ngIf="p.respuesta">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <polyline points="9 11 12 14 22 4"></polyline>
+                      <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+                    </svg>
+                    <span>{{ p.respuesta }}</span>
+                  </div>
+                  <div class="respuesta-detalle sin-respuesta" *ngIf="!p.respuesta">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <line x1="12" y1="8" x2="12" y2="12"></line>
+                      <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                    </svg>
+                    <span>Sin respuesta aún</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
             <div class="respuestas-panel" *ngIf="anotandoId === e.id_entrevista">
               <h4 class="respuestas-title">Anotar Respuestas</h4>
               <div class="respuesta-group" *ngFor="let p of e.preguntas; let i = index">
@@ -312,4 +416,13 @@
 
     </div>
   </div>
+
+  <!-- Confirm Modal -->
+  <app-confirm-modal
+    [isOpen]="showConfirmModal"
+    [config]="confirmModalConfig"
+    (confirm)="confirmDelete()"
+    (cancel)="cancelDelete()"
+  ></app-confirm-modal>
+
 </div>
