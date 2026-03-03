@@ -8,7 +8,7 @@ export interface Subproceso {
   descripcion: string;
   stakeholder_id?: string;
   herramienta?: {
-    id: number;      // ← AGREGAR ESTO
+    id: number;
     tipo: string;
     nombre: string;
   };

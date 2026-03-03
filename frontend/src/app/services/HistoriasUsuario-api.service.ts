@@ -5,8 +5,8 @@ import { Observable } from 'rxjs';
 export interface HistoriaUsuario {
     id_historia: number;
     id_proyecto: number;
-    id_proceso: number;
-    id_subproceso: number;
+    id_proceso?: number;
+    id_subproceso?: number;
     titulo_historia?: string;
     rol?: string;
     quiero?: string;
@@ -18,8 +18,6 @@ export interface HistoriaUsuario {
 
 export interface CreateHistoriaUsuarioDto {
     id_proyecto: number;
-    id_proceso: number;
-    id_subproceso: number;
     titulo_historia?: string;
     rol?: string;
     quiero?: string;
@@ -50,6 +48,10 @@ export class HistoriaUsuarioApiService {
         return this.http.get<HistoriaUsuario[]>(`${this.base}/historias-usuario`, {
             params: { proyectoId: proyectoId.toString() }
         });
+    }
+
+    getHistoria(id: number): Observable<HistoriaUsuario> {
+        return this.http.get<HistoriaUsuario>(`${this.base}/historias-usuario/${id}`);
     }
 
     createHistoria(dto: CreateHistoriaUsuarioDto): Observable<HistoriaUsuario> {

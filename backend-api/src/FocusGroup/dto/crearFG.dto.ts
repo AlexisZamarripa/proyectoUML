@@ -1,21 +1,13 @@
-import { IsString, IsNotEmpty, IsOptional, IsInt, IsEnum, IsDateString } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsInt, IsEnum, IsDateString, Min } from 'class-validator';
 
 export class CreateFocusGroupDto {
     @IsInt()
     @IsNotEmpty()
     id_proyecto: number;
 
-    @IsInt()
-    @IsNotEmpty()
-    id_proceso: number;
-
-    @IsInt()
-    @IsNotEmpty()
-    id_subproceso: number;
-
     @IsString()
-    @IsOptional()
-    nombre_focus?: string;
+    @IsNotEmpty()
+    nombre_focus: string;
 
     @IsString()
     @IsOptional()
@@ -25,11 +17,32 @@ export class CreateFocusGroupDto {
     @IsOptional()
     fecha_inicio?: string;
 
+    @IsDateString()
+    @IsOptional()
+    fecha_fin?: string;
+
+    @IsEnum(['presencial', 'virtual', 'hibrido'])
+    @IsOptional()
+    modalidad?: 'presencial' | 'virtual' | 'hibrido';
+
+    @IsString()
+    @IsOptional()
+    lugar?: string;
+
+    @IsString()
+    @IsOptional()
+    moderador?: string;
+
+    @IsInt()
+    @Min(1)
+    @IsOptional()
+    numero_participantes?: number;
+
     @IsEnum(['planificacion', 'en_progreso', 'pausado', 'completado'])
     @IsOptional()
     estado?: 'planificacion' | 'en_progreso' | 'pausado' | 'completado';
 
     @IsString()
     @IsOptional()
-    color?: string;
+    conclusiones?: string;
 }

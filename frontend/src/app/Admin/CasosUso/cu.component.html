@@ -95,27 +95,6 @@
             </div>
           </div>
 
-          <div class="form-grid form-grid-2">
-            <div class="form-group">
-              <label class="form-label">Proceso *</label>
-              <select class="form-input" [(ngModel)]="procesoVinculadoId" name="procesoVinculado"
-                (change)="onProcesoChange()" required>
-                <option value="">-- Seleccionar proceso --</option>
-                <option *ngFor="let proceso of procesosDisponibles" [value]="proceso.id">{{ proceso.nombre }}</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Subproceso *</label>
-              <select class="form-input" [(ngModel)]="subprocesoId" name="subproceso"
-                [disabled]="!procesoVinculadoId || subprocesosDisponibles.length === 0" required>
-                <option value="">{{ procesoVinculadoId ? '-- Seleccionar subproceso --' : 'Primero selecciona un
-                  proceso' }}</option>
-                <option *ngFor="let subproceso of subprocesosDisponibles" [value]="subproceso.id">{{ subproceso.nombre
-                  }}</option>
-              </select>
-            </div>
-          </div>
-
           <div class="criterios-box">
             <div class="criterios-header">
               <label class="form-label">Criterios de Aceptación</label>
@@ -185,14 +164,12 @@
               <span class="badge-prioridad" [class]="'prioridad-' + historia.prioridad">
                 {{ historia.prioridad }}
               </span>
-              <!-- Botón Editar -->
               <button class="btn-icon btn-edit-icon" (click)="abrirDrawer(historia)" title="Editar">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                   <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                 </svg>
               </button>
-              <!-- Botón Eliminar -->
               <button class="btn-icon btn-delete-icon" (click)="eliminarHistoria(historia.id_historia)"
                 title="Eliminar">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -242,10 +219,8 @@
      DRAWER DE EDICIÓN
      ═══════════════════════════════════════════ -->
 
-<!-- Overlay -->
 <div class="drawer-overlay" [class.open]="drawerOpen" (click)="cerrarDrawer()"></div>
 
-<!-- Drawer -->
 <div class="drawer" [class.open]="drawerOpen">
 
   <div class="drawer-header">
@@ -260,17 +235,14 @@
 
   <div class="drawer-body">
 
-    <!-- Error edición -->
     <div class="error-msg" *ngIf="editErrorMsg">{{ editErrorMsg }}</div>
 
-    <!-- Título -->
     <div class="form-group">
       <label class="form-label">Título de la Historia *</label>
       <input class="form-input" type="text" [(ngModel)]="editTitulo" name="editTitulo"
         placeholder="Título de la historia" />
     </div>
 
-    <!-- Formato -->
     <div class="formato-box">
       <p class="formato-label">Formato: Como [rol], quiero [acción] para que [beneficio]</p>
       <div class="form-group">
@@ -288,7 +260,6 @@
       </div>
     </div>
 
-    <!-- Prioridad + Estimación -->
     <div class="form-grid form-grid-2">
       <div class="form-group">
         <label class="form-label">Prioridad</label>
@@ -305,7 +276,6 @@
       </div>
     </div>
 
-    <!-- Criterios -->
     <div class="criterios-box">
       <div class="criterios-header">
         <label class="form-label">Criterios de Aceptación</label>

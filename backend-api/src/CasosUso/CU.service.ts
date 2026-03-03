@@ -1,9 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { HistoriaUsuario } from './entities/CU.entity';
 import { CreateHistoriaUsuarioDto } from './dto/crearCU.dto';
 import { UpdateHistoriaUsuarioDto } from './dto/actualizarCU.dto';
-import { HistoriaUsuario } from './entities/CU.entity';
 
 @Injectable()
 export class HistoriasUsuarioService {
@@ -12,8 +12,8 @@ export class HistoriasUsuarioService {
         private historiasRepository: Repository<HistoriaUsuario>,
     ) { }
 
-    async create(createHistoriaUsuarioDto: CreateHistoriaUsuarioDto): Promise<HistoriaUsuario> {
-        const historia = this.historiasRepository.create(createHistoriaUsuarioDto);
+    async create(dto: CreateHistoriaUsuarioDto): Promise<HistoriaUsuario> {
+        const historia = this.historiasRepository.create(dto);
         return await this.historiasRepository.save(historia);
     }
 
@@ -44,30 +44,21 @@ export class HistoriasUsuarioService {
         });
     }
 
-    async findByPrioridad(prioridad: 'baja' | 'media' | 'alta'): Promise<HistoriaUsuario[]> {
-        return await this.historiasRepository.find({
-            where: { prioridad },
-            order: { id_historia: 'DESC' },
-        });
-    }
-
     async findOne(id: number): Promise<HistoriaUsuario> {
         const historia = await this.historiasRepository.findOne({
             where: { id_historia: id },
         });
 
         if (!historia) {
-            throw new NotFoundException(`Historia de Usuario con ID ${id} no encontrada`);
+            throw new NotFoundException(`Historia de usuario con ID ${id} no encontrada`);
         }
 
         return historia;
     }
 
-    async update(id: number, updateHistoriaUsuarioDto: UpdateHistoriaUsuarioDto): Promise<HistoriaUsuario> {
+    async update(id: number, dto: UpdateHistoriaUsuarioDto): Promise<HistoriaUsuario> {
         const historia = await this.findOne(id);
-
-        Object.assign(historia, updateHistoriaUsuarioDto);
-
+        Object.assign(historia, dto);
         return await this.historiasRepository.save(historia);
     }
 

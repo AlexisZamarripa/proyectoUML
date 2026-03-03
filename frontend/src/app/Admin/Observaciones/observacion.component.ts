@@ -29,6 +29,13 @@ export class ObservacionComponent implements OnInit {
   isLoading = false;
   errorMsg = '';
 
+  // ── Modal: Ver ────────────────────────────────────────────────────────────
+  viewingObs: ObservacionUI | null = null;
+
+  // ── Edición ───────────────────────────────────────────────────────────────
+  /** ID de la observación que se está editando; null si es creación nueva */
+  editingId: number | null = null;
+
   // Procesos y subprocesos
   procesosDisponibles: Proceso[] = [];
   subprocesosDisponibles: Subproceso[] = [];
@@ -97,9 +104,7 @@ export class ObservacionComponent implements OnInit {
     const idProyecto = parseInt(this.proyecto.id, 10);
     if (!idProyecto) return;
     this.procesoApiService.getProcesosByProyecto(idProyecto).subscribe({
-      next: (data) => {
-        this.procesosDisponibles = data;
-      },
+      next: (data) => { this.procesosDisponibles = data; },
       error: (err) => console.error('Error al cargar procesos:', err)
     });
   }
@@ -114,7 +119,69 @@ export class ObservacionComponent implements OnInit {
     this.subprocesosDisponibles = proceso?.subprocesos || [];
   }
 
-  // ─── Formulario ────────────────────────────────────────────────────────────
+  // ─── Modal: Ver ────────────────────────────────────────────────────────────
+
+  viewObservacion(obs: ObservacionUI): void {
+    this.viewingObs = obs;
+  }
+
+  closeViewModal(): void {
+    this.viewingObs = null;
+  }
+
+  /** Convierte la cadena "a | b | c" en un arreglo ["a", "b", "c"] */
+  getHallazgosArray(raw: string): string[] {
+    return raw.split('|').map(h => h.trim()).filter(h => h.length > 0);
+  }
+
+  /** Devuelve el nombre del proceso dado su ID */
+  getNombreProceso(idProceso: number): string {
+    const p = this.procesosDisponibles.find(x => x.id === String(idProceso));
+    return p ? p.nombre : `Proceso ${idProceso}`;
+  }
+
+  /** Devuelve el nombre del subproceso dado el ID del proceso y del subproceso */
+  getNombreSubproceso(idProceso: number, idSubproceso: number): string {
+    const p = this.procesosDisponibles.find(x => x.id === String(idProceso));
+    if (!p) return `Subproceso ${idSubproceso}`;
+    const s = p.subprocesos?.find((x: Subproceso) => x.id === String(idSubproceso));
+    return s ? s.nombre : `Subproceso ${idSubproceso}`;
+  }
+
+  // ─── Formulario (Crear / Editar) ───────────────────────────────────────────
+
+  /**
+   * Abre el formulario cargando los datos de la observación seleccionada.
+   * También precarga los subprocesos del proceso correspondiente.
+   */
+  editObservacion(obs: ObservacionUI): void {
+    this.editingId = obs.id_observacion;
+
+    this.titulo = obs.titulo;
+    this.textoObservaciones = obs.observaciones;
+    this.hallazgos = obs.hallazgos_puntos_clave
+      ? this.getHallazgosArray(obs.hallazgos_puntos_clave)
+      : [];
+    this.tempHallazgo = '';
+
+    // Pre-seleccionar proceso y subproceso
+    this.procesoVinculadoId = obs.id_proceso ? String(obs.id_proceso) : '';
+    if (this.procesoVinculadoId) {
+      const proceso = this.procesosDisponibles.find(
+        p => p.id === this.procesoVinculadoId
+      );
+      this.subprocesosDisponibles = proceso?.subprocesos || [];
+    }
+    this.subprocesoId = obs.id_subproceso ? String(obs.id_subproceso) : '';
+
+    this.errorMsg = '';
+    this.showForm = true;
+  }
+
+  cancelForm(): void {
+    this.resetForm();
+    this.showForm = false;
+  }
 
   handleSubmit(): void {
     if (!this.titulo.trim() || !this.textoObservaciones.trim()) return;
@@ -132,20 +199,44 @@ export class ObservacionComponent implements OnInit {
       hallazgos_puntos_clave: this.hallazgos.filter(h => h.trim()).join(' | ')
     };
 
-    this.observacionApiService.createObservacion(dto).subscribe({
-      next: (nueva) => {
-        this.observaciones.push({
-          ...nueva,
-          fecha: nueva.fecha ?? new Date().toISOString().split('T')[0]
-        });
-        this.resetForm();
-        this.showForm = false;
-      },
-      error: (err) => {
-        console.error('Error al crear observación:', err);
-        this.errorMsg = 'Error al guardar la observación. Intenta de nuevo.';
-      }
-    });
+    if (this.editingId !== null) {
+      // ── EDITAR ────────────────────────────────────────────────────────────
+      this.observacionApiService.updateObservacion(this.editingId, dto).subscribe({
+        next: (actualizada: Observacion) => {
+          const idx = this.observaciones.findIndex(
+            o => o.id_observacion === this.editingId
+          );
+          if (idx !== -1) {
+            this.observaciones[idx] = {
+              ...actualizada,
+              fecha: actualizada.fecha ?? new Date().toISOString().split('T')[0]
+            };
+          }
+          this.resetForm();
+          this.showForm = false;
+        },
+        error: (err) => {
+          console.error('Error al actualizar observación:', err);
+          this.errorMsg = 'Error al actualizar la observación. Intenta de nuevo.';
+        }
+      });
+    } else {
+      // ── CREAR ─────────────────────────────────────────────────────────────
+      this.observacionApiService.createObservacion(dto).subscribe({
+        next: (nueva) => {
+          this.observaciones.push({
+            ...nueva,
+            fecha: nueva.fecha ?? new Date().toISOString().split('T')[0]
+          });
+          this.resetForm();
+          this.showForm = false;
+        },
+        error: (err) => {
+          console.error('Error al crear observación:', err);
+          this.errorMsg = 'Error al guardar la observación. Intenta de nuevo.';
+        }
+      });
+    }
   }
 
   resetForm(): void {
@@ -157,6 +248,7 @@ export class ObservacionComponent implements OnInit {
     this.subprocesoId = '';
     this.subprocesosDisponibles = [];
     this.errorMsg = '';
+    this.editingId = null;
   }
 
   addHallazgo(): void {
