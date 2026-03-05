@@ -1,5 +1,4 @@
 <div class="procesos-page">
-  <!-- Back Link -->
   <button class="back-link" (click)="goBack()">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
       stroke-linecap="round" stroke-linejoin="round">
@@ -9,7 +8,6 @@
     Volver a Proyectos
   </button>
 
-  <!-- Project Header Card -->
   <div class="project-header-card" [style.background]="getProyectoGradient()">
     <div class="project-header-watermark">
       <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="0.5">
@@ -23,12 +21,10 @@
     <p class="project-header-desc">{{ proyecto.descripcion }}</p>
   </div>
 
-  <!-- Main Layout: Sidebar + Content -->
   <div class="main-layout">
     <app-barra [projectId]="proyecto.id" [activeTab]="activeTab"></app-barra>
 
     <div class="content-area">
-      <!-- Header -->
       <div class="content-header">
         <div class="content-header-text">
           <h2 class="content-title">Procesos</h2>
@@ -43,7 +39,6 @@
         </button>
       </div>
 
-      <!-- Form -->
       <div class="form-card" *ngIf="showForm">
         <h3 class="form-title">Gestionar Procesos</h3>
         <form (ngSubmit)="handleSubmit()">
@@ -181,6 +176,7 @@
                   </span>
                 </div>
                 <div class="subproceso-actions">
+                  <!-- Ver encuesta -->
                   <button class="btn-ver-simple" *ngIf="sub.herramienta?.tipo === 'encuesta'"
                     (click)="openEncuestaModal(sub)" title="Ver encuesta">
                     <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -188,6 +184,7 @@
                       <circle cx="12" cy="12" r="3" />
                     </svg>
                   </button>
+                  <!-- Ver entrevista -->
                   <button class="btn-ver-simple" *ngIf="sub.herramienta?.tipo === 'entrevista'"
                     (click)="openEntrevistaModal(sub)" title="Ver entrevista">
                     <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -195,8 +192,17 @@
                       <circle cx="12" cy="12" r="3" />
                     </svg>
                   </button>
-                  <button class="btn-ver-simple" *ngIf="sub.herramienta?.tipo === 'documento'"
-                    (click)="openDocumentoModal(sub)" title="Ver documento">
+                  <!-- Ver historia de usuario (solo lectura) -->
+                  <button class="btn-ver-simple" *ngIf="sub.herramienta?.tipo === 'historia_usuario'"
+                    (click)="openHistoriaModalReadOnly(sub)" title="Ver historia de usuario">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                      <circle cx="12" cy="12" r="3" />
+                    </svg>
+                  </button>
+                  <!-- Ver focus group -->
+                  <button class="btn-ver-simple" *ngIf="sub.herramienta?.tipo === 'focus_group'"
+                    (click)="openFocusGroupModal(sub)" title="Ver focus group">
                     <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                       <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
                       <circle cx="12" cy="12" r="3" />
@@ -376,7 +382,6 @@
             </button>
           </div>
 
-          <!-- Form agregar subproceso en modal -->
           <div class="inline-sub-form-modal" *ngIf="addingSubprocesoModal">
             <div class="inline-sub-header">
               <h4 class="inline-sub-title-modal">Agregar Subproceso a: {{ selectedProceso.nombre }}</h4>
@@ -464,8 +469,7 @@
                   </svg>
                   {{ getStakeholderNombre(sub.stakeholder_id) }}
                 </div>
-
-                <!-- HERRAMIENTA BADGE + BOTÓN VER -->
+                <!-- HERRAMIENTA BADGE + BOTONES VER -->
                 <div class="subproceso-herramienta-badge" *ngIf="sub.herramienta">
                   <span class="herramienta-badge-tipo" [ngClass]="'badge-' + sub.herramienta.tipo">
                     <span [innerHTML]="getIconoTipoHerramienta(sub.herramienta.tipo)"></span>
@@ -490,9 +494,18 @@
                     </svg>
                     Ver
                   </button>
-                  <!-- Ver documento -->
-                  <button class="btn-ver-herramienta" *ngIf="sub.herramienta.tipo === 'documento'"
-                    (click)="openDocumentoModal(sub)" title="Ver documento">
+                  <!-- Ver historia de usuario (solo lectura) -->
+                  <button class="btn-ver-herramienta" *ngIf="sub.herramienta.tipo === 'historia_usuario'"
+                    (click)="openHistoriaModalReadOnly(sub)" title="Ver historia de usuario">
+                    <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                      <circle cx="12" cy="12" r="3" />
+                    </svg>
+                    Ver
+                  </button>
+                  <!-- Ver focus group -->
+                  <button class="btn-ver-herramienta" *ngIf="sub.herramienta.tipo === 'focus_group'"
+                    (click)="openFocusGroupModal(sub)" title="Ver focus group">
                     <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                       <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
                       <circle cx="12" cy="12" r="3" />
@@ -517,14 +530,12 @@
   <!-- ========== MODAL DE ENCUESTA ========== -->
   <div class="modal-overlay modal-overlay-top" *ngIf="encuestaModal" (click)="closeEncuestaModal()">
     <div class="modal-content modal-encuesta" (click)="$event.stopPropagation()">
-
       <div class="encuesta-loading" *ngIf="loadingEncuesta">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spin">
           <path d="M21 12a9 9 0 1 1-6.219-8.56" />
         </svg>
         Cargando encuesta...
       </div>
-
       <ng-container *ngIf="!loadingEncuesta && encuestaDetalle">
         <div class="modal-header encuesta-header">
           <div class="modal-header-content">
@@ -550,16 +561,13 @@
             {{ encuestaDetalle.numero_participantes_esperados }} participantes esperados
           </div>
         </div>
-
         <div class="modal-body encuesta-body">
           <div class="encuesta-sin-preguntas" *ngIf="encuestaDetalle.preguntas.length === 0">
             <p>Esta encuesta no tiene preguntas definidas.</p>
           </div>
-
           <div class="encuesta-preguntas" *ngIf="encuestaDetalle.preguntas.length > 0">
             <p class="encuesta-instruccion">Completa las respuestas para el subproceso <strong>{{
                 encuestaSubprocesoNombre }}</strong>:</p>
-
             <div class="pregunta-item" *ngFor="let p of encuestaDetalle.preguntas; let i = index">
               <div class="pregunta-header">
                 <span class="pregunta-numero">{{ i + 1 }}</span>
@@ -570,8 +578,7 @@
               </div>
               <div class="pregunta-respuesta">
                 <textarea *ngIf="p.tipo_pregunta === 'texto_abierto'" class="form-input respuesta-textarea"
-                  placeholder="Escribe tu respuesta..." [(ngModel)]="respuestasMap[p.id_pregunta]" rows="3">
-                </textarea>
+                  placeholder="Escribe tu respuesta..." [(ngModel)]="respuestasMap[p.id_pregunta]" rows="3"></textarea>
                 <div class="respuesta-sino" *ngIf="p.tipo_pregunta === 'si_no'">
                   <button type="button" class="btn-sino" [class.active]="respuestasMap[p.id_pregunta] === 'Sí'"
                     (click)="respuestasMap[p.id_pregunta] = 'Sí'">Sí</button>
@@ -584,13 +591,11 @@
                     (click)="respuestasMap[p.id_pregunta] = n.toString()">{{ n }}</button>
                 </div>
                 <textarea *ngIf="p.tipo_pregunta === 'opcion_multiple'" class="form-input respuesta-textarea"
-                  placeholder="Escribe tu opción..." [(ngModel)]="respuestasMap[p.id_pregunta]" rows="2">
-                </textarea>
+                  placeholder="Escribe tu opción..." [(ngModel)]="respuestasMap[p.id_pregunta]" rows="2"></textarea>
               </div>
             </div>
           </div>
         </div>
-
         <div class="encuesta-footer" *ngIf="encuestaDetalle.preguntas.length > 0">
           <span class="encuesta-guardado-msg" *ngIf="encuestaGuardada">
             <svg width="14" height="14" fill="none" stroke="#10b981" stroke-width="2.5" viewBox="0 0 24 24">
@@ -616,14 +621,12 @@
   <!-- ========== MODAL DE ENTREVISTA ========== -->
   <div class="modal-overlay modal-overlay-top" *ngIf="entrevistaModal" (click)="closeEntrevistaModal()">
     <div class="modal-content modal-encuesta" (click)="$event.stopPropagation()">
-
       <div class="encuesta-loading" *ngIf="loadingEntrevista">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spin">
           <path d="M21 12a9 9 0 1 1-6.219-8.56" />
         </svg>
         Cargando entrevista...
       </div>
-
       <ng-container *ngIf="!loadingEntrevista && entrevistaDetalle">
         <div class="modal-header encuesta-header">
           <div class="modal-header-content">
@@ -647,16 +650,13 @@
           </div>
           <p class="modal-desc" *ngIf="entrevistaDetalle.notas_contexto">{{ entrevistaDetalle.notas_contexto }}</p>
         </div>
-
         <div class="modal-body encuesta-body">
           <div class="encuesta-sin-preguntas" *ngIf="entrevistaDetalle.preguntas.length === 0">
             <p>Esta entrevista no tiene preguntas definidas.</p>
           </div>
-
           <div class="encuesta-preguntas" *ngIf="entrevistaDetalle.preguntas.length > 0">
             <p class="encuesta-instruccion">Anota las respuestas para el subproceso <strong>{{
                 entrevistaSubprocesoNombre }}</strong>:</p>
-
             <div class="pregunta-item" *ngFor="let p of entrevistaDetalle.preguntas; let i = index">
               <div class="pregunta-header">
                 <span class="pregunta-numero">{{ i + 1 }}</span>
@@ -666,13 +666,11 @@
               </div>
               <div class="pregunta-respuesta">
                 <textarea class="form-input respuesta-textarea" placeholder="Escribe la respuesta..."
-                  [(ngModel)]="respuestasEntrevistaMap[p.id_pregunta]" rows="3">
-                </textarea>
+                  [(ngModel)]="respuestasEntrevistaMap[p.id_pregunta]" rows="3"></textarea>
               </div>
             </div>
           </div>
         </div>
-
         <div class="encuesta-footer" *ngIf="entrevistaDetalle.preguntas.length > 0">
           <span class="encuesta-guardado-msg" *ngIf="entrevistaGuardada">
             <svg width="14" height="14" fill="none" stroke="#10b981" stroke-width="2.5" viewBox="0 0 24 24">
@@ -695,116 +693,276 @@
     </div>
   </div>
 
-  <!-- ========== MODAL DE DOCUMENTO ========== -->
-  <div class="modal-overlay modal-overlay-top" *ngIf="documentoModal" (click)="closeDocumentoModal()">
+  <!-- ========== MODAL DE HISTORIA DE USUARIO ========== -->
+  <div class="modal-overlay modal-overlay-top" *ngIf="historiaModal" (click)="closeHistoriaModal()">
     <div class="modal-content modal-encuesta" (click)="$event.stopPropagation()">
-
-      <div class="encuesta-loading" *ngIf="loadingDocumento">
+      <div class="encuesta-loading" *ngIf="loadingHistoria">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spin">
           <path d="M21 12a9 9 0 1 1-6.219-8.56" />
         </svg>
-        Cargando documento...
+        Cargando historia de usuario...
       </div>
 
-      <ng-container *ngIf="!loadingDocumento && documentoDetalle">
+      <ng-container *ngIf="!loadingHistoria && historiaDetalle">
         <div class="modal-header encuesta-header">
           <div class="modal-header-content">
             <div class="encuesta-header-info">
-              <span class="encuesta-badge-label" style="background:rgba(99,102,241,0.25);color:#a5b4fc;">Documento vinculado</span>
-              <h2 class="modal-title">{{ documentoDetalle.titulo }}</h2>
+              <span class="encuesta-badge-label" *ngIf="!historiaReadOnly">Historia de Usuario</span>
+              <span class="encuesta-badge-label" *ngIf="historiaReadOnly"
+                style="display:flex;align-items:center;gap:4px;opacity:0.85;">
+                <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+                Solo lectura
+              </span>
+              <h2 class="modal-title">{{ historiaForm.titulo_historia || 'Historia de Usuario' }}</h2>
             </div>
-            <button class="btn-close-modal" (click)="closeDocumentoModal()">
+            <button class="btn-close-modal" (click)="closeHistoriaModal()">
               <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                 <line x1="18" y1="6" x2="6" y2="18" />
                 <line x1="6" y1="6" x2="18" y2="18" />
               </svg>
             </button>
           </div>
-          <div class="encuesta-meta">
-            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-              <polyline points="14 2 14 8 20 8" />
-            </svg>
-            {{ documentoDetalle.tipoDocumento }}
-            <span *ngIf="documentoDetalle.fuente"> · Fuente: {{ documentoDetalle.fuente }}</span>
-          </div>
+          <p class="modal-desc">Subproceso: <strong>{{ historiaSubprocesoNombre }}</strong></p>
         </div>
 
         <div class="modal-body encuesta-body">
-
-          <!-- Archivos adjuntos -->
-          <div class="modal-section" *ngIf="documentoDetalle.documentos && documentoDetalle.documentos.length > 0">
-            <div class="section-header-simple">
-              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                <polyline points="14 2 14 8 20 8" />
-              </svg>
-              <h3 class="section-title">Archivos ({{ documentoDetalle.documentos.length }})</h3>
-            </div>
-            <div class="doc-files-list">
-              <div class="doc-file-item" *ngFor="let d of documentoDetalle.documentos">
-                <div class="doc-file-icon">
-                  <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                    <polyline points="14 2 14 8 20 8" />
-                  </svg>
+          <!-- MODO SOLO LECTURA -->
+          <ng-container *ngIf="historiaReadOnly">
+            <div style="display:flex;flex-direction:column;gap:16px;">
+              <div
+                style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:12px;">
+                <div *ngIf="historiaForm.rol" style="display:flex;flex-direction:column;gap:2px;">
+                  <span
+                    style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#94a3b8;">Como</span>
+                  <span style="font-size:14px;color:#1e293b;">{{ historiaForm.rol }}</span>
                 </div>
-                <div class="doc-file-info">
-                  <span class="doc-file-nombre">{{ d.nombre }}</span>
-                  <span class="doc-file-tipo badge-blue" *ngIf="d.tipo">{{ d.tipo }}</span>
-                  <p class="doc-file-desc" *ngIf="d.descripcion">{{ d.descripcion }}</p>
+                <div *ngIf="historiaForm.quiero" style="display:flex;flex-direction:column;gap:2px;">
+                  <span
+                    style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#94a3b8;">Quiero</span>
+                  <span style="font-size:14px;color:#1e293b;">{{ historiaForm.quiero }}</span>
                 </div>
-                <a class="btn-ver-herramienta" *ngIf="d.url"
-                  [href]="getDocFileUrl(d.url)" target="_blank" rel="noopener">
-                  <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                    <polyline points="7 10 12 15 17 10" />
-                    <line x1="12" y1="15" x2="12" y2="3" />
-                  </svg>
-                  Descargar
-                </a>
+                <div *ngIf="historiaForm.para_que" style="display:flex;flex-direction:column;gap:2px;">
+                  <span
+                    style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#94a3b8;">Para
+                    que</span>
+                  <span style="font-size:14px;color:#1e293b;">{{ historiaForm.para_que }}</span>
+                </div>
+              </div>
+              <div style="display:flex;gap:16px;flex-wrap:wrap;">
+                <div *ngIf="historiaForm.prioridad" style="display:flex;flex-direction:column;gap:4px;">
+                  <span
+                    style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#94a3b8;">Prioridad</span>
+                  <span style="font-size:12px;font-weight:600;padding:3px 10px;border-radius:20px;"
+                    [style.background]="historiaForm.prioridad==='alta' ? '#fee2e2' : historiaForm.prioridad==='baja' ? '#dcfce7' : '#e0f2fe'"
+                    [style.color]="historiaForm.prioridad==='alta' ? '#dc2626' : historiaForm.prioridad==='baja' ? '#16a34a' : '#0284c7'">
+                    {{ historiaForm.prioridad | titlecase }}
+                  </span>
+                </div>
+                <div *ngIf="historiaForm.estimacion" style="display:flex;flex-direction:column;gap:4px;">
+                  <span
+                    style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#94a3b8;">Estimación</span>
+                  <span style="font-size:14px;color:#1e293b;">{{ historiaForm.estimacion }}</span>
+                </div>
+              </div>
+              <div *ngIf="historiaForm.criterios_aceptacion && historiaForm.criterios_aceptacion[0]">
+                <span
+                  style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#94a3b8;display:block;margin-bottom:8px;">Criterios
+                  de Aceptación</span>
+                <ul style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:6px;">
+                  <li *ngFor="let criterio of historiaForm.criterios_aceptacion"
+                    [style.display]="criterio.trim() ? 'flex' : 'none'"
+                    style="align-items:flex-start;gap:8px;font-size:14px;color:#374151;">
+                    <svg width="14" height="14" fill="none" stroke="#10b981" stroke-width="2.5" viewBox="0 0 24 24"
+                      style="flex-shrink:0;margin-top:2px;">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                    {{ criterio }}
+                  </li>
+                </ul>
+              </div>
+              <div *ngIf="!historiaForm.rol && !historiaForm.quiero && !historiaForm.para_que"
+                style="text-align:center;padding:24px;color:#94a3b8;font-size:14px;">
+                Esta historia de usuario aún no tiene contenido registrado.
               </div>
             </div>
-          </div>
+          </ng-container>
 
-          <!-- Hallazgos -->
-          <div class="modal-section" *ngIf="documentoDetalle.hallazgos && documentoDetalle.hallazgos.length > 0">
-            <div class="section-header-simple">
-              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <circle cx="11" cy="11" r="8" />
-                <line x1="21" y1="21" x2="16.65" y2="16.65" />
-              </svg>
-              <h3 class="section-title">Hallazgos</h3>
-            </div>
-            <div class="pasos-list">
-              <div class="paso-item" *ngFor="let h of documentoDetalle.hallazgos; let i = index">
-                <span class="paso-number">{{ i + 1 }}</span>
-                <span class="paso-text">{{ h }}</span>
+          <!-- MODO EDICIÓN -->
+          <ng-container *ngIf="!historiaReadOnly">
+            <div class="historia-form-container">
+              <div class="inline-sub-field">
+                <label class="inline-sub-label">Título *</label>
+                <input class="form-input" type="text" [(ngModel)]="historiaForm.titulo_historia"
+                  placeholder="Título de la historia" />
+              </div>
+              <div class="inline-sub-field">
+                <label class="inline-sub-label">Como (Rol) *</label>
+                <input class="form-input" type="text" [(ngModel)]="historiaForm.rol"
+                  placeholder="Ej: usuario registrado" />
+              </div>
+              <div class="inline-sub-field">
+                <label class="inline-sub-label">Quiero *</label>
+                <textarea class="form-input" [(ngModel)]="historiaForm.quiero"
+                  placeholder="Ej: poder ver mi historial de pedidos" rows="2"></textarea>
+              </div>
+              <div class="inline-sub-field">
+                <label class="inline-sub-label">Para que *</label>
+                <textarea class="form-input" [(ngModel)]="historiaForm.para_que"
+                  placeholder="Ej: pueda hacer seguimiento de mis compras" rows="2"></textarea>
+              </div>
+              <div style="display:flex;gap:16px;">
+                <div class="inline-sub-field" style="flex:1">
+                  <label class="inline-sub-label">Prioridad</label>
+                  <select class="form-input" [(ngModel)]="historiaForm.prioridad">
+                    <option value="baja">Baja</option>
+                    <option value="media">Media</option>
+                    <option value="alta">Alta</option>
+                  </select>
+                </div>
+                <div class="inline-sub-field" style="flex:1">
+                  <label class="inline-sub-label">Estimación (opcional)</label>
+                  <input class="form-input" type="text" [(ngModel)]="historiaForm.estimacion"
+                    placeholder="Ej: 3 puntos, 2h" />
+                </div>
+              </div>
+              <div class="inline-sub-field">
+                <label class="inline-sub-label">Criterios de Aceptación</label>
+                <div *ngFor="let criterio of historiaForm.criterios_aceptacion; let ci = index"
+                  style="display:flex;gap:8px;margin-bottom:6px;">
+                  <input class="form-input" type="text" [(ngModel)]="historiaForm.criterios_aceptacion[ci]"
+                    [placeholder]="'Criterio ' + (ci + 1)" />
+                  <button type="button" class="btn-delete-item"
+                    (click)="historiaForm.criterios_aceptacion.splice(ci, 1)"
+                    *ngIf="historiaForm.criterios_aceptacion.length > 1">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                      <line x1="18" y1="6" x2="6" y2="18" />
+                      <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                  </button>
+                </div>
+                <button type="button" class="btn-add-inline" (click)="historiaForm.criterios_aceptacion.push('')">
+                  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                    <line x1="12" y1="5" x2="12" y2="19" />
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                  </svg>
+                  Añadir criterio
+                </button>
               </div>
             </div>
-          </div>
-
-          <!-- Recomendaciones -->
-          <div class="modal-section" *ngIf="documentoDetalle.recomendaciones">
-            <div class="section-header-simple">
-              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <polyline points="9 11 12 14 22 4" />
-                <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
-              </svg>
-              <h3 class="section-title">Recomendaciones</h3>
-            </div>
-            <p class="doc-recomendaciones">{{ documentoDetalle.recomendaciones }}</p>
-          </div>
-
-          <div class="encuesta-sin-preguntas"
-            *ngIf="(!documentoDetalle.documentos || documentoDetalle.documentos.length === 0) && !documentoDetalle.hallazgos?.length && !documentoDetalle.recomendaciones">
-            <p>Este análisis de documento no tiene contenido adicional.</p>
-          </div>
+          </ng-container>
         </div>
 
         <div class="encuesta-footer">
+          <span class="encuesta-guardado-msg" *ngIf="historiaGuardada && !historiaReadOnly">
+            <svg width="14" height="14" fill="none" stroke="#10b981" stroke-width="2.5" viewBox="0 0 24 24">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+            Historia guardada
+          </span>
           <div class="encuesta-footer-actions">
-            <button class="btn-cancelar" (click)="closeDocumentoModal()">Cerrar</button>
+            <button class="btn-cancelar" (click)="closeHistoriaModal()">Cerrar</button>
+            <button class="btn-guardar" *ngIf="!historiaReadOnly" (click)="saveHistoria()" [disabled]="savingHistoria">
+              <svg *ngIf="savingHistoria" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2" class="spin">
+                <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+              </svg>
+              {{ savingHistoria ? 'Guardando...' : 'Guardar Historia' }}
+            </button>
+          </div>
+        </div>
+      </ng-container>
+    </div>
+  </div>
+
+  <!-- ========== MODAL DE FOCUS GROUP ========== -->
+  <div class="modal-overlay modal-overlay-top" *ngIf="focusGroupModal" (click)="closeFocusGroupModal()">
+    <div class="modal-content modal-encuesta" (click)="$event.stopPropagation()">
+      <div class="encuesta-loading" *ngIf="loadingFocusGroup">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spin">
+          <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+        </svg>
+        Cargando focus group...
+      </div>
+      <ng-container *ngIf="!loadingFocusGroup && focusGroupDetalle">
+        <div class="modal-header encuesta-header">
+          <div class="modal-header-content">
+            <div class="encuesta-header-info">
+              <span class="encuesta-badge-label">Focus Group vinculado</span>
+              <h2 class="modal-title">{{ focusGroupDetalle.nombre_focus }}</h2>
+            </div>
+            <button class="btn-close-modal" (click)="closeFocusGroupModal()">
+              <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
+          <p class="modal-desc">Subproceso: <strong>{{ focusGroupSubprocesoNombre }}</strong></p>
+        </div>
+        <div class="modal-body encuesta-body">
+          <div style="display:flex;flex-direction:column;gap:14px;">
+            <div *ngIf="focusGroupDetalle.descripcion" style="display:flex;flex-direction:column;gap:4px;">
+              <span
+                style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#94a3b8;">Descripción</span>
+              <span style="font-size:14px;color:#1e293b;">{{ focusGroupDetalle.descripcion }}</span>
+            </div>
+            <div *ngIf="focusGroupDetalle.moderador" style="display:flex;flex-direction:column;gap:4px;">
+              <span
+                style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#94a3b8;">Moderador</span>
+              <span style="font-size:14px;color:#1e293b;">{{ focusGroupDetalle.moderador }}</span>
+            </div>
+            <div *ngIf="focusGroupDetalle.modalidad" style="display:flex;flex-direction:column;gap:4px;">
+              <span
+                style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#94a3b8;">Modalidad</span>
+              <span style="font-size:14px;color:#1e293b;">{{ focusGroupDetalle.modalidad | titlecase }}</span>
+            </div>
+            <div *ngIf="focusGroupDetalle.lugar" style="display:flex;flex-direction:column;gap:4px;">
+              <span
+                style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#94a3b8;">Lugar</span>
+              <span style="font-size:14px;color:#1e293b;">{{ focusGroupDetalle.lugar }}</span>
+            </div>
+            <div *ngIf="focusGroupDetalle.numero_participantes" style="display:flex;flex-direction:column;gap:4px;">
+              <span
+                style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#94a3b8;">Participantes
+                esperados</span>
+              <span style="font-size:14px;color:#1e293b;">{{ focusGroupDetalle.numero_participantes }}</span>
+            </div>
+            <div *ngIf="focusGroupDetalle.estado" style="display:flex;flex-direction:column;gap:4px;">
+              <span
+                style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#94a3b8;">Estado</span>
+              <span style="font-size:14px;color:#1e293b;">{{ focusGroupDetalle.estado | titlecase }}</span>
+            </div>
+            <div *ngIf="focusGroupDetalle.fecha_inicio" style="display:flex;flex-direction:column;gap:4px;">
+              <span
+                style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#94a3b8;">Fecha
+                inicio</span>
+              <span style="font-size:14px;color:#1e293b;">{{ focusGroupDetalle.fecha_inicio }}</span>
+            </div>
+            <div *ngIf="focusGroupDetalle.fecha_fin" style="display:flex;flex-direction:column;gap:4px;">
+              <span
+                style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#94a3b8;">Fecha
+                fin</span>
+              <span style="font-size:14px;color:#1e293b;">{{ focusGroupDetalle.fecha_fin }}</span>
+            </div>
+            <div *ngIf="focusGroupDetalle.conclusiones" style="display:flex;flex-direction:column;gap:4px;">
+              <span
+                style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#94a3b8;">Conclusiones</span>
+              <span style="font-size:14px;color:#1e293b;white-space:pre-wrap;">{{ focusGroupDetalle.conclusiones
+                }}</span>
+            </div>
+            <div
+              *ngIf="!focusGroupDetalle.descripcion && !focusGroupDetalle.moderador && !focusGroupDetalle.conclusiones"
+              style="text-align:center;padding:24px;color:#94a3b8;font-size:14px;">
+              Este focus group aún no tiene contenido detallado registrado.
+            </div>
+          </div>
+        </div>
+        <div class="encuesta-footer">
+          <div class="encuesta-footer-actions">
+            <button class="btn-cancelar" (click)="closeFocusGroupModal()">Cerrar</button>
           </div>
         </div>
       </ng-container>

@@ -5,7 +5,6 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { BarraComponent } from '../../components/barra/barra.component';
 import { ProyectoApiService } from '../../services/proyecto-api.service';
 import { HistoriaUsuarioApiService, HistoriaUsuario, CreateHistoriaUsuarioDto, UpdateHistoriaUsuarioDto } from '../../services/HistoriasUsuario-api.service';
-import { ProcesoApiService, Proceso, Subproceso } from '../../services/proceso-api.service';
 
 @Component({
     selector: 'app-casos-uso',
@@ -23,12 +22,6 @@ export class CasosUsoComponent implements OnInit {
 
     proyecto = { id: '', nombre: '', descripcion: '', color: 'blue' };
     activeTab = 'historias';
-
-    // Procesos y subprocesos
-    procesosDisponibles: Proceso[] = [];
-    subprocesosDisponibles: Subproceso[] = [];
-    procesoVinculadoId = '';
-    subprocesoId = '';
 
     // Campos del formulario crear
     titulo = '';
@@ -66,7 +59,6 @@ export class CasosUsoComponent implements OnInit {
         private route: ActivatedRoute,
         private proyectoApiService: ProyectoApiService,
         private historiaApiService: HistoriaUsuarioApiService,
-        private procesoApiService: ProcesoApiService
     ) { }
 
     ngOnInit(): void {
@@ -77,7 +69,6 @@ export class CasosUsoComponent implements OnInit {
                 next: (p) => {
                     this.proyecto = { id, nombre: p.nombre, descripcion: p.descripcion, color: p.color };
                     this.cargarHistorias();
-                    this.cargarProcesos();
                 },
                 error: (err) => console.error('Error al cargar proyecto:', err)
             });
@@ -95,39 +86,20 @@ export class CasosUsoComponent implements OnInit {
         });
     }
 
-    cargarProcesos(): void {
-        const idProyecto = parseInt(this.proyecto.id, 10);
-        if (!idProyecto) return;
-        this.procesoApiService.getProcesosByProyecto(idProyecto).subscribe({
-            next: (data) => { this.procesosDisponibles = data; },
-            error: (err) => console.error('Error al cargar procesos:', err)
-        });
-    }
-
-    onProcesoChange(): void {
-        this.subprocesoId = '';
-        if (!this.procesoVinculadoId) { this.subprocesosDisponibles = []; return; }
-        const proceso = this.procesosDisponibles.find(p => p.id === this.procesoVinculadoId);
-        this.subprocesosDisponibles = proceso?.subprocesos || [];
-    }
-
     // ─── Formulario crear ──────────────────────────────────────────────────────
 
     isFormValid(): boolean {
-        return !!(this.titulo.trim() && this.como.trim() && this.quiero.trim() && this.paraque.trim()
-            && this.procesoVinculadoId && this.subprocesoId);
+        return !!(this.titulo.trim() && this.como.trim() && this.quiero.trim() && this.paraque.trim());
     }
 
     handleSubmit(): void {
         if (!this.isFormValid()) {
-            this.errorMsg = 'Completa todos los campos obligatorios incluyendo proceso y subproceso.';
+            this.errorMsg = 'Completa todos los campos obligatorios.';
             return;
         }
         const criterios = this.criteriosAceptacion.filter(c => c.trim());
         const dto: CreateHistoriaUsuarioDto = {
             id_proyecto: parseInt(this.proyecto.id, 10),
-            id_proceso: parseInt(this.procesoVinculadoId, 10),
-            id_subproceso: parseInt(this.subprocesoId, 10),
             titulo_historia: this.titulo.trim(),
             rol: this.como.trim(),
             quiero: this.quiero.trim(),
@@ -145,7 +117,6 @@ export class CasosUsoComponent implements OnInit {
     resetForm(): void {
         this.titulo = ''; this.como = ''; this.quiero = ''; this.paraque = '';
         this.prioridad = 'media'; this.estimacion = ''; this.criteriosAceptacion = [''];
-        this.procesoVinculadoId = ''; this.subprocesoId = ''; this.subprocesosDisponibles = [];
         this.errorMsg = '';
     }
 
@@ -192,7 +163,7 @@ export class CasosUsoComponent implements OnInit {
                 if (idx !== -1) this.historias[idx] = actualizada;
                 this.cerrarDrawer();
             },
-            error: (err) => { console.error('Error al actualizar historia:', err); this.editErrorMsg = 'Error al guardar los cambios. Intenta de nuevo.'; }
+            error: (err) => { console.error('Error al actualizar historia:', err); this.editErrorMsg = 'Error al guardar los cambios.'; }
         });
     }
 

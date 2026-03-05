@@ -5,6 +5,9 @@ export class FocusGroup {
     @PrimaryGeneratedColumn()
     id_focus: number;
 
+    @Column({ type: 'int' })
+    id_proyecto: number;
+
     @Column({ type: 'varchar', length: 150, nullable: true })
     nombre_focus: string;
 
@@ -14,6 +17,25 @@ export class FocusGroup {
     @Column({ type: 'date', nullable: true })
     fecha_inicio: Date;
 
+    @Column({ type: 'date', nullable: true })
+    fecha_fin: Date;
+
+    @Column({
+        type: 'enum',
+        enum: ['presencial', 'virtual', 'hibrido'],
+        nullable: true,
+    })
+    modalidad: 'presencial' | 'virtual' | 'hibrido';
+
+    @Column({ type: 'varchar', length: 200, nullable: true })
+    lugar: string;
+
+    @Column({ type: 'varchar', length: 150, nullable: true })
+    moderador: string;
+
+    @Column({ type: 'int', nullable: true })
+    numero_participantes: number;
+
     @Column({
         type: 'enum',
         enum: ['planificacion', 'en_progreso', 'pausado', 'completado'],
@@ -21,15 +43,6 @@ export class FocusGroup {
     })
     estado: 'planificacion' | 'en_progreso' | 'pausado' | 'completado';
 
-    @Column({ type: 'varchar', length: 30, nullable: true })
-    color: string;
-
-    @Column({ type: 'int' })
-    id_proyecto: number;
-
-    @Column({ type: 'int' })
-    id_proceso: number;
-
-    @Column({ type: 'int' })
-    id_subproceso: number;
+    @Column({ type: 'text', nullable: true })
+    conclusiones: string;
 }

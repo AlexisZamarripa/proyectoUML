@@ -1,6 +1,5 @@
 <div class="focusgroup-page">
 
-  <!-- Back link -->
   <button class="back-link" (click)="goBack()">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
       stroke-linecap="round" stroke-linejoin="round">
@@ -10,7 +9,6 @@
     Volver a Proyectos
   </button>
 
-  <!-- Project Header Card -->
   <div class="project-header-card" [style.background]="getProyectoGradient()">
     <div class="project-header-watermark">
       <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="0.5">
@@ -24,14 +22,11 @@
     <p class="project-header-desc">{{ proyecto.descripcion }}</p>
   </div>
 
-  <!-- Main Layout -->
   <div class="main-layout">
-
     <app-barra [projectId]="proyecto.id" [activeTab]="activeTab"></app-barra>
 
     <div class="content-area">
 
-      <!-- Content Header -->
       <div class="content-header">
         <div class="content-header-text">
           <h2 class="content-title">Focus Groups</h2>
@@ -48,66 +43,69 @@
         </button>
       </div>
 
-      <!-- Error -->
       <div class="error-msg" *ngIf="errorMsg">{{ errorMsg }}</div>
 
-      <!-- Form -->
+      <!-- Form crear -->
       <div class="form-card" *ngIf="showForm">
         <h3 class="form-title">Registrar Nuevo Focus Group</h3>
-
         <form (ngSubmit)="handleSubmit()">
-
-          <!-- Nombre -->
           <div class="form-group full-width">
             <label class="form-label">Nombre del Focus Group *</label>
             <input class="form-input" type="text" [(ngModel)]="nombreFocus" name="nombreFocus"
               placeholder="Ej: Focus group sobre usabilidad" required />
           </div>
-
-          <!-- Descripción -->
           <div class="form-group full-width">
             <label class="form-label">Descripción</label>
             <textarea class="form-input form-textarea" [(ngModel)]="descripcion" name="descripcion" rows="3"
               placeholder="Objetivo o descripción del focus group"></textarea>
           </div>
-
           <div class="form-grid form-grid-2">
-            <!-- Fecha de inicio -->
             <div class="form-group">
               <label class="form-label">Fecha de Inicio</label>
               <input class="form-input" type="date" [(ngModel)]="fechaInicio" name="fechaInicio" />
             </div>
-            <!-- Estado -->
             <div class="form-group">
-              <label class="form-label">Estado</label>
-              <select class="form-input" [(ngModel)]="estado" name="estado">
-                <option *ngFor="let e of ESTADOS" [value]="e.valor">{{ e.label }}</option>
-              </select>
+              <label class="form-label">Fecha de Fin</label>
+              <input class="form-input" type="date" [(ngModel)]="fechaFin" name="fechaFin" />
             </div>
           </div>
-
-          <!-- Selects en cascada: Proceso → Subproceso -->
           <div class="form-grid form-grid-2">
             <div class="form-group">
-              <label class="form-label">Proceso *</label>
-              <select class="form-input" [(ngModel)]="procesoVinculadoId" name="procesoVinculado"
-                (change)="onProcesoChange()" required>
-                <option value="">-- Seleccionar proceso --</option>
-                <option *ngFor="let proceso of procesosDisponibles" [value]="proceso.id">{{ proceso.nombre }}</option>
+              <label class="form-label">Modalidad</label>
+              <select class="form-input" [(ngModel)]="modalidad" name="modalidad">
+                <option value="">-- Seleccionar modalidad --</option>
+                <option *ngFor="let m of MODALIDADES" [value]="m.valor">{{ m.label }}</option>
               </select>
             </div>
             <div class="form-group">
-              <label class="form-label">Subproceso *</label>
-              <select class="form-input" [(ngModel)]="subprocesoId" name="subproceso"
-                [disabled]="!procesoVinculadoId || subprocesosDisponibles.length === 0" required>
-                <option value="">{{ procesoVinculadoId ? '-- Seleccionar subproceso --' : 'Primero selecciona un
-                  proceso' }}</option>
-                <option *ngFor="let subproceso of subprocesosDisponibles" [value]="subproceso.id">{{ subproceso.nombre
-                  }}</option>
-              </select>
+              <label class="form-label">Lugar</label>
+              <input class="form-input" type="text" [(ngModel)]="lugar" name="lugar"
+                placeholder="Ej: Sala de reuniones A, Zoom..." />
             </div>
           </div>
-
+          <div class="form-grid form-grid-2">
+            <div class="form-group">
+              <label class="form-label">Moderador</label>
+              <input class="form-input" type="text" [(ngModel)]="moderador" name="moderador"
+                placeholder="Nombre del moderador" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">N° de Participantes</label>
+              <input class="form-input" type="number" [(ngModel)]="numeroParticipantes" name="numeroParticipantes"
+                placeholder="Ej: 8" min="1" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Estado</label>
+            <select class="form-input" [(ngModel)]="estado" name="estado">
+              <option *ngFor="let e of ESTADOS" [value]="e.valor">{{ e.label }}</option>
+            </select>
+          </div>
+          <div class="form-group full-width">
+            <label class="form-label">Conclusiones</label>
+            <textarea class="form-input form-textarea" [(ngModel)]="conclusiones" name="conclusiones" rows="3"
+              placeholder="Hallazgos o conclusiones obtenidas en la sesión"></textarea>
+          </div>
           <div class="form-actions">
             <button type="submit" class="btn-submit" [disabled]="!nombreFocus.trim()">
               Guardar Focus Group
@@ -127,8 +125,23 @@
           <div class="focusgroup-header">
             <h3 class="focusgroup-title">{{ fg.nombre_focus }}</h3>
             <div class="focusgroup-actions">
+              <!-- Ver -->
+              <button class="btn-icon btn-icon-view" (click)="openVerModal(fg)" title="Ver detalles">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+              </button>
+              <!-- Editar -->
+              <button class="btn-icon btn-icon-edit" (click)="openEditModal(fg)" title="Editar">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                </svg>
+              </button>
+              <!-- Eliminar -->
               <button class="btn-icon" (click)="deleteFocusGroup(fg.id_focus)" title="Eliminar">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polyline points="3 6 5 6 21 6"></polyline>
                   <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
                 </svg>
@@ -146,16 +159,49 @@
                 <line x1="8" y1="2" x2="8" y2="6"></line>
                 <line x1="3" y1="10" x2="21" y2="10"></line>
               </svg>
-              <span>{{ formatDate(fg.fecha_inicio) }}</span>
+              <span>{{ formatDate(fg.fecha_inicio) }}{{ fg.fecha_fin ? ' → ' + formatDate(fg.fecha_fin) : '' }}</span>
+            </div>
+            <div class="meta-item" *ngIf="fg.modalidad">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M15 10l4.553-2.069A1 1 0 0 1 21 8.87v6.26a1 1 0 0 1-1.447.899L15 14"></path>
+                <rect x="1" y="6" width="14" height="12" rx="2" ry="2"></rect>
+              </svg>
+              <span>{{ getModalidadLabel(fg.modalidad) }}</span>
+            </div>
+            <div class="meta-item" *ngIf="fg.lugar">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 1 1 18 0z"></path>
+                <circle cx="12" cy="10" r="3"></circle>
+              </svg>
+              <span>{{ fg.lugar }}</span>
+            </div>
+            <div class="meta-item" *ngIf="fg.moderador">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </svg>
+              <span>{{ fg.moderador }}</span>
+            </div>
+            <div class="meta-item" *ngIf="fg.numero_participantes">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+              </svg>
+              <span>{{ fg.numero_participantes }} participantes</span>
             </div>
           </div>
+
+          <p class="focusgroup-conclusiones" *ngIf="fg.conclusiones">
+            <strong>Conclusiones:</strong> {{ fg.conclusiones }}
+          </p>
 
           <div class="focusgroup-stats">
             <span class="badge" [ngClass]="getEstadoBadgeClass(fg.estado)">{{ getEstadoLabel(fg.estado) }}</span>
           </div>
         </div>
 
-        <!-- Empty State -->
         <div class="empty-state" *ngIf="focusGroups.length === 0">
           <div class="empty-icon">
             <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -179,4 +225,173 @@
 
     </div>
   </div>
+
+  <!-- ===== MODAL VER / EDITAR ===== -->
+  <div class="modal-overlay" *ngIf="selectedFg" (click)="closeModal()">
+    <div class="modal-content modal-fg" (click)="$event.stopPropagation()">
+
+      <!-- Header -->
+      <div class="modal-header fg-modal-header">
+        <div class="modal-header-content">
+          <div class="fg-modal-header-info">
+            <span class="fg-badge-label" *ngIf="modalReadOnly" style="display:flex;align-items:center;gap:4px;">
+              <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+              Solo lectura
+            </span>
+            <span class="fg-badge-label" *ngIf="!modalReadOnly">Editar Focus Group</span>
+            <h2 class="modal-title">{{ selectedFg.nombre_focus }}</h2>
+          </div>
+          <button class="btn-close-modal" (click)="closeModal()">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Body -->
+      <div class="modal-body fg-modal-body">
+
+        <!-- SOLO LECTURA -->
+        <ng-container *ngIf="modalReadOnly">
+          <div class="fg-readonly-grid">
+            <div class="fg-readonly-field" *ngIf="selectedFg.descripcion">
+              <span class="fg-field-label">Descripción</span>
+              <span class="fg-field-value">{{ selectedFg.descripcion }}</span>
+            </div>
+            <div class="fg-readonly-row">
+              <div class="fg-readonly-field" *ngIf="selectedFg.fecha_inicio">
+                <span class="fg-field-label">Fechas</span>
+                <span class="fg-field-value">{{ formatDate(selectedFg.fecha_inicio) }}{{ selectedFg.fecha_fin ? ' → ' +
+                  formatDate(selectedFg.fecha_fin) : '' }}</span>
+              </div>
+              <div class="fg-readonly-field" *ngIf="selectedFg.modalidad">
+                <span class="fg-field-label">Modalidad</span>
+                <span class="fg-field-value">{{ getModalidadLabel(selectedFg.modalidad) }}</span>
+              </div>
+              <div class="fg-readonly-field" *ngIf="selectedFg.lugar">
+                <span class="fg-field-label">Lugar</span>
+                <span class="fg-field-value">{{ selectedFg.lugar }}</span>
+              </div>
+              <div class="fg-readonly-field" *ngIf="selectedFg.moderador">
+                <span class="fg-field-label">Moderador</span>
+                <span class="fg-field-value">{{ selectedFg.moderador }}</span>
+              </div>
+              <div class="fg-readonly-field" *ngIf="selectedFg.numero_participantes">
+                <span class="fg-field-label">Participantes</span>
+                <span class="fg-field-value">{{ selectedFg.numero_participantes }}</span>
+              </div>
+              <div class="fg-readonly-field">
+                <span class="fg-field-label">Estado</span>
+                <span class="badge" [ngClass]="getEstadoBadgeClass(selectedFg.estado)">{{
+                  getEstadoLabel(selectedFg.estado) }}</span>
+              </div>
+            </div>
+            <div class="fg-readonly-field" *ngIf="selectedFg.conclusiones">
+              <span class="fg-field-label">Conclusiones</span>
+              <span class="fg-field-value">{{ selectedFg.conclusiones }}</span>
+            </div>
+            <div class="fg-empty-content"
+              *ngIf="!selectedFg.descripcion && !selectedFg.fecha_inicio && !selectedFg.moderador && !selectedFg.conclusiones">
+              <p>Este focus group aún no tiene contenido registrado.</p>
+            </div>
+          </div>
+        </ng-container>
+
+        <!-- EDICIÓN -->
+        <ng-container *ngIf="!modalReadOnly">
+          <div class="error-msg" *ngIf="editErrorMsg">{{ editErrorMsg }}</div>
+          <div class="form-group full-width">
+            <label class="form-label">Nombre *</label>
+            <input class="form-input" type="text" [(ngModel)]="editNombre" name="editNombre" />
+          </div>
+          <div class="form-group full-width">
+            <label class="form-label">Descripción</label>
+            <textarea class="form-input form-textarea" [(ngModel)]="editDescripcion" name="editDescripcion"
+              rows="3"></textarea>
+          </div>
+          <div class="form-grid form-grid-2">
+            <div class="form-group">
+              <label class="form-label">Fecha de Inicio</label>
+              <input class="form-input" type="date" [(ngModel)]="editFechaInicio" name="editFechaInicio" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Fecha de Fin</label>
+              <input class="form-input" type="date" [(ngModel)]="editFechaFin" name="editFechaFin" />
+            </div>
+          </div>
+          <div class="form-grid form-grid-2">
+            <div class="form-group">
+              <label class="form-label">Modalidad</label>
+              <select class="form-input" [(ngModel)]="editModalidad" name="editModalidad">
+                <option value="">-- Seleccionar modalidad --</option>
+                <option *ngFor="let m of MODALIDADES" [value]="m.valor">{{ m.label }}</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Lugar</label>
+              <input class="form-input" type="text" [(ngModel)]="editLugar" name="editLugar" />
+            </div>
+          </div>
+          <div class="form-grid form-grid-2">
+            <div class="form-group">
+              <label class="form-label">Moderador</label>
+              <input class="form-input" type="text" [(ngModel)]="editModerador" name="editModerador" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">N° de Participantes</label>
+              <input class="form-input" type="number" [(ngModel)]="editNumeroParticipantes"
+                name="editNumeroParticipantes" min="1" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Estado</label>
+            <select class="form-input" [(ngModel)]="editEstado" name="editEstado">
+              <option *ngFor="let e of ESTADOS" [value]="e.valor">{{ e.label }}</option>
+            </select>
+          </div>
+          <div class="form-group full-width">
+            <label class="form-label">Conclusiones</label>
+            <textarea class="form-input form-textarea" [(ngModel)]="editConclusiones" name="editConclusiones"
+              rows="3"></textarea>
+          </div>
+        </ng-container>
+
+      </div>
+
+      <!-- Footer -->
+      <div class="fg-modal-footer">
+        <span class="encuesta-guardado-msg" *ngIf="editGuardado">
+          <svg width="14" height="14" fill="none" stroke="#10b981" stroke-width="2.5" viewBox="0 0 24 24">
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+          Cambios guardados
+        </span>
+        <div class="fg-footer-actions">
+          <button class="btn-cancelar" (click)="closeModal()">Cerrar</button>
+          <button class="btn-guardar" *ngIf="!modalReadOnly" (click)="saveEdit()"
+            [disabled]="savingEdit || !editNombre.trim()">
+            <svg *ngIf="savingEdit" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="2" class="spin">
+              <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+            </svg>
+            {{ savingEdit ? 'Guardando...' : 'Guardar Cambios' }}
+          </button>
+          <button class="btn-guardar" *ngIf="modalReadOnly" (click)="modalReadOnly = false">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+            </svg>
+            Editar
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
 </div>

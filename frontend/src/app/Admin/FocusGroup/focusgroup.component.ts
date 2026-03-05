@@ -5,7 +5,6 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { BarraComponent } from '../../components/barra/barra.component';
 import { ProyectoApiService } from '../../services/proyecto-api.service';
 import { FocusGroupApiService, FocusGroup, CreateFocusGroupDto } from '../../services/FocusGroup.service';
-import { ProcesoApiService, Proceso, Subproceso } from '../../services/proceso-api.service';
 
 @Component({
   selector: 'app-focusgroup',
@@ -25,23 +24,48 @@ export class FocusGroupComponent implements OnInit {
 
   activeTab = 'focus-groups';
 
-  // Procesos y subprocesos
-  procesosDisponibles: Proceso[] = [];
-  subprocesosDisponibles: Subproceso[] = [];
-  procesoVinculadoId = '';
-  subprocesoId = '';
-
-  // Form fields
+  // Form fields (crear)
   nombreFocus = '';
   descripcion = '';
   fechaInicio = '';
+  fechaFin = '';
+  modalidad: 'presencial' | 'virtual' | 'hibrido' | '' = '';
+  lugar = '';
+  numeroParticipantes: number | null = null;
+  moderador = '';
   estado: 'planificacion' | 'en_progreso' | 'pausado' | 'completado' = 'planificacion';
+  conclusiones = '';
+
+  // Modal edición / vista
+  selectedFg: FocusGroup | null = null;
+  modalReadOnly = false;
+  editErrorMsg = '';
+  savingEdit = false;
+  editGuardado = false;
+
+  // Form fields (editar) — espejo del selected
+  editNombre = '';
+  editDescripcion = '';
+  editFechaInicio = '';
+  editFechaFin = '';
+  editModalidad: 'presencial' | 'virtual' | 'hibrido' | '' = '';
+  editLugar = '';
+  editNumeroParticipantes: number | null = null;
+  editModerador = '';
+  editEstado: 'planificacion' | 'en_progreso' | 'pausado' | 'completado' = 'planificacion';
+  editConclusiones = '';
 
   readonly ESTADOS = [
     { valor: 'planificacion', label: 'Planificación' },
     { valor: 'en_progreso', label: 'En Progreso' },
     { valor: 'pausado', label: 'Pausado' },
     { valor: 'completado', label: 'Completado' },
+  ];
+
+  readonly MODALIDADES = [
+    { valor: 'presencial', label: 'Presencial' },
+    { valor: 'virtual', label: 'Virtual' },
+    { valor: 'hibrido', label: 'Híbrido' },
   ];
 
   readonly COLORES_PROYECTO: { valor: string; gradient: string }[] = [
@@ -57,8 +81,7 @@ export class FocusGroupComponent implements OnInit {
     private router: Router,
     private route: ActivatedRoute,
     private proyectoApiService: ProyectoApiService,
-    private focusGroupApiService: FocusGroupApiService,
-    private procesoApiService: ProcesoApiService
+    private focusGroupApiService: FocusGroupApiService
   ) { }
 
   ngOnInit(): void {
@@ -69,107 +92,140 @@ export class FocusGroupComponent implements OnInit {
         next: (p) => {
           this.proyecto = { id, nombre: p.nombre, descripcion: p.descripcion, color: p.color };
           this.cargarFocusGroups();
-          this.cargarProcesos();
         },
         error: (err) => console.error('Error al cargar proyecto:', err)
       });
     }
   }
 
-  // ─── Carga de datos ────────────────────────────────────────────────────────
+  // ─── Carga ────────────────────────────────────────────────────────────────
 
   cargarFocusGroups(): void {
     this.isLoading = true;
     const idProyecto = parseInt(this.proyecto.id, 10);
     this.focusGroupApiService.getFocusGroups(idProyecto).subscribe({
-      next: (data) => {
-        this.focusGroups = data;
-        this.isLoading = false;
-      },
-      error: (err) => {
-        console.error('Error al cargar focus groups:', err);
-        this.isLoading = false;
-      }
+      next: (data) => { this.focusGroups = data; this.isLoading = false; },
+      error: (err) => { console.error('Error al cargar focus groups:', err); this.isLoading = false; }
     });
   }
 
-  cargarProcesos(): void {
-    const idProyecto = parseInt(this.proyecto.id, 10);
-    if (!idProyecto) return;
-    this.procesoApiService.getProcesosByProyecto(idProyecto).subscribe({
-      next: (data) => { this.procesosDisponibles = data; },
-      error: (err) => console.error('Error al cargar procesos:', err)
-    });
-  }
-
-  onProcesoChange(): void {
-    this.subprocesoId = '';
-    if (!this.procesoVinculadoId) {
-      this.subprocesosDisponibles = [];
-      return;
-    }
-    const proceso = this.procesosDisponibles.find(p => p.id === this.procesoVinculadoId);
-    this.subprocesosDisponibles = proceso?.subprocesos || [];
-  }
-
-  // ─── Formulario ────────────────────────────────────────────────────────────
+  // ─── Crear ────────────────────────────────────────────────────────────────
 
   handleSubmit(): void {
     if (!this.nombreFocus.trim()) return;
-    if (!this.procesoVinculadoId || !this.subprocesoId) {
-      this.errorMsg = 'Debes seleccionar un proceso y un subproceso.';
-      return;
-    }
 
     const dto: CreateFocusGroupDto = {
       id_proyecto: parseInt(this.proyecto.id, 10),
-      id_proceso: parseInt(this.procesoVinculadoId, 10),
-      id_subproceso: parseInt(this.subprocesoId, 10),
       nombre_focus: this.nombreFocus.trim(),
       descripcion: this.descripcion.trim() || undefined,
       fecha_inicio: this.fechaInicio || undefined,
-      estado: this.estado
+      fecha_fin: this.fechaFin || undefined,
+      modalidad: this.modalidad || undefined,
+      lugar: this.lugar.trim() || undefined,
+      numero_participantes: this.numeroParticipantes ?? undefined,
+      moderador: this.moderador.trim() || undefined,
+      estado: this.estado,
+      conclusiones: this.conclusiones.trim() || undefined,
     };
 
     this.focusGroupApiService.createFocusGroup(dto).subscribe({
-      next: (nuevo) => {
-        this.focusGroups.push(nuevo);
-        this.resetForm();
-        this.showForm = false;
-      },
-      error: (err) => {
-        console.error('Error al crear focus group:', err);
-        this.errorMsg = 'Error al guardar el focus group. Intenta de nuevo.';
-      }
+      next: (nuevo) => { this.focusGroups.push(nuevo); this.resetForm(); this.showForm = false; },
+      error: (err) => { console.error('Error al crear focus group:', err); this.errorMsg = 'Error al guardar. Intenta de nuevo.'; }
     });
   }
 
   resetForm(): void {
-    this.nombreFocus = '';
-    this.descripcion = '';
-    this.fechaInicio = '';
-    this.estado = 'planificacion';
-    this.procesoVinculadoId = '';
-    this.subprocesoId = '';
-    this.subprocesosDisponibles = [];
-    this.errorMsg = '';
+    this.nombreFocus = ''; this.descripcion = ''; this.fechaInicio = '';
+    this.fechaFin = ''; this.modalidad = ''; this.lugar = '';
+    this.numeroParticipantes = null; this.moderador = '';
+    this.estado = 'planificacion'; this.conclusiones = ''; this.errorMsg = '';
   }
+
+  // ─── Modal ver / editar ───────────────────────────────────────────────────
+
+  openVerModal(fg: FocusGroup): void {
+    this.selectedFg = fg;
+    this.modalReadOnly = true;
+    this.editGuardado = false;
+    this.editErrorMsg = '';
+    this.loadEditForm(fg);
+  }
+
+  openEditModal(fg: FocusGroup): void {
+    this.selectedFg = fg;
+    this.modalReadOnly = false;
+    this.editGuardado = false;
+    this.editErrorMsg = '';
+    this.loadEditForm(fg);
+  }
+
+  private loadEditForm(fg: FocusGroup): void {
+    this.editNombre = fg.nombre_focus ?? '';
+    this.editDescripcion = fg.descripcion ?? '';
+    this.editFechaInicio = fg.fecha_inicio ?? '';
+    this.editFechaFin = fg.fecha_fin ?? '';
+    this.editModalidad = fg.modalidad ?? '';
+    this.editLugar = fg.lugar ?? '';
+    this.editNumeroParticipantes = fg.numero_participantes ?? null;
+    this.editModerador = fg.moderador ?? '';
+    this.editEstado = fg.estado ?? 'planificacion';
+    this.editConclusiones = fg.conclusiones ?? '';
+  }
+
+  closeModal(): void {
+    this.selectedFg = null;
+    this.editGuardado = false;
+    this.editErrorMsg = '';
+    this.savingEdit = false;
+  }
+
+  saveEdit(): void {
+    if (!this.selectedFg || !this.editNombre.trim()) return;
+    this.savingEdit = true;
+    this.editGuardado = false;
+
+    const dto = {
+      nombre_focus: this.editNombre.trim(),
+      descripcion: this.editDescripcion.trim() || undefined,
+      fecha_inicio: this.editFechaInicio || undefined,
+      fecha_fin: this.editFechaFin || undefined,
+      modalidad: this.editModalidad || undefined,
+      lugar: this.editLugar.trim() || undefined,
+      numero_participantes: this.editNumeroParticipantes ?? undefined,
+      moderador: this.editModerador.trim() || undefined,
+      estado: this.editEstado,
+      conclusiones: this.editConclusiones.trim() || undefined,
+    };
+
+    this.focusGroupApiService.updateFocusGroup(this.selectedFg.id_focus, dto).subscribe({
+      next: (actualizado) => {
+        const idx = this.focusGroups.findIndex(fg => fg.id_focus === actualizado.id_focus);
+        if (idx !== -1) this.focusGroups[idx] = actualizado;
+        this.savingEdit = false;
+        this.editGuardado = true;
+        setTimeout(() => this.editGuardado = false, 3000);
+      },
+      error: (err) => {
+        console.error('Error al actualizar focus group:', err);
+        this.editErrorMsg = 'Error al guardar. Intenta de nuevo.';
+        this.savingEdit = false;
+      }
+    });
+  }
+
+  // ─── Eliminar ─────────────────────────────────────────────────────────────
 
   deleteFocusGroup(id: number): void {
     if (!confirm('¿Eliminar este focus group?')) return;
     this.focusGroupApiService.deleteFocusGroup(id).subscribe({
-      next: () => {
-        this.focusGroups = this.focusGroups.filter(fg => fg.id_focus !== id);
-      },
+      next: () => { this.focusGroups = this.focusGroups.filter(fg => fg.id_focus !== id); },
       error: (err) => console.error('Error al eliminar focus group:', err)
     });
   }
 
-  // ─── Utilidades ────────────────────────────────────────────────────────────
+  // ─── Utilidades ───────────────────────────────────────────────────────────
 
-  goBack(): void {
-    this.router.navigate(['/proyectos']);
-  }
+  goBack(): void { this.router.navigate(['/proyectos']); }
 
   getProyectoGradient(): string {
     const c = this.COLORES_PROYECTO.find(x => x.valor === this.proyecto.color);
@@ -188,6 +244,10 @@ export class FocusGroupComponent implements OnInit {
       completado: 'badge-green'
     };
     return map[estado ?? ''] ?? 'badge-gray';
+  }
+
+  getModalidadLabel(modalidad?: string): string {
+    return this.MODALIDADES.find(m => m.valor === modalidad)?.label ?? '';
   }
 
   formatDate(fecha?: string): string {

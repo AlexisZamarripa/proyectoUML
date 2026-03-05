@@ -25,18 +25,10 @@ export class FocusGroupController {
     @Get()
     findAll(
         @Query('proyectoId') proyectoId?: string,
-        @Query('procesoId') procesoId?: string,
-        @Query('subprocesoId') subprocesoId?: string,
         @Query('estado') estado?: 'planificacion' | 'en_progreso' | 'pausado' | 'completado',
     ) {
         if (estado) {
             return this.focusGroupService.findByEstado(estado);
-        }
-        if (subprocesoId) {
-            return this.focusGroupService.findBySubproceso(parseInt(subprocesoId, 10));
-        }
-        if (procesoId) {
-            return this.focusGroupService.findByProceso(parseInt(procesoId, 10));
         }
         if (proyectoId) {
             return this.focusGroupService.findByProyecto(parseInt(proyectoId, 10));

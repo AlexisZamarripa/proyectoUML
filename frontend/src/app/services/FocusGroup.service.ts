@@ -5,24 +5,30 @@ import { Observable } from 'rxjs';
 export interface FocusGroup {
     id_focus: number;
     id_proyecto: number;
-    id_proceso: number;
-    id_subproceso: number;
-    nombre_focus?: string;
+    nombre_focus: string;
     descripcion?: string;
     fecha_inicio?: string;
+    fecha_fin?: string;
+    modalidad?: 'presencial' | 'virtual' | 'hibrido';
+    lugar?: string;
+    moderador?: string;
+    numero_participantes?: number;
     estado?: 'planificacion' | 'en_progreso' | 'pausado' | 'completado';
-    color?: string;
+    conclusiones?: string;
 }
 
 export interface CreateFocusGroupDto {
     id_proyecto: number;
-    id_proceso: number;
-    id_subproceso: number;
-    nombre_focus?: string;
+    nombre_focus: string;
     descripcion?: string;
     fecha_inicio?: string;
-    estado?: 'planificacion' | 'en_progreso' | 'pausado' | 'completado';
-    color?: string;
+    fecha_fin?: string;
+    modalidad?: 'presencial' | 'virtual' | 'hibrido';
+    lugar?: string;
+    moderador?: string;
+    numero_participantes?: number;
+    estado: 'planificacion' | 'en_progreso' | 'pausado' | 'completado';
+    conclusiones?: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -38,11 +44,19 @@ export class FocusGroupApiService {
         });
     }
 
+    getFocusGroup(id: number): Observable<FocusGroup> {
+        return this.http.get<FocusGroup>(`${this.base}/focus-group/${id}`);
+    }
+
     createFocusGroup(dto: CreateFocusGroupDto): Observable<FocusGroup> {
         return this.http.post<FocusGroup>(`${this.base}/focus-group`, dto);
     }
 
     deleteFocusGroup(id: number): Observable<void> {
         return this.http.delete<void>(`${this.base}/focus-group/${id}`);
+    }
+
+    updateFocusGroup(id: number, dto: Partial<CreateFocusGroupDto>): Observable<FocusGroup> {
+        return this.http.patch<FocusGroup>(`${this.base}/focus-group/${id}`, dto);
     }
 }

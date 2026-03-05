@@ -8,9 +8,11 @@ import { ProyectoApiService } from '../../services/proyecto-api.service';
 import { StakeholderApiService, Stakeholder } from '../../services/stakeholder-api.service';
 import { ProcesoApiService, Proceso, Subproceso } from '../../services/proceso-api.service';
 import { HerramientaApiService } from '../../services/herramienta-api.service';
-import { EncuestaApiService, Encuesta, RespuestaEncuesta } from '../../services/Encuesta-api.service';
+import { EncuestaApiService, Encuesta, RespuestaEncuesta } from '../../services/encuesta-api.service';
 import { EntrevistaApiService, Entrevista } from '../../services/Entrevista-api.service';
-import { DocumentoApiService, AnalisisDocumento } from '../../services/documento-api.service';
+import { HistoriaUsuarioApiService, HistoriaUsuario, UpdateHistoriaUsuarioDto } from '../../services/HistoriasUsuario-api.service';
+import { FocusGroupApiService } from '../../services/FocusGroup.service';
+import type { FocusGroup } from '../../services/FocusGroup.service';
 
 interface ColorOption {
   valor: string;
@@ -142,11 +144,29 @@ export class ProcesosComponent implements OnInit {
   savingRespuestasEntrevista = false;
   entrevistaGuardada = false;
 
-  // ===== MODAL DOCUMENTO =====
-  documentoModal = false;
-  loadingDocumento = false;
-  documentoDetalle: AnalisisDocumento | null = null;
-  documentoSubprocesoNombre: string = '';
+  // ===== MODAL HISTORIA DE USUARIO =====
+  historiaModal = false;
+  loadingHistoria = false;
+  historiaDetalle: HistoriaUsuario | null = null;
+  historiaSubprocesoNombre: string = '';
+  savingHistoria = false;
+  historiaGuardada = false;
+  historiaReadOnly = false;
+  historiaForm = {
+    titulo_historia: '',
+    rol: '',
+    quiero: '',
+    para_que: '',
+    prioridad: 'media' as 'baja' | 'media' | 'alta',
+    estimacion: '',
+    criterios_aceptacion: [''],
+  };
+
+  // ===== MODAL FOCUS GROUP =====
+  focusGroupModal = false;
+  loadingFocusGroup = false;
+  focusGroupDetalle: FocusGroup | null = null;
+  focusGroupSubprocesoNombre: string = '';
 
   // Modal proceso
   selectedProceso: Proceso | null = null;
@@ -185,7 +205,8 @@ export class ProcesosComponent implements OnInit {
     private herramientaApiService: HerramientaApiService,
     private encuestaApiService: EncuestaApiService,
     private entrevistaApiService: EntrevistaApiService,
-    private documentoApiService: DocumentoApiService,
+    private historiaApiService: HistoriaUsuarioApiService,
+    private focusGroupApiService: FocusGroupApiService,
   ) { }
 
   ngOnInit(): void {
@@ -311,6 +332,22 @@ export class ProcesosComponent implements OnInit {
     this.herramientasDisponibles = []; this.loadingHerramientas = false;
   }
 
+  private loadHistoriaIntoForm(historia: HistoriaUsuario): void {
+    this.historiaDetalle = historia;
+    this.historiaForm = {
+      titulo_historia: historia.titulo_historia || '',
+      rol: historia.rol || '',
+      quiero: historia.quiero || '',
+      para_que: historia.para_que || '',
+      prioridad: historia.prioridad || 'media',
+      estimacion: historia.estimacion || '',
+      criterios_aceptacion: historia.criterios_aceptacion
+        ? historia.criterios_aceptacion.split(' | ')
+        : [''],
+    };
+    this.loadingHistoria = false;
+  }
+
   // ===== MODAL ENCUESTA =====
 
   openEncuestaModal(sub: Subproceso): void {
@@ -392,7 +429,6 @@ export class ProcesosComponent implements OnInit {
     this.entrevistaApiService.getEntrevista(entrevistaId).subscribe({
       next: (entrevista) => {
         this.entrevistaDetalle = entrevista;
-        // Pre-cargar respuestas existentes si las hay
         entrevista.preguntas.forEach(p => {
           if (p.respuesta) this.respuestasEntrevistaMap[p.id_pregunta] = p.respuesta;
         });
@@ -432,27 +468,88 @@ export class ProcesosComponent implements OnInit {
     });
   }
 
-  // ===== MODAL DOCUMENTO =====
+  // ===== MODAL HISTORIA DE USUARIO =====
 
-  openDocumentoModal(sub: Subproceso): void {
+  openHistoriaModal(sub: Subproceso): void {
     if (!sub.herramienta) return;
-    this.documentoModal = true;
-    this.loadingDocumento = true;
-    this.documentoDetalle = null;
-    this.documentoSubprocesoNombre = sub.nombre;
-    this.documentoApiService.getOne(sub.herramienta.id).subscribe({
-      next: (doc) => { this.documentoDetalle = doc; this.loadingDocumento = false; },
-      error: (e) => { console.error('Error al cargar documento:', e); this.loadingDocumento = false; }
+    this.historiaReadOnly = false;
+    this.historiaModal = true;
+    this.loadingHistoria = true;
+    this.historiaDetalle = null;
+    this.historiaGuardada = false;
+    this.historiaSubprocesoNombre = sub.nombre;
+    this.historiaApiService.getHistoria(Number(sub.herramienta.id)).subscribe({
+      next: (historia) => this.loadHistoriaIntoForm(historia),
+      error: (e) => { console.error('Error al cargar historia:', e); this.loadingHistoria = false; }
     });
   }
 
-  closeDocumentoModal(): void {
-    this.documentoModal = false;
-    this.documentoDetalle = null;
+  openHistoriaModalReadOnly(sub: Subproceso): void {
+    if (!sub.herramienta) return;
+    this.historiaReadOnly = true;
+    this.historiaModal = true;
+    this.loadingHistoria = true;
+    this.historiaDetalle = null;
+    this.historiaGuardada = false;
+    this.historiaSubprocesoNombre = sub.nombre;
+    this.historiaApiService.getHistoria(Number(sub.herramienta.id)).subscribe({
+      next: (historia) => this.loadHistoriaIntoForm(historia),
+      error: (e) => { console.error('Error al cargar historia:', e); this.loadingHistoria = false; }
+    });
   }
 
-  getDocFileUrl(url: string): string {
-    return this.documentoApiService.getFileUrl(url);
+  closeHistoriaModal(): void {
+    this.historiaModal = false;
+    this.historiaDetalle = null;
+    this.historiaGuardada = false;
+    this.savingHistoria = false;
+    this.historiaReadOnly = false;
+  }
+
+  saveHistoria(): void {
+    if (!this.historiaDetalle) return;
+    this.savingHistoria = true;
+    this.historiaGuardada = false;
+
+    const criterios = this.historiaForm.criterios_aceptacion.filter(c => c.trim());
+    const dto: UpdateHistoriaUsuarioDto = {
+      titulo_historia: this.historiaForm.titulo_historia,
+      rol: this.historiaForm.rol,
+      quiero: this.historiaForm.quiero,
+      para_que: this.historiaForm.para_que,
+      prioridad: this.historiaForm.prioridad,
+      estimacion: this.historiaForm.estimacion || undefined,
+      criterios_aceptacion: criterios.length > 0 ? criterios.join(' | ') : undefined,
+    };
+
+    this.historiaApiService.updateHistoria(this.historiaDetalle.id_historia, dto).subscribe({
+      next: () => {
+        this.savingHistoria = false;
+        this.historiaGuardada = true;
+        setTimeout(() => this.historiaGuardada = false, 3000);
+      },
+      error: (e) => { console.error('Error al guardar historia:', e); this.savingHistoria = false; }
+    });
+  }
+
+  // ===== MODAL FOCUS GROUP =====
+
+  openFocusGroupModal(sub: Subproceso): void {
+    if (!sub.herramienta) return;
+    this.focusGroupModal = true;
+    this.loadingFocusGroup = true;
+    this.focusGroupDetalle = null;
+    this.focusGroupSubprocesoNombre = sub.nombre;
+    this.focusGroupApiService.getFocusGroup(Number(sub.herramienta.id)).subscribe({
+      next: (fg: FocusGroup) => { this.focusGroupDetalle = fg; this.loadingFocusGroup = false; },
+      error: (e: unknown) => { console.error('Error al cargar focus group:', e); this.loadingFocusGroup = false; }
+    });
+  }
+
+  closeFocusGroupModal(): void {
+    this.focusGroupModal = false;
+    this.focusGroupDetalle = null;
+    this.focusGroupSubprocesoNombre = '';
   }
 
   // ===== SUBPROCESOS =====
@@ -587,5 +684,17 @@ export class ProcesosComponent implements OnInit {
   onCancelModal(): void {
     this.showConfirmModal = false;
     this.confirmCallback = null;
+  }
+
+  getHistoriaPrioridadBg(prioridad: string): string {
+    if (prioridad === 'alta') return '#fee2e2';
+    if (prioridad === 'baja') return '#dcfce7';
+    return '#e0f2fe';
+  }
+
+  getHistoriaPrioridadColor(prioridad: string): string {
+    if (prioridad === 'alta') return '#dc2626';
+    if (prioridad === 'baja') return '#16a34a';
+    return '#0284c7';
   }
 }

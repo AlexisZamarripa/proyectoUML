@@ -30,20 +30,6 @@ export class FocusGroupService {
         });
     }
 
-    async findByProceso(idProceso: number): Promise<FocusGroup[]> {
-        return await this.focusGroupRepository.find({
-            where: { id_proceso: idProceso },
-            order: { id_focus: 'DESC' },
-        });
-    }
-
-    async findBySubproceso(idSubproceso: number): Promise<FocusGroup[]> {
-        return await this.focusGroupRepository.find({
-            where: { id_subproceso: idSubproceso },
-            order: { id_focus: 'DESC' },
-        });
-    }
-
     async findByEstado(estado: 'planificacion' | 'en_progreso' | 'pausado' | 'completado'): Promise<FocusGroup[]> {
         return await this.focusGroupRepository.find({
             where: { estado },
@@ -65,9 +51,7 @@ export class FocusGroupService {
 
     async update(id: number, updateFocusGroupDto: UpdateFocusGroupDto): Promise<FocusGroup> {
         const focusGroup = await this.findOne(id);
-
         Object.assign(focusGroup, updateFocusGroupDto);
-
         return await this.focusGroupRepository.save(focusGroup);
     }
 

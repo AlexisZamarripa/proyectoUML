@@ -2,7 +2,8 @@
 
   <!-- Back link -->
   <button class="back-link" (click)="goBack()">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+      stroke-linecap="round" stroke-linejoin="round">
       <line x1="19" y1="12" x2="5" y2="12"></line>
       <polyline points="12 19 5 12 12 5"></polyline>
     </svg>
@@ -12,7 +13,8 @@
   <!-- Project Header Card -->
   <div class="project-header-card" [style.background]="getProyectoGradient()">
     <div class="project-header-watermark">
-      <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round">
+      <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="0.5"
+        stroke-linecap="round" stroke-linejoin="round">
         <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
       </svg>
     </div>
@@ -35,7 +37,7 @@
           <h2 class="content-title">Seguimiento Transaccional</h2>
           <p class="content-subtitle">Rastrea transacciones y flujos del proceso</p>
         </div>
-        <button class="btn-agregar" (click)="showForm = !showForm; showForm ? null : resetForm()">
+        <button class="btn-agregar" (click)="showForm = !showForm">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <line *ngIf="!showForm" x1="12" y1="5" x2="12" y2="19"></line>
             <line *ngIf="!showForm" x1="5" y1="12" x2="19" y2="12"></line>
@@ -48,9 +50,10 @@
 
       <!-- Form Card -->
       <div class="form-card" *ngIf="showForm">
-        <h3 class="form-title">{{ isEditMode ? 'Editar Seguimiento Transaccional' : 'Crear Seguimiento Transaccional' }}</h3>
-        <p style="font-size: 0.85rem; color: var(--text-secondary); margin: -0.5rem 0 1rem 0;" *ngIf="!isEditMode">
-          <svg width="14" height="14" style="vertical-align: -2px; margin-right: 4px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <h3 class="form-title">Crear Seguimiento Transaccional</h3>
+        <p style="font-size: 0.85rem; color: var(--text-secondary); margin: -0.5rem 0 1rem 0;">
+          <svg width="14" height="14" style="vertical-align: -2px; margin-right: 4px;" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="10"></circle>
             <line x1="12" y1="16" x2="12" y2="12"></line>
             <line x1="12" y1="8" x2="12.01" y2="8"></line>
@@ -58,33 +61,31 @@
           El ID de transacción se generará automáticamente (formato: TXN-[año]-[número])
         </p>
         <form (ngSubmit)="handleSubmit()">
-          
+
           <!-- Título -->
           <div class="form-group full-width">
             <label class="form-label">Título del Seguimiento *</label>
-            <input class="form-input" type="text" [(ngModel)]="titulo" name="titulo" placeholder="Ej: Seguimiento de Orden #12345" required />
-          </div>
-
-          <!-- Nombre del Proceso (campo único) -->
-          <div class="form-group full-width">
-            <label class="form-label">Nombre del Proceso *</label>
-            <input class="form-input" type="text" [(ngModel)]="nombreProceso" name="nombreProceso" placeholder="Ej: Procesamiento de Orden de Compra" required />
+            <input class="form-input" type="text" [(ngModel)]="titulo" name="titulo"
+              placeholder="Ej: Seguimiento de Orden #12345" required />
           </div>
 
           <!-- Proceso Vinculado + Subproceso -->
           <div class="form-grid">
             <div class="form-group">
               <label class="form-label">Proceso Vinculado (opcional)</label>
-              <select class="form-input" [(ngModel)]="procesoVinculadoId" name="procesoVinculado" (change)="onProcesoChange()">
+              <select class="form-input" [(ngModel)]="procesoVinculadoId" name="procesoVinculado"
+                (change)="onProcesoChange()">
                 <option value="">-- Seleccionar proceso --</option>
                 <option *ngFor="let proceso of procesosDisponibles" [value]="proceso.id">{{ proceso.nombre }}</option>
               </select>
             </div>
             <div class="form-group">
               <label class="form-label">Subproceso (opcional)</label>
-              <select class="form-input" [(ngModel)]="subprocesoId" name="subproceso" [disabled]="!procesoVinculadoId || subprocesosDisponibles.length === 0">
+              <select class="form-input" [(ngModel)]="subprocesoId" name="subproceso"
+                [disabled]="!procesoVinculadoId || subprocesosDisponibles.length === 0">
                 <option value="">-- Seleccionar subproceso --</option>
-                <option *ngFor="let subproceso of subprocesosDisponibles" [value]="subproceso.id">{{ subproceso.nombre }}</option>
+                <option *ngFor="let subproceso of subprocesosDisponibles" [value]="subproceso.id">{{ subproceso.nombre
+                  }}</option>
               </select>
             </div>
           </div>
@@ -114,13 +115,12 @@
                   </button>
                 </div>
                 <div class="paso-fields">
-                  <input class="form-input" type="text" [(ngModel)]="paso.nombre" [name]="'paso_nombre_' + i" placeholder="Nombre del paso" />
-                  <input class="form-input" type="text" [(ngModel)]="paso.duracion" [name]="'paso_duracion_' + i" placeholder="Duración (ej: 5 min, 2h)" />
-                  <select class="form-input" [(ngModel)]="paso.estado" [name]="'paso_estado_' + i">
-                    <option value="pendiente">Pendiente</option>
-                    <option value="completado">Completado</option>
-                    <option value="con demora">Con demora</option>
-                  </select>
+                  <input class="form-input" type="text" [(ngModel)]="paso.nombre" [name]="'paso_nombre_' + i"
+                    placeholder="Nombre del paso" />
+                  <input class="form-input" type="text" [(ngModel)]="paso.duracion" [name]="'paso_duracion_' + i"
+                    placeholder="Duración (ej: 2min, 1h)" />
+                  <input class="form-input" type="text" [(ngModel)]="paso.responsable" [name]="'paso_responsable_' + i"
+                    placeholder="Responsable (opcional)" />
                 </div>
               </div>
             </div>
@@ -141,7 +141,8 @@
 
             <div class="problemas-inputs">
               <div class="problema-input-item" *ngFor="let problema of problemas; let i = index; trackBy: trackByIndex">
-                <input class="form-input" type="text" [(ngModel)]="problemas[i]" [name]="'problema_' + i" placeholder="Problema 1" />
+                <input class="form-input" type="text" [(ngModel)]="problemas[i]" [name]="'problema_' + i"
+                  placeholder="Problema 1" />
                 <button type="button" class="btn-remove" (click)="eliminarProblema(i)" *ngIf="problemas.length > 1">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -167,8 +168,10 @@
 
             <div class="metricas-lista">
               <div class="metrica-item" *ngFor="let metrica of metricas; let i = index; trackBy: trackByIndex">
-                <input class="form-input" type="text" [(ngModel)]="metrica.nombre" [name]="'metrica_nombre_' + i" placeholder="Nombre de la métrica" />
-                <input class="form-input" type="text" [(ngModel)]="metrica.valor" [name]="'metrica_valor_' + i" placeholder="Valor" />
+                <input class="form-input" type="text" [(ngModel)]="metrica.nombre" [name]="'metrica_nombre_' + i"
+                  placeholder="Nombre de la métrica" />
+                <input class="form-input" type="text" [(ngModel)]="metrica.valor" [name]="'metrica_valor_' + i"
+                  placeholder="Valor" />
                 <button type="button" class="btn-remove" (click)="eliminarMetrica(i)" *ngIf="metricas.length > 1">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -181,9 +184,8 @@
 
           <!-- Submit -->
           <div class="form-actions">
-            <button type="submit" class="btn-submit-red" [disabled]="!isFormValid()">
-              {{ isEditMode ? 'Actualizar Seguimiento' : 'Crear Seguimiento Transaccional' }}
-            </button>
+            <button type="submit" class="btn-submit-red" [disabled]="!isFormValid()">Crear Seguimiento
+              Transaccional</button>
           </div>
         </form>
       </div>
@@ -209,7 +211,7 @@
       <!-- Lista de Seguimientos -->
       <div class="seguimientos-list" *ngIf="seguimientos.length > 0">
         <div class="seguimiento-card" *ngFor="let item of seguimientos; trackBy: trackBySeguimiento">
-          
+
           <!-- Header -->
           <div class="seguimiento-header">
             <div class="seguimiento-header-left">
@@ -217,16 +219,10 @@
               <span class="seguimiento-fecha">{{ item.fecha }} • ID: {{ item.idTransaccion }}</span>
             </div>
             <div class="seguimiento-header-right">
-              <button class="btn-icon btn-view" (click)="verDetalle(item)" title="Ver detalles">
+              <button class="btn-icon btn-view" title="Ver detalles">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                   <circle cx="12" cy="12" r="3"></circle>
-                </svg>
-              </button>
-              <button class="btn-icon btn-edit" (click)="editarSeguimiento(item)" title="Editar">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                 </svg>
               </button>
               <button class="btn-icon btn-delete-icon" (click)="eliminarSeguimiento(item.id)" title="Eliminar">
@@ -255,7 +251,8 @@
             <p class="pasos-titulo">Pasos del Proceso</p>
             <ul class="pasos-lista-mini">
               <li *ngFor="let paso of item.pasos.slice(0, 5)">
-                <svg class="check-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <svg class="check-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  stroke-width="2.5">
                   <polyline points="20 6 9 17 4 12"></polyline>
                 </svg>
                 <span class="paso-nombre">{{ paso.nombre }}</span>
@@ -279,7 +276,8 @@
           </div>
 
           <!-- Problemas -->
-          <div class="seguimiento-footer" *ngIf="item.problemas && item.problemas.length > 0 && item.problemas[0].trim() !== ''">
+          <div class="seguimiento-footer"
+            *ngIf="item.problemas && item.problemas.length > 0 && item.problemas[0].trim() !== ''">
             <p class="problemas-text">
               <strong>Problemas identificados:</strong> {{ item.problemas.join(', ') }}
             </p>
@@ -291,106 +289,5 @@
     </div>
 
   </div>
-
-  <!-- Modal de Detalle -->
-  <div class="modal-overlay" *ngIf="showModal" (click)="cerrarModal()">
-    <div class="modal-content" (click)="$event.stopPropagation()" *ngIf="seguimientoDetalle">
-      
-      <!-- Modal Header -->
-      <div class="modal-header">
-        <div class="modal-header-left">
-          <h2 class="modal-title">Seguimiento: {{ seguimientoDetalle.titulo }}</h2>
-          <p class="modal-subtitle">{{ seguimientoDetalle.fecha }} • ID: {{ seguimientoDetalle.idTransaccion }}</p>
-        </div>
-        <button class="modal-close" (click)="cerrarModal()">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
-      </div>
-
-      <!-- Modal Body -->
-      <div class="modal-body">
-
-        <!-- Vinculación -->
-        <div class="modal-section" *ngIf="seguimientoDetalle.nombreProceso">
-          <h3 class="modal-section-title">Vinculación:</h3>
-          <div class="vinculacion-badge">
-            <span class="badge-proceso-red">{{ seguimientoDetalle.nombreProceso }}</span>
-          </div>
-        </div>
-
-        <!-- Proceso -->
-        <div class="modal-section" *ngIf="seguimientoDetalle.procesoVinculado">
-          <h3 class="modal-section-title">Proceso:</h3>
-          <div class="modal-section-content">
-            <p class="proceso-detalle-text">{{ seguimientoDetalle.procesoVinculado }}</p>
-          </div>
-        </div>
-
-        <!-- Pasos del Proceso -->
-        <div class="modal-section" *ngIf="seguimientoDetalle.pasos && seguimientoDetalle.pasos.length > 0">
-          <h3 class="modal-section-title">Pasos del Proceso:</h3>
-          <div class="modal-pasos-lista">
-            <div class="modal-paso-item" *ngFor="let paso of seguimientoDetalle.pasos" [ngClass]="getEstadoClass(paso.estado)">
-              <svg class="modal-paso-icon" *ngIf="paso.estado === 'completado'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                <polyline points="20 6 9 17 4 12"></polyline>
-              </svg>
-              <svg class="modal-paso-icon" *ngIf="paso.estado === 'con demora'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-                <line x1="12" y1="9" x2="12" y2="13"></line>
-                <line x1="12" y1="17" x2="12.01" y2="17"></line>
-              </svg>
-              <svg class="modal-paso-icon" *ngIf="paso.estado === 'pendiente'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10"></circle>
-                <polyline points="12 6 12 12 16 14"></polyline>
-              </svg>
-              <span class="modal-paso-nombre">{{ paso.nombre }}</span>
-              <span class="modal-paso-duracion" *ngIf="paso.duracion">{{ paso.duracion }}</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Problemas Identificados -->
-        <div class="modal-section" *ngIf="seguimientoDetalle.problemas && seguimientoDetalle.problemas.length > 0 && seguimientoDetalle.problemas[0].trim() !== ''">
-          <h3 class="modal-section-title">Problemas Identificados:</h3>
-          <div class="modal-problemas-lista">
-            <div class="modal-problema-item" *ngFor="let problema of seguimientoDetalle.problemas">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-                <line x1="12" y1="9" x2="12" y2="13"></line>
-                <line x1="12" y1="17" x2="12.01" y2="17"></line>
-              </svg>
-              <span>{{ problema }}</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Métricas -->
-        <div class="modal-section" *ngIf="seguimientoDetalle.metricas && seguimientoDetalle.metricas.length > 0">
-          <h3 class="modal-section-title">Métricas:</h3>
-          <div class="modal-metricas-container">
-            <div class="modal-metricas-grid">
-              <div class="modal-metrica-card" *ngFor="let metrica of seguimientoDetalle.metricas">
-                <p class="modal-metrica-label">{{ metrica.nombre }}</p>
-                <p class="modal-metrica-valor">{{ metrica.valor }}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-      </div>
-
-    </div>
-  </div>
-
-  <!-- Modal de Confirmación de Borrado -->
-  <app-confirm-modal
-    [isOpen]="showDeleteModal"
-    [config]="deleteModalConfig"
-    (confirm)="confirmarEliminacion()"
-    (cancel)="cancelarEliminacion()">
-  </app-confirm-modal>
 
 </div>

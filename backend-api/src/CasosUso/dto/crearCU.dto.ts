@@ -6,12 +6,12 @@ export class CreateHistoriaUsuarioDto {
     id_proyecto: number;
 
     @IsInt()
-    @IsNotEmpty()
-    id_proceso: number;
+    @IsOptional()
+    id_proceso?: number;
 
     @IsInt()
-    @IsNotEmpty()
-    id_subproceso: number;
+    @IsOptional()
+    id_subproceso?: number;
 
     @IsString()
     @IsOptional()
