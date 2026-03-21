@@ -176,7 +176,6 @@
                   </span>
                 </div>
                 <div class="subproceso-actions">
-                  <!-- Ver encuesta -->
                   <button class="btn-ver-simple" *ngIf="sub.herramienta?.tipo === 'encuesta'"
                     (click)="openEncuestaModal(sub)" title="Ver encuesta">
                     <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -184,7 +183,6 @@
                       <circle cx="12" cy="12" r="3" />
                     </svg>
                   </button>
-                  <!-- Ver entrevista -->
                   <button class="btn-ver-simple" *ngIf="sub.herramienta?.tipo === 'entrevista'"
                     (click)="openEntrevistaModal(sub)" title="Ver entrevista">
                     <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -192,7 +190,6 @@
                       <circle cx="12" cy="12" r="3" />
                     </svg>
                   </button>
-                  <!-- Ver historia de usuario (solo lectura) -->
                   <button class="btn-ver-simple" *ngIf="sub.herramienta?.tipo === 'historia_usuario'"
                     (click)="openHistoriaModalReadOnly(sub)" title="Ver historia de usuario">
                     <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -200,7 +197,6 @@
                       <circle cx="12" cy="12" r="3" />
                     </svg>
                   </button>
-                  <!-- Ver focus group -->
                   <button class="btn-ver-simple" *ngIf="sub.herramienta?.tipo === 'focus_group'"
                     (click)="openFocusGroupModal(sub)" title="Ver focus group">
                     <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -469,14 +465,12 @@
                   </svg>
                   {{ getStakeholderNombre(sub.stakeholder_id) }}
                 </div>
-                <!-- HERRAMIENTA BADGE + BOTONES VER -->
                 <div class="subproceso-herramienta-badge" *ngIf="sub.herramienta">
                   <span class="herramienta-badge-tipo" [ngClass]="'badge-' + sub.herramienta.tipo">
                     <span [innerHTML]="getIconoTipoHerramienta(sub.herramienta.tipo)"></span>
                     {{ getLabelTipoHerramienta(sub.herramienta.tipo) }}:
                   </span>
                   <span class="herramienta-badge-nombre">{{ sub.herramienta.nombre }}</span>
-                  <!-- Ver encuesta -->
                   <button class="btn-ver-herramienta" *ngIf="sub.herramienta.tipo === 'encuesta'"
                     (click)="openEncuestaModal(sub)" title="Ver encuesta">
                     <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -485,7 +479,6 @@
                     </svg>
                     Ver
                   </button>
-                  <!-- Ver entrevista -->
                   <button class="btn-ver-herramienta" *ngIf="sub.herramienta.tipo === 'entrevista'"
                     (click)="openEntrevistaModal(sub)" title="Ver entrevista">
                     <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -494,7 +487,6 @@
                     </svg>
                     Ver
                   </button>
-                  <!-- Ver historia de usuario (solo lectura) -->
                   <button class="btn-ver-herramienta" *ngIf="sub.herramienta.tipo === 'historia_usuario'"
                     (click)="openHistoriaModalReadOnly(sub)" title="Ver historia de usuario">
                     <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -503,7 +495,6 @@
                     </svg>
                     Ver
                   </button>
-                  <!-- Ver focus group -->
                   <button class="btn-ver-herramienta" *ngIf="sub.herramienta.tipo === 'focus_group'"
                     (click)="openFocusGroupModal(sub)" title="Ver focus group">
                     <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -527,90 +518,130 @@
     </div>
   </div>
 
-  <!-- ========== MODAL DE ENCUESTA ========== -->
+  <!-- ========== MODAL DE ENCUESTA (REDISEÑADO) ========== -->
   <div class="modal-overlay modal-overlay-top" *ngIf="encuestaModal" (click)="closeEncuestaModal()">
-    <div class="modal-content modal-encuesta" (click)="$event.stopPropagation()">
-      <div class="encuesta-loading" *ngIf="loadingEncuesta">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spin">
+    <div class="modal-v2" (click)="$event.stopPropagation()">
+
+      <div class="mv2-loading" *ngIf="loadingEncuesta">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spin">
           <path d="M21 12a9 9 0 1 1-6.219-8.56" />
         </svg>
-        Cargando encuesta...
+        <span>Cargando...</span>
       </div>
+
       <ng-container *ngIf="!loadingEncuesta && encuestaDetalle">
-        <div class="modal-header encuesta-header">
-          <div class="modal-header-content">
-            <div class="encuesta-header-info">
-              <span class="encuesta-badge-label">Encuesta vinculada</span>
-              <h2 class="modal-title">{{ encuestaDetalle.titulo_encuesta }}</h2>
-            </div>
-            <button class="btn-close-modal" (click)="closeEncuestaModal()">
-              <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
+        <!-- HEADER -->
+        <div class="mv2-header">
+          <div class="mv2-header-left">
+            <div class="mv2-pill mv2-pill--encuesta">
+              <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                <path d="M9 11l3 3L22 4" />
+                <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
               </svg>
-            </button>
+              Encuesta vinculada
+            </div>
+            <h2 class="mv2-title">{{ encuestaDetalle.titulo_encuesta }}</h2>
+            <p class="mv2-subtitle" *ngIf="encuestaDetalle.descripcion">{{ encuestaDetalle.descripcion }}</p>
           </div>
-          <p class="modal-desc" *ngIf="encuestaDetalle.descripcion">{{ encuestaDetalle.descripcion }}</p>
-          <div class="encuesta-meta" *ngIf="encuestaDetalle.numero_participantes_esperados">
+          <button class="mv2-close" (click)="closeEncuestaModal()">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+
+        <!-- META BAR -->
+        <div class="mv2-meta-bar">
+          <div class="mv2-meta-item" *ngIf="encuestaDetalle.numero_participantes_esperados">
             <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
               <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
               <circle cx="9" cy="7" r="4" />
               <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
               <path d="M16 3.13a4 4 0 0 1 0 7.75" />
             </svg>
-            {{ encuestaDetalle.numero_participantes_esperados }} participantes esperados
+            {{ encuestaDetalle.numero_participantes_esperados }} participantes
+          </div>
+          <div class="mv2-meta-item">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="12 6 12 12 16 14" />
+            </svg>
+            {{ encuestaDetalle.preguntas.length }} preguntas
+          </div>
+          <div class="mv2-meta-divider"></div>
+          <div class="mv2-meta-context">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <polyline points="16 18 22 12 16 6" />
+              <polyline points="8 6 2 12 8 18" />
+            </svg>
+            Subproceso: <strong>{{ encuestaSubprocesoNombre }}</strong>
           </div>
         </div>
-        <div class="modal-body encuesta-body">
-          <div class="encuesta-sin-preguntas" *ngIf="encuestaDetalle.preguntas.length === 0">
-            <p>Esta encuesta no tiene preguntas definidas.</p>
+
+        <!-- BODY -->
+        <div class="mv2-body">
+          <div class="mv2-empty-state" *ngIf="encuestaDetalle.preguntas.length === 0">
+            <svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+            <p>Esta encuesta no tiene preguntas definidas aún.</p>
           </div>
-          <div class="encuesta-preguntas" *ngIf="encuestaDetalle.preguntas.length > 0">
-            <p class="encuesta-instruccion">Completa las respuestas para el subproceso <strong>{{
-                encuestaSubprocesoNombre }}</strong>:</p>
-            <div class="pregunta-item" *ngFor="let p of encuestaDetalle.preguntas; let i = index">
-              <div class="pregunta-header">
-                <span class="pregunta-numero">{{ i + 1 }}</span>
-                <div class="pregunta-content">
-                  <p class="pregunta-texto">{{ p.pregunta }}</p>
-                  <span class="pregunta-tipo-badge">{{ getTipoPreguntaLabel(p.tipo_pregunta) }}</span>
+
+          <div class="mv2-preguntas-list" *ngIf="encuestaDetalle.preguntas.length > 0">
+            <p class="mv2-instruccion">Completa las respuestas para el subproceso <strong>{{ encuestaSubprocesoNombre
+                }}</strong>:</p>
+            <div class="mv2-pregunta-card" *ngFor="let p of encuestaDetalle.preguntas; let i = index">
+              <div class="mv2-pregunta-top">
+                <span class="mv2-num mv2-num--encuesta">{{ i + 1 }}</span>
+                <div class="mv2-pregunta-info">
+                  <p class="mv2-pregunta-texto">{{ p.pregunta }}</p>
+                  <span class="mv2-tipo-tag">{{ getTipoPreguntaLabel(p.tipo_pregunta) }}</span>
                 </div>
               </div>
-              <div class="pregunta-respuesta">
-                <textarea *ngIf="p.tipo_pregunta === 'texto_abierto'" class="form-input respuesta-textarea"
+              <div class="mv2-pregunta-respuesta">
+                <textarea *ngIf="p.tipo_pregunta === 'texto_abierto'" class="mv2-textarea"
                   placeholder="Escribe tu respuesta..." [(ngModel)]="respuestasMap[p.id_pregunta]" rows="3"></textarea>
-                <div class="respuesta-sino" *ngIf="p.tipo_pregunta === 'si_no'">
-                  <button type="button" class="btn-sino" [class.active]="respuestasMap[p.id_pregunta] === 'Sí'"
+                <div class="mv2-sino-group" *ngIf="p.tipo_pregunta === 'si_no'">
+                  <button type="button" class="mv2-sino-btn" [class.active]="respuestasMap[p.id_pregunta] === 'Sí'"
                     (click)="respuestasMap[p.id_pregunta] = 'Sí'">Sí</button>
-                  <button type="button" class="btn-sino" [class.active]="respuestasMap[p.id_pregunta] === 'No'"
+                  <button type="button" class="mv2-sino-btn" [class.active]="respuestasMap[p.id_pregunta] === 'No'"
                     (click)="respuestasMap[p.id_pregunta] = 'No'">No</button>
                 </div>
-                <div class="respuesta-escala" *ngIf="p.tipo_pregunta === 'escala'">
-                  <button type="button" class="btn-escala" *ngFor="let n of [1,2,3,4,5]"
+                <div class="mv2-escala-group" *ngIf="p.tipo_pregunta === 'escala'">
+                  <button type="button" class="mv2-escala-btn" *ngFor="let n of [1,2,3,4,5]"
                     [class.active]="respuestasMap[p.id_pregunta] === n.toString()"
                     (click)="respuestasMap[p.id_pregunta] = n.toString()">{{ n }}</button>
+                  <div class="mv2-escala-labels">
+                    <span>Muy malo</span>
+                    <span>Excelente</span>
+                  </div>
                 </div>
-                <textarea *ngIf="p.tipo_pregunta === 'opcion_multiple'" class="form-input respuesta-textarea"
+                <textarea *ngIf="p.tipo_pregunta === 'opcion_multiple'" class="mv2-textarea"
                   placeholder="Escribe tu opción..." [(ngModel)]="respuestasMap[p.id_pregunta]" rows="2"></textarea>
               </div>
             </div>
           </div>
         </div>
-        <div class="encuesta-footer" *ngIf="encuestaDetalle.preguntas.length > 0">
-          <span class="encuesta-guardado-msg" *ngIf="encuestaGuardada">
-            <svg width="14" height="14" fill="none" stroke="#10b981" stroke-width="2.5" viewBox="0 0 24 24">
+
+        <!-- FOOTER -->
+        <div class="mv2-footer" *ngIf="encuestaDetalle.preguntas.length > 0">
+          <span class="mv2-saved-msg" *ngIf="encuestaGuardada">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
               <polyline points="20 6 9 17 4 12" />
             </svg>
             Respuestas guardadas
           </span>
-          <div class="encuesta-footer-actions">
-            <button class="btn-cancelar" (click)="closeEncuestaModal()">Cerrar</button>
-            <button class="btn-guardar" (click)="saveRespuestas()" [disabled]="savingRespuestas">
+          <div class="mv2-footer-actions">
+            <button class="mv2-btn mv2-btn--ghost" (click)="closeEncuestaModal()">Cerrar</button>
+            <button class="mv2-btn mv2-btn--encuesta" (click)="saveRespuestas()" [disabled]="savingRespuestas">
               <svg *ngIf="savingRespuestas" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                 stroke-width="2" class="spin">
                 <path d="M21 12a9 9 0 1 1-6.219-8.56" />
               </svg>
-              {{ savingRespuestas ? 'Guardando...' : 'Guardar Respuestas' }}
+              {{ savingRespuestas ? 'Guardando...' : 'Guardar respuestas' }}
             </button>
           </div>
         </div>
@@ -618,74 +649,121 @@
     </div>
   </div>
 
-  <!-- ========== MODAL DE ENTREVISTA ========== -->
+  <!-- ========== MODAL DE ENTREVISTA (REDISEÑADO) ========== -->
   <div class="modal-overlay modal-overlay-top" *ngIf="entrevistaModal" (click)="closeEntrevistaModal()">
-    <div class="modal-content modal-encuesta" (click)="$event.stopPropagation()">
-      <div class="encuesta-loading" *ngIf="loadingEntrevista">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spin">
+    <div class="modal-v2" (click)="$event.stopPropagation()">
+
+      <div class="mv2-loading" *ngIf="loadingEntrevista">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spin">
           <path d="M21 12a9 9 0 1 1-6.219-8.56" />
         </svg>
-        Cargando entrevista...
+        <span>Cargando...</span>
       </div>
+
       <ng-container *ngIf="!loadingEntrevista && entrevistaDetalle">
-        <div class="modal-header encuesta-header">
-          <div class="modal-header-content">
-            <div class="encuesta-header-info">
-              <span class="encuesta-badge-label">Entrevista vinculada</span>
-              <h2 class="modal-title">{{ entrevistaDetalle.titulo_entrevista }}</h2>
-            </div>
-            <button class="btn-close-modal" (click)="closeEntrevistaModal()">
-              <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
+        <!-- HEADER -->
+        <div class="mv2-header">
+          <div class="mv2-header-left">
+            <div class="mv2-pill mv2-pill--entrevista">
+              <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
               </svg>
-            </button>
+              Entrevista vinculada
+            </div>
+            <h2 class="mv2-title">{{ entrevistaDetalle.titulo_entrevista }}</h2>
           </div>
-          <div class="encuesta-meta">
-            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-              <circle cx="12" cy="7" r="4" />
+          <button class="mv2-close" (click)="closeEntrevistaModal()">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
-            {{ entrevistaDetalle.entrevistador }} → {{ entrevistaDetalle.entrevistado }}
-          </div>
-          <p class="modal-desc" *ngIf="entrevistaDetalle.notas_contexto">{{ entrevistaDetalle.notas_contexto }}</p>
+          </button>
         </div>
-        <div class="modal-body encuesta-body">
-          <div class="encuesta-sin-preguntas" *ngIf="entrevistaDetalle.preguntas.length === 0">
-            <p>Esta entrevista no tiene preguntas definidas.</p>
+
+        <!-- PARTICIPANTS CARD -->
+        <div class="mv2-participants-card">
+          <div class="mv2-participant-block">
+            <span class="mv2-participant-role">Entrevistador</span>
+            <span class="mv2-participant-name">{{ entrevistaDetalle.entrevistador }}</span>
           </div>
-          <div class="encuesta-preguntas" *ngIf="entrevistaDetalle.preguntas.length > 0">
-            <p class="encuesta-instruccion">Anota las respuestas para el subproceso <strong>{{
-                entrevistaSubprocesoNombre }}</strong>:</p>
-            <div class="pregunta-item" *ngFor="let p of entrevistaDetalle.preguntas; let i = index">
-              <div class="pregunta-header">
-                <span class="pregunta-numero">{{ i + 1 }}</span>
-                <div class="pregunta-content">
-                  <p class="pregunta-texto">{{ p.pregunta }}</p>
+          <div class="mv2-participant-arrow">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <line x1="5" y1="12" x2="19" y2="12" />
+              <polyline points="12 5 19 12 12 19" />
+            </svg>
+          </div>
+          <div class="mv2-participant-block">
+            <span class="mv2-participant-role">Entrevistado</span>
+            <span class="mv2-participant-name">{{ entrevistaDetalle.entrevistado }}</span>
+          </div>
+        </div>
+
+        <!-- META BAR -->
+        <div class="mv2-meta-bar">
+          <div class="mv2-meta-item" *ngIf="entrevistaDetalle.notas_contexto">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+            {{ entrevistaDetalle.notas_contexto }}
+          </div>
+          <div class="mv2-meta-divider" *ngIf="entrevistaDetalle.notas_contexto"></div>
+          <div class="mv2-meta-context">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <polyline points="16 18 22 12 16 6" />
+              <polyline points="8 6 2 12 8 18" />
+            </svg>
+            Subproceso: <strong>{{ entrevistaSubprocesoNombre }}</strong>
+          </div>
+        </div>
+
+        <!-- BODY -->
+        <div class="mv2-body">
+          <div class="mv2-empty-state" *ngIf="entrevistaDetalle.preguntas.length === 0">
+            <svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+            <p>Esta entrevista no tiene preguntas definidas aún.</p>
+          </div>
+
+          <div class="mv2-preguntas-list" *ngIf="entrevistaDetalle.preguntas.length > 0">
+            <p class="mv2-instruccion">Anota las respuestas para el subproceso <strong>{{ entrevistaSubprocesoNombre
+                }}</strong>:</p>
+            <div class="mv2-pregunta-card" *ngFor="let p of entrevistaDetalle.preguntas; let i = index">
+              <div class="mv2-pregunta-top">
+                <span class="mv2-num mv2-num--entrevista">{{ i + 1 }}</span>
+                <div class="mv2-pregunta-info">
+                  <p class="mv2-pregunta-texto">{{ p.pregunta }}</p>
                 </div>
               </div>
-              <div class="pregunta-respuesta">
-                <textarea class="form-input respuesta-textarea" placeholder="Escribe la respuesta..."
+              <div class="mv2-pregunta-respuesta">
+                <textarea class="mv2-textarea" placeholder="Anota la respuesta aquí..."
                   [(ngModel)]="respuestasEntrevistaMap[p.id_pregunta]" rows="3"></textarea>
               </div>
             </div>
           </div>
         </div>
-        <div class="encuesta-footer" *ngIf="entrevistaDetalle.preguntas.length > 0">
-          <span class="encuesta-guardado-msg" *ngIf="entrevistaGuardada">
-            <svg width="14" height="14" fill="none" stroke="#10b981" stroke-width="2.5" viewBox="0 0 24 24">
+
+        <!-- FOOTER -->
+        <div class="mv2-footer" *ngIf="entrevistaDetalle.preguntas.length > 0">
+          <span class="mv2-saved-msg" *ngIf="entrevistaGuardada">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
               <polyline points="20 6 9 17 4 12" />
             </svg>
             Respuestas guardadas
           </span>
-          <div class="encuesta-footer-actions">
-            <button class="btn-cancelar" (click)="closeEntrevistaModal()">Cerrar</button>
-            <button class="btn-guardar" (click)="saveRespuestasEntrevista()" [disabled]="savingRespuestasEntrevista">
+          <div class="mv2-footer-actions">
+            <button class="mv2-btn mv2-btn--ghost" (click)="closeEntrevistaModal()">Cerrar</button>
+            <button class="mv2-btn mv2-btn--entrevista" (click)="saveRespuestasEntrevista()"
+              [disabled]="savingRespuestasEntrevista">
               <svg *ngIf="savingRespuestasEntrevista" width="14" height="14" viewBox="0 0 24 24" fill="none"
                 stroke="currentColor" stroke-width="2" class="spin">
                 <path d="M21 12a9 9 0 1 1-6.219-8.56" />
               </svg>
-              {{ savingRespuestasEntrevista ? 'Guardando...' : 'Guardar Respuestas' }}
+              {{ savingRespuestasEntrevista ? 'Guardando...' : 'Guardar respuestas' }}
             </button>
           </div>
         </div>
@@ -693,183 +771,185 @@
     </div>
   </div>
 
-  <!-- ========== MODAL DE HISTORIA DE USUARIO ========== -->
+  <!-- ========== MODAL DE HISTORIA DE USUARIO (REDISEÑADO) ========== -->
   <div class="modal-overlay modal-overlay-top" *ngIf="historiaModal" (click)="closeHistoriaModal()">
-    <div class="modal-content modal-encuesta" (click)="$event.stopPropagation()">
-      <div class="encuesta-loading" *ngIf="loadingHistoria">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spin">
+    <div class="modal-v2" (click)="$event.stopPropagation()">
+
+      <div class="mv2-loading" *ngIf="loadingHistoria">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spin">
           <path d="M21 12a9 9 0 1 1-6.219-8.56" />
         </svg>
-        Cargando historia de usuario...
+        <span>Cargando...</span>
       </div>
 
       <ng-container *ngIf="!loadingHistoria && historiaDetalle">
-        <div class="modal-header encuesta-header">
-          <div class="modal-header-content">
-            <div class="encuesta-header-info">
-              <span class="encuesta-badge-label" *ngIf="!historiaReadOnly">Historia de Usuario</span>
-              <span class="encuesta-badge-label" *ngIf="historiaReadOnly"
-                style="display:flex;align-items:center;gap:4px;opacity:0.85;">
-                <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                  <circle cx="12" cy="12" r="3" />
-                </svg>
-                Solo lectura
-              </span>
-              <h2 class="modal-title">{{ historiaForm.titulo_historia || 'Historia de Usuario' }}</h2>
-            </div>
-            <button class="btn-close-modal" (click)="closeHistoriaModal()">
-              <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
+        <!-- HEADER -->
+        <div class="mv2-header">
+          <div class="mv2-header-left">
+            <div class="mv2-pill" [ngClass]="historiaReadOnly ? 'mv2-pill--readonly' : 'mv2-pill--historia'">
+              <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
               </svg>
-            </button>
+              {{ historiaReadOnly ? 'Solo lectura' : 'Historia de usuario' }}
+            </div>
+            <h2 class="mv2-title">{{ historiaForm.titulo_historia || 'Historia de usuario' }}</h2>
           </div>
-          <p class="modal-desc">Subproceso: <strong>{{ historiaSubprocesoNombre }}</strong></p>
+          <button class="mv2-close" (click)="closeHistoriaModal()">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
         </div>
 
-        <div class="modal-body encuesta-body">
-          <!-- MODO SOLO LECTURA -->
-          <ng-container *ngIf="historiaReadOnly">
-            <div style="display:flex;flex-direction:column;gap:16px;">
-              <div
-                style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:12px;">
-                <div *ngIf="historiaForm.rol" style="display:flex;flex-direction:column;gap:2px;">
-                  <span
-                    style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#94a3b8;">Como</span>
-                  <span style="font-size:14px;color:#1e293b;">{{ historiaForm.rol }}</span>
-                </div>
-                <div *ngIf="historiaForm.quiero" style="display:flex;flex-direction:column;gap:2px;">
-                  <span
-                    style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#94a3b8;">Quiero</span>
-                  <span style="font-size:14px;color:#1e293b;">{{ historiaForm.quiero }}</span>
-                </div>
-                <div *ngIf="historiaForm.para_que" style="display:flex;flex-direction:column;gap:2px;">
-                  <span
-                    style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#94a3b8;">Para
-                    que</span>
-                  <span style="font-size:14px;color:#1e293b;">{{ historiaForm.para_que }}</span>
-                </div>
+        <!-- META BAR -->
+        <div class="mv2-meta-bar">
+          <span class="mv2-prioridad-badge mv2-prioridad-badge--alta" *ngIf="historiaForm.prioridad === 'alta'">Alta
+            prioridad</span>
+          <span class="mv2-prioridad-badge mv2-prioridad-badge--media" *ngIf="historiaForm.prioridad === 'media'">Media
+            prioridad</span>
+          <span class="mv2-prioridad-badge mv2-prioridad-badge--baja" *ngIf="historiaForm.prioridad === 'baja'">Baja
+            prioridad</span>
+          <div class="mv2-meta-item" *ngIf="historiaForm.estimacion">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="12 6 12 12 16 14" />
+            </svg>
+            {{ historiaForm.estimacion }}
+          </div>
+          <div class="mv2-meta-divider"></div>
+          <div class="mv2-meta-context">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <polyline points="16 18 22 12 16 6" />
+              <polyline points="8 6 2 12 8 18" />
+            </svg>
+            Subproceso: <strong>{{ historiaSubprocesoNombre }}</strong>
+          </div>
+        </div>
+
+        <!-- BODY READONLY -->
+        <div class="mv2-body" *ngIf="historiaReadOnly">
+          <div class="mv2-empty-state" *ngIf="!historiaForm.rol && !historiaForm.quiero && !historiaForm.para_que">
+            <svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+            <p>Esta historia de usuario aún no tiene contenido registrado.</p>
+          </div>
+
+          <div class="mv2-historia-frase-block"
+            *ngIf="historiaForm.rol || historiaForm.quiero || historiaForm.para_que">
+            <div class="mv2-historia-frase" *ngIf="historiaForm.rol">
+              <span class="mv2-historia-keyword">Como</span>
+              <span class="mv2-historia-value">{{ historiaForm.rol }}</span>
+            </div>
+            <div class="mv2-historia-frase" *ngIf="historiaForm.quiero">
+              <span class="mv2-historia-keyword">Quiero</span>
+              <span class="mv2-historia-value">{{ historiaForm.quiero }}</span>
+            </div>
+            <div class="mv2-historia-frase" *ngIf="historiaForm.para_que">
+              <span class="mv2-historia-keyword">Para que</span>
+              <span class="mv2-historia-value">{{ historiaForm.para_que }}</span>
+            </div>
+          </div>
+
+          <div class="mv2-criterios-section"
+            *ngIf="historiaForm.criterios_aceptacion && historiaForm.criterios_aceptacion[0]">
+            <p class="mv2-section-label">Criterios de aceptación</p>
+            <ul class="mv2-criterios-list">
+              <li *ngFor="let criterio of historiaForm.criterios_aceptacion"
+                [style.display]="criterio.trim() ? 'flex' : 'none'">
+                <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"
+                  style="flex-shrink:0;margin-top:2px;">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+                {{ criterio }}
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- BODY EDIT -->
+        <div class="mv2-body" *ngIf="!historiaReadOnly">
+          <div class="mv2-edit-fields">
+            <div class="mv2-field">
+              <label class="mv2-field-label">Título *</label>
+              <input class="form-input" type="text" [(ngModel)]="historiaForm.titulo_historia"
+                placeholder="Título de la historia" />
+            </div>
+            <div class="mv2-field">
+              <label class="mv2-field-label">Como (Rol) *</label>
+              <input class="form-input" type="text" [(ngModel)]="historiaForm.rol"
+                placeholder="Ej: usuario registrado" />
+            </div>
+            <div class="mv2-field">
+              <label class="mv2-field-label">Quiero *</label>
+              <textarea class="form-input" [(ngModel)]="historiaForm.quiero"
+                placeholder="Ej: poder ver mi historial de pedidos" rows="2"></textarea>
+            </div>
+            <div class="mv2-field">
+              <label class="mv2-field-label">Para que *</label>
+              <textarea class="form-input" [(ngModel)]="historiaForm.para_que"
+                placeholder="Ej: pueda hacer seguimiento de mis compras" rows="2"></textarea>
+            </div>
+            <div class="mv2-field-row">
+              <div class="mv2-field">
+                <label class="mv2-field-label">Prioridad</label>
+                <select class="form-input" [(ngModel)]="historiaForm.prioridad">
+                  <option value="baja">Baja</option>
+                  <option value="media">Media</option>
+                  <option value="alta">Alta</option>
+                </select>
               </div>
-              <div style="display:flex;gap:16px;flex-wrap:wrap;">
-                <div *ngIf="historiaForm.prioridad" style="display:flex;flex-direction:column;gap:4px;">
-                  <span
-                    style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#94a3b8;">Prioridad</span>
-                  <span style="font-size:12px;font-weight:600;padding:3px 10px;border-radius:20px;"
-                    [style.background]="historiaForm.prioridad==='alta' ? '#fee2e2' : historiaForm.prioridad==='baja' ? '#dcfce7' : '#e0f2fe'"
-                    [style.color]="historiaForm.prioridad==='alta' ? '#dc2626' : historiaForm.prioridad==='baja' ? '#16a34a' : '#0284c7'">
-                    {{ historiaForm.prioridad | titlecase }}
-                  </span>
-                </div>
-                <div *ngIf="historiaForm.estimacion" style="display:flex;flex-direction:column;gap:4px;">
-                  <span
-                    style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#94a3b8;">Estimación</span>
-                  <span style="font-size:14px;color:#1e293b;">{{ historiaForm.estimacion }}</span>
-                </div>
-              </div>
-              <div *ngIf="historiaForm.criterios_aceptacion && historiaForm.criterios_aceptacion[0]">
-                <span
-                  style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#94a3b8;display:block;margin-bottom:8px;">Criterios
-                  de Aceptación</span>
-                <ul style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:6px;">
-                  <li *ngFor="let criterio of historiaForm.criterios_aceptacion"
-                    [style.display]="criterio.trim() ? 'flex' : 'none'"
-                    style="align-items:flex-start;gap:8px;font-size:14px;color:#374151;">
-                    <svg width="14" height="14" fill="none" stroke="#10b981" stroke-width="2.5" viewBox="0 0 24 24"
-                      style="flex-shrink:0;margin-top:2px;">
-                      <polyline points="20 6 9 17 4 12" />
-                    </svg>
-                    {{ criterio }}
-                  </li>
-                </ul>
-              </div>
-              <div *ngIf="!historiaForm.rol && !historiaForm.quiero && !historiaForm.para_que"
-                style="text-align:center;padding:24px;color:#94a3b8;font-size:14px;">
-                Esta historia de usuario aún no tiene contenido registrado.
+              <div class="mv2-field">
+                <label class="mv2-field-label">Estimación</label>
+                <input class="form-input" type="text" [(ngModel)]="historiaForm.estimacion"
+                  placeholder="Ej: 3 puntos, 2h" />
               </div>
             </div>
-          </ng-container>
-
-          <!-- MODO EDICIÓN -->
-          <ng-container *ngIf="!historiaReadOnly">
-            <div class="historia-form-container">
-              <div class="inline-sub-field">
-                <label class="inline-sub-label">Título *</label>
-                <input class="form-input" type="text" [(ngModel)]="historiaForm.titulo_historia"
-                  placeholder="Título de la historia" />
-              </div>
-              <div class="inline-sub-field">
-                <label class="inline-sub-label">Como (Rol) *</label>
-                <input class="form-input" type="text" [(ngModel)]="historiaForm.rol"
-                  placeholder="Ej: usuario registrado" />
-              </div>
-              <div class="inline-sub-field">
-                <label class="inline-sub-label">Quiero *</label>
-                <textarea class="form-input" [(ngModel)]="historiaForm.quiero"
-                  placeholder="Ej: poder ver mi historial de pedidos" rows="2"></textarea>
-              </div>
-              <div class="inline-sub-field">
-                <label class="inline-sub-label">Para que *</label>
-                <textarea class="form-input" [(ngModel)]="historiaForm.para_que"
-                  placeholder="Ej: pueda hacer seguimiento de mis compras" rows="2"></textarea>
-              </div>
-              <div style="display:flex;gap:16px;">
-                <div class="inline-sub-field" style="flex:1">
-                  <label class="inline-sub-label">Prioridad</label>
-                  <select class="form-input" [(ngModel)]="historiaForm.prioridad">
-                    <option value="baja">Baja</option>
-                    <option value="media">Media</option>
-                    <option value="alta">Alta</option>
-                  </select>
-                </div>
-                <div class="inline-sub-field" style="flex:1">
-                  <label class="inline-sub-label">Estimación (opcional)</label>
-                  <input class="form-input" type="text" [(ngModel)]="historiaForm.estimacion"
-                    placeholder="Ej: 3 puntos, 2h" />
-                </div>
-              </div>
-              <div class="inline-sub-field">
-                <label class="inline-sub-label">Criterios de Aceptación</label>
-                <div *ngFor="let criterio of historiaForm.criterios_aceptacion; let ci = index"
-                  style="display:flex;gap:8px;margin-bottom:6px;">
-                  <input class="form-input" type="text" [(ngModel)]="historiaForm.criterios_aceptacion[ci]"
-                    [placeholder]="'Criterio ' + (ci + 1)" />
-                  <button type="button" class="btn-delete-item"
-                    (click)="historiaForm.criterios_aceptacion.splice(ci, 1)"
-                    *ngIf="historiaForm.criterios_aceptacion.length > 1">
-                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                      <line x1="18" y1="6" x2="6" y2="18" />
-                      <line x1="6" y1="6" x2="18" y2="18" />
-                    </svg>
-                  </button>
-                </div>
-                <button type="button" class="btn-add-inline" (click)="historiaForm.criterios_aceptacion.push('')">
-                  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-                    <line x1="12" y1="5" x2="12" y2="19" />
-                    <line x1="5" y1="12" x2="19" y2="12" />
+            <div class="mv2-field">
+              <label class="mv2-field-label">Criterios de aceptación</label>
+              <div *ngFor="let criterio of historiaForm.criterios_aceptacion; let ci = index" class="mv2-criterio-row">
+                <input class="form-input" type="text" [(ngModel)]="historiaForm.criterios_aceptacion[ci]"
+                  [placeholder]="'Criterio ' + (ci + 1)" />
+                <button type="button" class="btn-delete-item" (click)="historiaForm.criterios_aceptacion.splice(ci, 1)"
+                  *ngIf="historiaForm.criterios_aceptacion.length > 1">
+                  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
                   </svg>
-                  Añadir criterio
                 </button>
               </div>
+              <button type="button" class="btn-add-inline" (click)="historiaForm.criterios_aceptacion.push('')">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+                Añadir criterio
+              </button>
             </div>
-          </ng-container>
+          </div>
         </div>
 
-        <div class="encuesta-footer">
-          <span class="encuesta-guardado-msg" *ngIf="historiaGuardada && !historiaReadOnly">
-            <svg width="14" height="14" fill="none" stroke="#10b981" stroke-width="2.5" viewBox="0 0 24 24">
+        <!-- FOOTER -->
+        <div class="mv2-footer">
+          <span class="mv2-saved-msg" *ngIf="historiaGuardada && !historiaReadOnly">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
               <polyline points="20 6 9 17 4 12" />
             </svg>
             Historia guardada
           </span>
-          <div class="encuesta-footer-actions">
-            <button class="btn-cancelar" (click)="closeHistoriaModal()">Cerrar</button>
-            <button class="btn-guardar" *ngIf="!historiaReadOnly" (click)="saveHistoria()" [disabled]="savingHistoria">
+          <div class="mv2-footer-actions">
+            <button class="mv2-btn mv2-btn--ghost" (click)="closeHistoriaModal()">Cerrar</button>
+            <button class="mv2-btn mv2-btn--historia" *ngIf="!historiaReadOnly" (click)="saveHistoria()"
+              [disabled]="savingHistoria">
               <svg *ngIf="savingHistoria" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                 stroke-width="2" class="spin">
                 <path d="M21 12a9 9 0 1 1-6.219-8.56" />
               </svg>
-              {{ savingHistoria ? 'Guardando...' : 'Guardar Historia' }}
+              {{ savingHistoria ? 'Guardando...' : 'Guardar historia' }}
             </button>
           </div>
         </div>
@@ -877,92 +957,118 @@
     </div>
   </div>
 
-  <!-- ========== MODAL DE FOCUS GROUP ========== -->
+  <!-- ========== MODAL DE FOCUS GROUP (REDISEÑADO) ========== -->
   <div class="modal-overlay modal-overlay-top" *ngIf="focusGroupModal" (click)="closeFocusGroupModal()">
-    <div class="modal-content modal-encuesta" (click)="$event.stopPropagation()">
-      <div class="encuesta-loading" *ngIf="loadingFocusGroup">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spin">
+    <div class="modal-v2" (click)="$event.stopPropagation()">
+
+      <div class="mv2-loading" *ngIf="loadingFocusGroup">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spin">
           <path d="M21 12a9 9 0 1 1-6.219-8.56" />
         </svg>
-        Cargando focus group...
+        <span>Cargando...</span>
       </div>
+
       <ng-container *ngIf="!loadingFocusGroup && focusGroupDetalle">
-        <div class="modal-header encuesta-header">
-          <div class="modal-header-content">
-            <div class="encuesta-header-info">
-              <span class="encuesta-badge-label">Focus Group vinculado</span>
-              <h2 class="modal-title">{{ focusGroupDetalle.nombre_focus }}</h2>
-            </div>
-            <button class="btn-close-modal" (click)="closeFocusGroupModal()">
-              <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
+        <!-- HEADER -->
+        <div class="mv2-header">
+          <div class="mv2-header-left">
+            <div class="mv2-pill mv2-pill--focus">
+              <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
               </svg>
-            </button>
+              Focus Group vinculado
+            </div>
+            <h2 class="mv2-title">{{ focusGroupDetalle.nombre_focus }}</h2>
+            <p class="mv2-subtitle" *ngIf="focusGroupDetalle.descripcion">{{ focusGroupDetalle.descripcion }}</p>
           </div>
-          <p class="modal-desc">Subproceso: <strong>{{ focusGroupSubprocesoNombre }}</strong></p>
+          <button class="mv2-close" (click)="closeFocusGroupModal()">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
         </div>
-        <div class="modal-body encuesta-body">
-          <div style="display:flex;flex-direction:column;gap:14px;">
-            <div *ngIf="focusGroupDetalle.descripcion" style="display:flex;flex-direction:column;gap:4px;">
-              <span
-                style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#94a3b8;">Descripción</span>
-              <span style="font-size:14px;color:#1e293b;">{{ focusGroupDetalle.descripcion }}</span>
-            </div>
-            <div *ngIf="focusGroupDetalle.moderador" style="display:flex;flex-direction:column;gap:4px;">
-              <span
-                style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#94a3b8;">Moderador</span>
-              <span style="font-size:14px;color:#1e293b;">{{ focusGroupDetalle.moderador }}</span>
-            </div>
-            <div *ngIf="focusGroupDetalle.modalidad" style="display:flex;flex-direction:column;gap:4px;">
-              <span
-                style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#94a3b8;">Modalidad</span>
-              <span style="font-size:14px;color:#1e293b;">{{ focusGroupDetalle.modalidad | titlecase }}</span>
-            </div>
-            <div *ngIf="focusGroupDetalle.lugar" style="display:flex;flex-direction:column;gap:4px;">
-              <span
-                style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#94a3b8;">Lugar</span>
-              <span style="font-size:14px;color:#1e293b;">{{ focusGroupDetalle.lugar }}</span>
-            </div>
-            <div *ngIf="focusGroupDetalle.numero_participantes" style="display:flex;flex-direction:column;gap:4px;">
-              <span
-                style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#94a3b8;">Participantes
-                esperados</span>
-              <span style="font-size:14px;color:#1e293b;">{{ focusGroupDetalle.numero_participantes }}</span>
-            </div>
-            <div *ngIf="focusGroupDetalle.estado" style="display:flex;flex-direction:column;gap:4px;">
-              <span
-                style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#94a3b8;">Estado</span>
-              <span style="font-size:14px;color:#1e293b;">{{ focusGroupDetalle.estado | titlecase }}</span>
-            </div>
-            <div *ngIf="focusGroupDetalle.fecha_inicio" style="display:flex;flex-direction:column;gap:4px;">
-              <span
-                style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#94a3b8;">Fecha
-                inicio</span>
-              <span style="font-size:14px;color:#1e293b;">{{ focusGroupDetalle.fecha_inicio }}</span>
-            </div>
-            <div *ngIf="focusGroupDetalle.fecha_fin" style="display:flex;flex-direction:column;gap:4px;">
-              <span
-                style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#94a3b8;">Fecha
-                fin</span>
-              <span style="font-size:14px;color:#1e293b;">{{ focusGroupDetalle.fecha_fin }}</span>
-            </div>
-            <div *ngIf="focusGroupDetalle.conclusiones" style="display:flex;flex-direction:column;gap:4px;">
-              <span
-                style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#94a3b8;">Conclusiones</span>
-              <span style="font-size:14px;color:#1e293b;white-space:pre-wrap;">{{ focusGroupDetalle.conclusiones
-                }}</span>
-            </div>
-            <div
-              *ngIf="!focusGroupDetalle.descripcion && !focusGroupDetalle.moderador && !focusGroupDetalle.conclusiones"
-              style="text-align:center;padding:24px;color:#94a3b8;font-size:14px;">
-              Este focus group aún no tiene contenido detallado registrado.
-            </div>
+
+        <!-- META BAR -->
+        <div class="mv2-meta-bar">
+          <div class="mv2-meta-item" *ngIf="focusGroupDetalle.estado">
+            <span class="mv2-estado-badge" [ngClass]="'mv2-estado--' + focusGroupDetalle.estado">
+              {{ focusGroupDetalle.estado | titlecase }}
+            </span>
+          </div>
+          <div class="mv2-meta-item" *ngIf="focusGroupDetalle.numero_participantes">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+              <circle cx="9" cy="7" r="4" />
+            </svg>
+            {{ focusGroupDetalle.numero_participantes }} participantes
+          </div>
+          <div class="mv2-meta-item" *ngIf="focusGroupDetalle.modalidad">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+              <line x1="3" y1="9" x2="21" y2="9" />
+            </svg>
+            {{ focusGroupDetalle.modalidad | titlecase }}
+          </div>
+          <div class="mv2-meta-divider"></div>
+          <div class="mv2-meta-context">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <polyline points="16 18 22 12 16 6" />
+              <polyline points="8 6 2 12 8 18" />
+            </svg>
+            Subproceso: <strong>{{ focusGroupSubprocesoNombre }}</strong>
           </div>
         </div>
-        <div class="encuesta-footer">
-          <div class="encuesta-footer-actions">
-            <button class="btn-cancelar" (click)="closeFocusGroupModal()">Cerrar</button>
+
+        <!-- BODY -->
+        <div class="mv2-body">
+          <div class="mv2-focus-grid">
+
+            <div class="mv2-focus-field" *ngIf="focusGroupDetalle.moderador">
+              <span class="mv2-focus-label">Moderador</span>
+              <span class="mv2-focus-value">{{ focusGroupDetalle.moderador }}</span>
+            </div>
+
+            <div class="mv2-focus-field" *ngIf="focusGroupDetalle.lugar">
+              <span class="mv2-focus-label">Lugar</span>
+              <span class="mv2-focus-value">{{ focusGroupDetalle.lugar }}</span>
+            </div>
+
+            <div class="mv2-focus-field" *ngIf="focusGroupDetalle.fecha_inicio">
+              <span class="mv2-focus-label">Fecha inicio</span>
+              <span class="mv2-focus-value">{{ focusGroupDetalle.fecha_inicio }}</span>
+            </div>
+
+            <div class="mv2-focus-field" *ngIf="focusGroupDetalle.fecha_fin">
+              <span class="mv2-focus-label">Fecha fin</span>
+              <span class="mv2-focus-value">{{ focusGroupDetalle.fecha_fin }}</span>
+            </div>
+
+          </div>
+
+          <div class="mv2-conclusiones" *ngIf="focusGroupDetalle.conclusiones">
+            <p class="mv2-section-label">Conclusiones</p>
+            <p class="mv2-conclusiones-text">{{ focusGroupDetalle.conclusiones }}</p>
+          </div>
+
+          <div class="mv2-empty-state"
+            *ngIf="!focusGroupDetalle.moderador && !focusGroupDetalle.descripcion && !focusGroupDetalle.conclusiones">
+            <svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+            <p>Este focus group aún no tiene contenido detallado registrado.</p>
+          </div>
+        </div>
+
+        <!-- FOOTER -->
+        <div class="mv2-footer">
+          <div class="mv2-footer-actions">
+            <button class="mv2-btn mv2-btn--ghost" (click)="closeFocusGroupModal()">Cerrar</button>
           </div>
         </div>
       </ng-container>

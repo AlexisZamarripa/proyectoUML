@@ -141,6 +141,26 @@ export class CasosUsoComponent implements OnInit {
         this.editErrorMsg = '';
     }
 
+    // Aliases para el nuevo modal (reemplazan el drawer)
+    modalOpen = false;
+
+    abrirModal(historia: any) {
+        this.abrirDrawer(historia); // reutiliza la lógica existente
+        this.modalOpen = true;
+        this.drawerOpen = false;   // cierra el drawer si estaba abierto
+    }
+
+    cerrarModal() {
+        this.modalOpen = false;
+        this.editTitulo = '';
+        this.editComo = '';
+        this.editQuiero = '';
+        this.editParaque = '';
+        this.editPrioridad = 'media';
+        this.editEstimacion = '';
+        this.editCriteriosAceptacion = [''];
+        this.editErrorMsg = '';
+    }
     guardarEdicion(): void {
         if (!this.editandoHistoria) return;
         if (!this.editTitulo.trim() || !this.editComo.trim() || !this.editQuiero.trim() || !this.editParaque.trim()) {
