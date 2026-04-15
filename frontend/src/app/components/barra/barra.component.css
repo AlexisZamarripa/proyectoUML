@@ -16,16 +16,60 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+  max-height: calc(100vh - 130px);
+  overflow-y: auto;
+  padding-right: 2px;
 }
 
-/* Section Label */
+/* Section Header */
+.nav-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.nav-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  border: none;
+  background: none;
+  text-align: left;
+  padding: 12px 14px 4px;
+  color: var(--text-muted, #64748b);
+  cursor: default;
+}
+
+.nav-section-header.is-collapsible {
+  cursor: pointer;
+}
+
 .nav-section-label {
   font-size: 0.65rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--text-muted, #64748b);
-  padding: 14px 14px 6px;
+}
+
+.section-chevron {
+  color: var(--text-muted, #64748b);
+  transition: transform 0.18s ease;
+}
+
+.section-chevron.expanded {
+  transform: rotate(90deg);
+}
+
+.section-items {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-left: 10px;
+  padding-left: 10px;
+  border-left: 1px solid var(--border-color, #1e3a5f);
 }
 
 /* Nav Item */
@@ -45,6 +89,14 @@
   background: none;
   width: 100%;
   text-align: left;
+}
+
+.nav-item svg {
+  flex-shrink: 0;
+}
+
+.nav-item-indented {
+  margin-left: 6px;
 }
 
 .nav-item:hover {
@@ -86,29 +138,32 @@
 /* ===== RESPONSIVE ===== */
 @media (max-width: 900px) {
   .barra {
-    min-width: unset;
-    max-width: unset;
+    min-width: 100%;
+    max-width: 100%;
     position: static;
-    display: flex;
+    top: auto;
     border-radius: 10px;
-    padding: 8px;
-    overflow-x: auto;
+    padding: 12px 10px;
   }
 
   .barra-nav {
-    flex-direction: row;
-    gap: 4px;
-    width: 100%;
+    max-height: none;
+    overflow-y: visible;
   }
 
-  .nav-section-label {
-    display: none;
+  .section-items {
+    margin-left: 8px;
+    padding-left: 8px;
   }
+}
 
+@media (max-width: 560px) {
   .nav-item {
-    white-space: nowrap;
-    padding: 8px 12px;
-    font-size: 0.78rem;
-    flex-shrink: 0;
+    padding: 9px 12px;
+    font-size: 0.8rem;
+  }
+
+  .nav-item-indented {
+    margin-left: 4px;
   }
 }

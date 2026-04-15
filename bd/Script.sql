@@ -1,3 +1,5 @@
+CREATE DATABASE  IF NOT EXISTS `graficacion` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci */ /*!80016 DEFAULT ENCRYPTION='N' */;
+USE `graficacion`;
 -- MySQL dump 10.13  Distrib 8.0.43, for Win64 (x86_64)
 --
 -- Host: localhost    Database: graficacion
@@ -44,7 +46,7 @@ CREATE TABLE `documentos` (
   CONSTRAINT `documentos_ibfk_1` FOREIGN KEY (`id_proyecto`) REFERENCES `proyectos` (`id_proyecto`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `documentos_ibfk_2` FOREIGN KEY (`id_proceso`) REFERENCES `procesos` (`id_proceso`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `documentos_ibfk_3` FOREIGN KEY (`id_subproceso`) REFERENCES `subprocesos` (`id_subproceso`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -53,6 +55,7 @@ CREATE TABLE `documentos` (
 
 LOCK TABLES `documentos` WRITE;
 /*!40000 ALTER TABLE `documentos` DISABLE KEYS */;
+INSERT INTO `documentos` VALUES (3,'asd','asd','informe2.pdf','pdf','/uploads/documentos/1774116920770-781247322.pdf','asd','[\"asd\"]','asd',1,1,10,'asd','[{\"nombre\":\"informe2.pdf\",\"tipo\":\"PDF\",\"url\":\"/uploads/documentos/1774116920770-781247322.pdf\",\"descripcion\":\"asd\"}]');
 /*!40000 ALTER TABLE `documentos` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -139,19 +142,18 @@ CREATE TABLE `focus_group` (
   `nombre_focus` varchar(150) DEFAULT NULL,
   `descripcion` text,
   `fecha_inicio` date DEFAULT NULL,
+  `fecha_fin` date DEFAULT NULL,
+  `modalidad` enum('presencial','virtual','hibrido') DEFAULT NULL,
+  `lugar` varchar(200) DEFAULT NULL,
+  `moderador` varchar(150) DEFAULT NULL,
+  `numero_participantes` int DEFAULT NULL,
+  `conclusiones` text,
   `estado` enum('planificacion','en_progreso','pausado','completado') DEFAULT NULL,
-  `color` varchar(30) DEFAULT NULL,
   `id_proyecto` int NOT NULL,
-  `id_proceso` int NOT NULL,
-  `id_subproceso` int NOT NULL,
   PRIMARY KEY (`id_focus`),
   KEY `id_proyecto` (`id_proyecto`),
-  KEY `id_proceso` (`id_proceso`),
-  KEY `id_subproceso` (`id_subproceso`),
-  CONSTRAINT `focus_group_ibfk_1` FOREIGN KEY (`id_proyecto`) REFERENCES `proyectos` (`id_proyecto`) ON DELETE CASCADE ON UPDATE CASCADE,
-  CONSTRAINT `focus_group_ibfk_2` FOREIGN KEY (`id_proceso`) REFERENCES `procesos` (`id_proceso`) ON DELETE CASCADE ON UPDATE CASCADE,
-  CONSTRAINT `focus_group_ibfk_3` FOREIGN KEY (`id_subproceso`) REFERENCES `subprocesos` (`id_subproceso`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  CONSTRAINT `focus_group_ibfk_1` FOREIGN KEY (`id_proyecto`) REFERENCES `proyectos` (`id_proyecto`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -160,6 +162,7 @@ CREATE TABLE `focus_group` (
 
 LOCK TABLES `focus_group` WRITE;
 /*!40000 ALTER TABLE `focus_group` DISABLE KEYS */;
+INSERT INTO `focus_group` VALUES (2,'focus group','prueba','2026-03-03','2026-03-04','virtual','zoom','yo',1,'no se','en_progreso',1);
 /*!40000 ALTER TABLE `focus_group` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -180,8 +183,8 @@ CREATE TABLE `historias_usuario` (
   `estimacion` varchar(20) DEFAULT NULL,
   `criterios_aceptacion` text,
   `id_proyecto` int NOT NULL,
-  `id_proceso` int NOT NULL,
-  `id_subproceso` int NOT NULL,
+  `id_proceso` int DEFAULT NULL,
+  `id_subproceso` int DEFAULT NULL,
   PRIMARY KEY (`id_historia`),
   KEY `id_proyecto` (`id_proyecto`),
   KEY `id_proceso` (`id_proceso`),
@@ -189,7 +192,7 @@ CREATE TABLE `historias_usuario` (
   CONSTRAINT `historias_usuario_ibfk_1` FOREIGN KEY (`id_proyecto`) REFERENCES `proyectos` (`id_proyecto`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `historias_usuario_ibfk_2` FOREIGN KEY (`id_proceso`) REFERENCES `procesos` (`id_proceso`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `historias_usuario_ibfk_3` FOREIGN KEY (`id_subproceso`) REFERENCES `subprocesos` (`id_subproceso`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -198,6 +201,7 @@ CREATE TABLE `historias_usuario` (
 
 LOCK TABLES `historias_usuario` WRITE;
 /*!40000 ALTER TABLE `historias_usuario` DISABLE KEYS */;
+INSERT INTO `historias_usuario` VALUES (2,'hsitoria','asd','asdasd','asd','baja','2','asd | 123',1,NULL,NULL);
 /*!40000 ALTER TABLE `historias_usuario` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -224,7 +228,7 @@ CREATE TABLE `observaciones` (
   CONSTRAINT `observaciones_ibfk_1` FOREIGN KEY (`id_proyecto`) REFERENCES `proyectos` (`id_proyecto`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `observaciones_ibfk_2` FOREIGN KEY (`id_proceso`) REFERENCES `procesos` (`id_proceso`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `observaciones_ibfk_3` FOREIGN KEY (`id_subproceso`) REFERENCES `subprocesos` (`id_subproceso`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -233,6 +237,7 @@ CREATE TABLE `observaciones` (
 
 LOCK TABLES `observaciones` WRITE;
 /*!40000 ALTER TABLE `observaciones` DISABLE KEYS */;
+INSERT INTO `observaciones` VALUES (3,NULL,'observaciones','asd','',1,1,7);
 /*!40000 ALTER TABLE `observaciones` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -309,7 +314,7 @@ CREATE TABLE `preguntas_entrevista` (
   PRIMARY KEY (`id_pregunta`),
   KEY `id_entrevista` (`id_entrevista`),
   CONSTRAINT `preguntas_entrevista_ibfk_1` FOREIGN KEY (`id_entrevista`) REFERENCES `entrevistas` (`id_entrevista`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -318,7 +323,7 @@ CREATE TABLE `preguntas_entrevista` (
 
 LOCK TABLES `preguntas_entrevista` WRITE;
 /*!40000 ALTER TABLE `preguntas_entrevista` DISABLE KEYS */;
-INSERT INTO `preguntas_entrevista` VALUES (7,6,'pregunta1','hola'),(8,6,'pregunta2','hola1');
+INSERT INTO `preguntas_entrevista` VALUES (11,6,'pregunta1','holaa'),(12,6,'pregunta2','hola1asdasd');
 /*!40000 ALTER TABLE `preguntas_entrevista` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -354,7 +359,7 @@ CREATE TABLE `procesos` (
 
 LOCK TABLES `procesos` WRITE;
 /*!40000 ALTER TABLE `procesos` DISABLE KEYS */;
-INSERT INTO `procesos` VALUES (1,1,'alexis','nose','blue',NULL,'[]',NULL,1,'[]');
+INSERT INTO `procesos` VALUES (1,1,'alexis','nose','blue',NULL,'[]',NULL,NULL,'[]');
 /*!40000 ALTER TABLE `procesos` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -407,7 +412,7 @@ CREATE TABLE `respuestas_encuesta` (
   CONSTRAINT `respuestas_ibfk_1` FOREIGN KEY (`id_pregunta`) REFERENCES `preguntas_encuesta` (`id_pregunta`) ON DELETE CASCADE,
   CONSTRAINT `respuestas_ibfk_2` FOREIGN KEY (`id_encuesta`) REFERENCES `encuestas` (`id_encuesta`) ON DELETE CASCADE,
   CONSTRAINT `respuestas_ibfk_3` FOREIGN KEY (`id_subproceso`) REFERENCES `subprocesos` (`id_subproceso`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -416,7 +421,7 @@ CREATE TABLE `respuestas_encuesta` (
 
 LOCK TABLES `respuestas_encuesta` WRITE;
 /*!40000 ALTER TABLE `respuestas_encuesta` DISABLE KEYS */;
-INSERT INTO `respuestas_encuesta` VALUES (2,5,6,6,'hol','2026-02-26 10:45:14');
+INSERT INTO `respuestas_encuesta` VALUES (4,5,6,6,'holaaakjbas','2026-03-21 11:03:40');
 /*!40000 ALTER TABLE `respuestas_encuesta` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -484,7 +489,7 @@ CREATE TABLE `stakeholders` (
   CONSTRAINT `stakeholders_ibfk_1` FOREIGN KEY (`id_proyecto`) REFERENCES `proyectos` (`id_proyecto`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `stakeholders_ibfk_2` FOREIGN KEY (`id_proceso`) REFERENCES `procesos` (`id_proceso`) ON DELETE SET NULL ON UPDATE CASCADE,
   CONSTRAINT `stakeholders_ibfk_3` FOREIGN KEY (`id_subproceso`) REFERENCES `subprocesos` (`id_subproceso`) ON DELETE SET NULL ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -493,7 +498,7 @@ CREATE TABLE `stakeholders` (
 
 LOCK TABLES `stakeholders` WRITE;
 /*!40000 ALTER TABLE `stakeholders` DISABLE KEYS */;
-INSERT INTO `stakeholders` VALUES (1,1,NULL,NULL,'alexis','nose','nose','nose','nose','blue');
+INSERT INTO `stakeholders` VALUES (2,1,NULL,NULL,'stakeholder','nose','nose','nose','nose','pink');
 /*!40000 ALTER TABLE `stakeholders` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -624,6 +629,7 @@ CREATE TABLE `subproceso_focus` (
 
 LOCK TABLES `subproceso_focus` WRITE;
 /*!40000 ALTER TABLE `subproceso_focus` DISABLE KEYS */;
+INSERT INTO `subproceso_focus` VALUES (1,1,10,2);
 /*!40000 ALTER TABLE `subproceso_focus` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -656,6 +662,7 @@ CREATE TABLE `subproceso_historia` (
 
 LOCK TABLES `subproceso_historia` WRITE;
 /*!40000 ALTER TABLE `subproceso_historia` DISABLE KEYS */;
+INSERT INTO `subproceso_historia` VALUES (1,1,8,2);
 /*!40000 ALTER TABLE `subproceso_historia` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -688,6 +695,7 @@ CREATE TABLE `subproceso_observacion` (
 
 LOCK TABLES `subproceso_observacion` WRITE;
 /*!40000 ALTER TABLE `subproceso_observacion` DISABLE KEYS */;
+INSERT INTO `subproceso_observacion` VALUES (1,1,13,3);
 /*!40000 ALTER TABLE `subproceso_observacion` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -744,7 +752,7 @@ CREATE TABLE `subprocesos` (
   CONSTRAINT `fk_subproceso_stakeholder` FOREIGN KEY (`id_stakeholder`) REFERENCES `stakeholders` (`id_stakeholder`) ON DELETE SET NULL ON UPDATE CASCADE,
   CONSTRAINT `subprocesos_ibfk_1` FOREIGN KEY (`id_proyecto`) REFERENCES `proyectos` (`id_proyecto`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `subprocesos_ibfk_2` FOREIGN KEY (`id_proceso`) REFERENCES `procesos` (`id_proceso`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=14 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -753,13 +761,9 @@ CREATE TABLE `subprocesos` (
 
 LOCK TABLES `subprocesos` WRITE;
 /*!40000 ALTER TABLE `subprocesos` DISABLE KEYS */;
-INSERT INTO `subprocesos` VALUES (6,1,1,'kasjbd','kajsb',1),(7,1,1,'entrevista','asldnjn',1);
+INSERT INTO `subprocesos` VALUES (6,1,1,'kasjbd','kajsb',NULL),(7,1,1,'entrevista','asldnjn',NULL),(8,1,1,'historiaUsuario','asd',NULL),(10,1,1,'Focus group','prueba',NULL),(13,1,1,'observaciones','asdih',2);
 /*!40000 ALTER TABLE `subprocesos` ENABLE KEYS */;
 UNLOCK TABLES;
-
---
--- Dumping routines for database 'graficacion'
---
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
@@ -770,4 +774,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-02-26 11:00:19
+-- Dump completed on 2026-04-14 21:26:44
