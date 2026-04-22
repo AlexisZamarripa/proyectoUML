@@ -1,6 +1,6 @@
 import { Component, Input, OnInit, OnChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 
 interface NavItem {
   id: string;
@@ -12,15 +12,13 @@ interface NavItem {
 interface NavSection {
   id: string;
   label: string;
-  collapsible: boolean;
-  expanded: boolean;
   items: NavItem[];
 }
 
 @Component({
   selector: 'app-barra',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule],
   templateUrl: './barra.component.html',
   styleUrls: ['./barra.component.css']
 })
@@ -31,6 +29,8 @@ export class BarraComponent implements OnInit, OnChanges {
   topItems: NavItem[] = [];
   navSections: NavSection[] = [];
 
+  constructor(private readonly router: Router) {}
+
   ngOnInit(): void {
     this.buildNavigation();
   }
@@ -39,12 +39,19 @@ export class BarraComponent implements OnInit, OnChanges {
     this.buildNavigation();
   }
 
-  toggleSection(sectionId: string): void {
-    const section = this.navSections.find((item) => item.id === sectionId);
-    if (!section || !section.collapsible) {
+  navigate(route: string, event: MouseEvent): void {
+    if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) {
       return;
     }
-    section.expanded = !section.expanded;
+
+    event.preventDefault();
+
+    void this.router.navigateByUrl(route, {
+      state: {
+        preserveScroll: true,
+        scrollY: window.scrollY,
+      },
+    });
   }
 
   private buildNavigation(): void {
@@ -59,8 +66,6 @@ export class BarraComponent implements OnInit, OnChanges {
       {
         id: 'analysis',
         label: 'ANÁLISIS',
-        collapsible: true,
-        expanded: false,
         items: [
           { id: 'entrevistas', label: 'Entrevistas', icon: 'file', route: `${base}/entrevistas` },
           { id: 'encuestas', label: 'Encuestas', icon: 'clipboard', route: `${base}/encuestas` },
@@ -74,22 +79,10 @@ export class BarraComponent implements OnInit, OnChanges {
       {
         id: 'visualization',
         label: 'VISUALIZACIÓN',
-        collapsible: false,
-        expanded: true,
         items: [
           { id: 'diagramas', label: 'Diagramas', icon: 'diagram', route: `${base}/diagramas` },
         ],
       },
     ];
-
-    this.expandSectionWithActiveItem();
-  }
-
-  private expandSectionWithActiveItem(): void {
-    for (const section of this.navSections) {
-      if (section.collapsible && section.items.some((item) => item.id === this.activeTab)) {
-        section.expanded = true;
-      }
-    }
   }
 }

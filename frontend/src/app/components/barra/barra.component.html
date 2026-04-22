@@ -5,31 +5,11 @@
     </ng-container>
 
     <section class="nav-section" *ngFor="let section of navSections">
-      <button
-        class="nav-section-header"
-        type="button"
-        [class.is-collapsible]="section.collapsible"
-        (click)="toggleSection(section.id)"
-      >
+      <div class="nav-section-header">
         <span class="nav-section-label">{{ section.label }}</span>
-        <svg
-          *ngIf="section.collapsible"
-          class="section-chevron"
-          [class.expanded]="section.expanded"
-          width="14"
-          height="14"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2.4"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <polyline points="9 6 15 12 9 18"></polyline>
-        </svg>
-      </button>
+      </div>
 
-      <div class="section-items" *ngIf="!section.collapsible || section.expanded">
+      <div class="section-items">
         <ng-container *ngFor="let item of section.items">
           <ng-container *ngTemplateOutlet="navItemTemplate; context: { $implicit: item, indented: true }"></ng-container>
         </ng-container>
@@ -43,7 +23,8 @@
     class="nav-item"
     [class.nav-item-indented]="indented"
     [class.active]="activeTab === item.id"
-    [routerLink]="item.route"
+    [attr.href]="item.route"
+    (click)="navigate(item.route, $event)"
   >
     <!-- Stakeholders / Users -->
     <svg *ngIf="item.icon === 'users'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
