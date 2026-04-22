@@ -1,0 +1,53 @@
+<section class="canvas-card">
+    <div class="canvas-head">
+        <div class="canvas-head-text">
+            <h3 class="canvas-title">Canvas: {{ diagram.nombre }}</h3>
+            <p class="canvas-subtitle">Diagrama de Casos de Uso</p>
+        </div>
+
+        <div class="canvas-actions">
+            <button type="button" class="btn-secondary" (click)="guardarLienzo()">Guardar estructura</button>
+            <button type="button" class="btn-secondary" [disabled]="canvasNodes.length === 0"
+                (click)="clearCanvas()">Limpiar canvas</button>
+        </div>
+    </div>
+
+    <p class="canvas-description">
+        Representa actores y funcionalidades del sistema. Arrastra elementos desde la paleta para construir la base del
+        diagrama.
+    </p>
+
+    <div class="canvas-layout">
+        <aside class="palette-panel">
+            <h4 class="palette-title">Paleta de componentes</h4>
+            <p class="palette-desc">Drag and drop sobre el área de trabajo.</p>
+
+            <div class="palette-list">
+                <div class="palette-item" *ngFor="let item of palette; trackBy: trackByPalette" draggable="true"
+                    (dragstart)="onPaletteDragStart($event, item)">
+                    <span class="palette-label">{{ item.label }}</span>
+                    <span class="palette-hint">{{ item.hint }}</span>
+                </div>
+            </div>
+        </aside>
+
+        <div class="stage-wrapper">
+            <div class="canvas-stage" #canvasStage (dragover)="onCanvasDragOver($event)" (drop)="onCanvasDrop($event)">
+                <div class="canvas-stage-hint" *ngIf="canvasNodes.length === 0">
+                    Suelta aquí elementos UML para iniciar el diagrama.
+                </div>
+
+                <div class="canvas-node" *ngFor="let node of canvasNodes; trackBy: trackByNode"
+                    [attr.data-kind]="node.kind" [class.dragging]="draggingNodeId === node.id" [style.left.px]="node.x"
+                    [style.top.px]="node.y" (pointerdown)="startNodeDrag($event, node.id)">
+                    <button type="button" class="node-remove" title="Eliminar nodo"
+                        (click)="removeNode(node.id, $event)">
+                        x
+                    </button>
+                    <span class="node-label">{{ node.label }}</span>
+                    <span class="node-kind">{{ node.kind }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>

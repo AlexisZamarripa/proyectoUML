@@ -34,7 +34,7 @@
       <div class="content-header">
         <div class="content-header-text">
           <h2 class="content-title">Diagramas</h2>
-          <p class="content-subtitle">Lista, crea y edita diagramas base para el canvas drag and drop</p>
+          <p class="content-subtitle">Lista, crea y edita diagramas UML</p>
         </div>
 
         <button type="button" class="btn-create" (click)="toggleCreateForm()">
@@ -49,23 +49,13 @@
       </div>
 
       <div class="type-filters">
-        <button
-          type="button"
-          class="type-filter"
-          [class.active]="filterTipo === 'todos'"
-          (click)="setFilter('todos')"
-        >
+        <button type="button" class="type-filter" [class.active]="filterTipo === 'todos'" (click)="setFilter('todos')">
           <span>Todos</span>
           <strong>{{ diagramas.length }}</strong>
         </button>
 
-        <button
-          type="button"
-          class="type-filter"
-          *ngFor="let type of umlTypeDefinitions; trackBy: trackByType"
-          [class.active]="filterTipo === type.id"
-          (click)="setFilter(type.id)"
-        >
+        <button type="button" class="type-filter" *ngFor="let type of umlTypeDefinitions; trackBy: trackByType"
+          [class.active]="filterTipo === type.id" (click)="setFilter(type.id)">
           <span>{{ type.nombre }}</span>
           <strong>{{ countByType(type.id) }}</strong>
         </button>
@@ -73,18 +63,13 @@
 
       <section class="create-card" *ngIf="showCreateForm">
         <h3 class="create-title">Crear nuevo diagrama UML</h3>
-        <p class="create-subtitle">Este formulario crea la base para el editor visual drag and drop.</p>
+        <p class="create-subtitle">Selecciona el tipo de diagrama que deseas crear.</p>
 
         <div class="create-grid">
           <div class="form-group form-group-large">
             <label class="form-label">Nombre del diagrama</label>
-            <input
-              type="text"
-              class="form-input"
-              [(ngModel)]="newDiagram.nombre"
-              name="newDiagramNombre"
-              placeholder="Ej: Modelo de dominio ventas"
-            />
+            <input type="text" class="form-input" [(ngModel)]="newDiagram.nombre" name="newDiagramNombre"
+              placeholder="Ej: Modelo de dominio ventas" />
           </div>
 
           <div class="form-group">
@@ -98,24 +83,14 @@
           </div>
 
           <div class="form-group form-group-large">
-            <label class="form-label">Descripcion</label>
-            <textarea
-              class="form-input form-textarea"
-              [(ngModel)]="newDiagram.descripcion"
-              name="newDiagramDescripcion"
-              rows="3"
-              placeholder="Objetivo del diagrama y alcance inicial"
-            ></textarea>
+            <label class="form-label">Descripción</label>
+            <textarea class="form-input form-textarea" [(ngModel)]="newDiagram.descripcion" name="newDiagramDescripcion"
+              rows="3" placeholder="Objetivo del diagrama y alcance inicial"></textarea>
           </div>
         </div>
 
         <div class="create-actions">
-          <button
-            type="button"
-            class="btn-create"
-            [disabled]="!newDiagram.nombre.trim()"
-            (click)="createDiagram()"
-          >
+          <button type="button" class="btn-create" [disabled]="!newDiagram.nombre.trim()" (click)="createDiagram()">
             Crear diagrama base
           </button>
         </div>
@@ -128,26 +103,21 @@
         </div>
 
         <div class="diagram-list" *ngIf="diagramasFiltrados.length > 0; else emptyDiagrams">
-          <button
-          type="button"
-          class="diagram-item"
-          *ngFor="let diagram of diagramasFiltrados; trackBy: trackByDiagram"
-          [class.active]="diagram.id === selectedDiagramId"
-          (click)="selectDiagram(diagram.id)"
-        >
-          <div class="diagram-item-top">
-            <span class="diagram-type">{{ getTypeName(diagram.tipo) }}</span>
-            <span class="diagram-date">{{ diagram.actualizadoEn | date:'dd/MM/yyyy HH:mm' }}</span>
-          </div>
+          <button type="button" class="diagram-item" *ngFor="let diagram of diagramasFiltrados; trackBy: trackByDiagram"
+            [class.active]="diagram.id === selectedDiagramId" (click)="selectDiagram(diagram.id)">
+            <div class="diagram-item-top">
+              <span class="diagram-type">{{ getTypeName(diagram.tipo) }}</span>
+              <span class="diagram-date">{{ diagram.actualizadoEn | date:'dd/MM/yyyy HH:mm' }}</span>
+            </div>
 
-          <h3 class="diagram-name">{{ diagram.nombre }}</h3>
-          <p class="diagram-desc">{{ diagram.descripcion || 'Sin descripcion' }}</p>
+            <h3 class="diagram-name">{{ diagram.nombre }}</h3>
+            <p class="diagram-desc">{{ diagram.descripcion || 'Sin descripción' }}</p>
 
-          <div class="diagram-meta">
-            <span>{{ diagram.nodes.length }} nodos</span>
-            <span>{{ diagram.id | slice:0:8 }}</span>
-          </div>
-        </button>
+            <div class="diagram-meta">
+              <span>{{ diagram.nodes.length }} nodos</span>
+              <span>{{ diagram.id | slice:0:8 }}</span>
+            </div>
+          </button>
         </div>
 
         <ng-template #emptyDiagrams>
@@ -159,90 +129,34 @@
                 <line x1="8" y1="13" x2="16" y2="13"></line>
               </svg>
             </div>
-            <h3 class="empty-title">Aun no hay diagramas UML</h3>
-            <p class="empty-desc">Usa el boton "Nuevo diagrama" para crear el primero.</p>
+            <h3 class="empty-title">Aún no hay diagramas UML</h3>
+            <p class="empty-desc">Usa el botón "Nuevo diagrama" para crear el primero.</p>
             <button type="button" class="btn-create" (click)="showCreateForm = true">Nuevo diagrama</button>
           </div>
         </ng-template>
       </section>
 
-      <section class="canvas-card" *ngIf="selectedDiagram as selected; else noSelectedDiagram">
-        <div class="canvas-head">
-          <div class="canvas-head-text">
-            <h3 class="canvas-title">Canvas: {{ selected.nombre }}</h3>
-            <p class="canvas-subtitle">{{ getTypeName(selected.tipo) }}</p>
-          </div>
+      <!-- Canvas específicos por tipo -->
+      <app-canvas-clases *ngIf="selectedDiagram?.tipo === 'clases'" [diagram]="selectedDiagram!"
+        (diagramUpdated)="onDiagramUpdated($event)">
+      </app-canvas-clases>
 
-          <div class="canvas-actions">
-            <button type="button" class="btn-secondary" (click)="guardarLienzo()">Guardar estructura</button>
-            <button type="button" class="btn-secondary" [disabled]="canvasNodes.length === 0" (click)="clearCanvas()">Limpiar canvas</button>
-          </div>
-        </div>
+      <app-canvas-casos-uso *ngIf="selectedDiagram?.tipo === 'casos-uso'" [diagram]="selectedDiagram!"
+        (diagramUpdated)="onDiagramUpdated($event)">
+      </app-canvas-casos-uso>
 
-        <p class="canvas-description">
-          {{ getTypeDescription(selected.tipo) }} Arrastra elementos desde la paleta para construir la base del diagrama.
-        </p>
+      <app-canvas-secuencia *ngIf="selectedDiagram?.tipo === 'secuencia'" [diagram]="selectedDiagram!"
+        (diagramUpdated)="onDiagramUpdated($event)">
+      </app-canvas-secuencia>
 
-        <div class="canvas-layout">
-          <aside class="palette-panel">
-            <h4 class="palette-title">Paleta de componentes</h4>
-            <p class="palette-desc">Drag and drop sobre el area de trabajo.</p>
+      <app-canvas-paquetes *ngIf="selectedDiagram?.tipo === 'paquetes'" [diagram]="selectedDiagram!"
+        (diagramUpdated)="onDiagramUpdated($event)">
+      </app-canvas-paquetes>
 
-            <div class="palette-list">
-              <div
-                class="palette-item"
-                *ngFor="let item of activePalette; trackBy: trackByPalette"
-                draggable="true"
-                (dragstart)="onPaletteDragStart($event, item)"
-              >
-                <span class="palette-label">{{ item.label }}</span>
-                <span class="palette-hint">{{ item.hint }}</span>
-              </div>
-            </div>
-          </aside>
-
-          <div class="stage-wrapper">
-            <div
-              class="canvas-stage"
-              #canvasStage
-              (dragover)="onCanvasDragOver($event)"
-              (drop)="onCanvasDrop($event)"
-            >
-              <div class="canvas-stage-hint" *ngIf="canvasNodes.length === 0">
-                Suelta aqui elementos UML para iniciar el diagrama.
-              </div>
-
-              <div
-                class="canvas-node"
-                *ngFor="let node of canvasNodes; trackBy: trackByNode"
-                [attr.data-kind]="node.kind"
-                [class.dragging]="draggingNodeId === node.id"
-                [style.left.px]="node.x"
-                [style.top.px]="node.y"
-                (pointerdown)="startNodeDrag($event, node.id)"
-              >
-                <button
-                  type="button"
-                  class="node-remove"
-                  title="Eliminar nodo"
-                  (click)="removeNode(node.id, $event)"
-                >
-                  x
-                </button>
-                <span class="node-label">{{ node.label }}</span>
-                <span class="node-kind">{{ node.kind }}</span>
-              </div>
-            </div>
-          </div>
-        </div>
+      <section class="canvas-empty" *ngIf="!selectedDiagram">
+        <h3 class="canvas-empty-title">Selecciona un diagrama para abrir su canvas</h3>
+        <p class="canvas-empty-desc">Cuando crees o selecciones un diagrama, aquí aparecerá el editor específico.</p>
       </section>
-
-      <ng-template #noSelectedDiagram>
-        <section class="canvas-empty">
-          <h3 class="canvas-empty-title">Selecciona un diagrama para abrir su canvas</h3>
-          <p class="canvas-empty-desc">Cuando crees o selecciones un diagrama, aqui aparecera el editor drag and drop.</p>
-        </section>
-      </ng-template>
 
     </div>
   </div>
