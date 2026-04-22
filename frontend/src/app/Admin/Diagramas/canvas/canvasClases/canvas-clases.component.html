@@ -1,53 +1,332 @@
 <section class="canvas-card">
+
+    <!-- ── HEADER ── -->
     <div class="canvas-head">
         <div class="canvas-head-text">
             <h3 class="canvas-title">Canvas: {{ diagram.nombre }}</h3>
-            <p class="canvas-subtitle">Diagrama de Clases</p>
+            <p class="canvas-subtitle">Diagrama de Clases UML</p>
         </div>
-
         <div class="canvas-actions">
-            <button type="button" class="btn-secondary" (click)="guardarLienzo()">Guardar estructura</button>
-            <button type="button" class="btn-secondary" [disabled]="canvasNodes.length === 0"
-                (click)="clearCanvas()">Limpiar canvas</button>
+            <button type="button" class="btn-secondary" (click)="guardarLienzo()">
+                <span class="btn-icon">💾</span> Guardar
+            </button>
+            <button type="button" class="btn-secondary btn-danger" [disabled]="canvasNodes.length === 0"
+                (click)="clearCanvas()">
+                <span class="btn-icon">🗑️</span> Limpiar
+            </button>
         </div>
     </div>
 
     <p class="canvas-description">
-        Define entidades, atributos y relaciones del dominio. Arrastra elementos desde la paleta para construir la base
-        del diagrama.
+        Arrastra elementos desde la paleta para construir el diagrama. Mueve nodos libremente
+        y elimínalos con <strong>×</strong>.
     </p>
 
+    <!-- ── LAYOUT ── -->
     <div class="canvas-layout">
+
+        <!-- ════════════════════════════════════
+         PALETTE PANEL
+         ════════════════════════════════════ -->
         <aside class="palette-panel">
-            <h4 class="palette-title">Paleta de componentes</h4>
-            <p class="palette-desc">Drag and drop sobre el área de trabajo.</p>
 
-            <div class="palette-list">
-                <div class="palette-item" *ngFor="let item of palette; trackBy: trackByPalette" draggable="true"
-                    (dragstart)="onPaletteDragStart($event, item)">
-                    <span class="palette-label">{{ item.label }}</span>
-                    <span class="palette-hint">{{ item.hint }}</span>
-                </div>
+            <div class="palette-header">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                    <rect x="3" y="3" width="8" height="8" />
+                    <rect x="13" y="3" width="8" height="8" />
+                    <rect x="3" y="13" width="8" height="8" />
+                    <rect x="13" y="13" width="8" height="8" />
+                </svg>
+                <span>DIAGRAMA DE CLASES</span>
             </div>
-        </aside>
 
+            <!-- ── ELEMENTOS ── -->
+            <div class="palette-group">
+                <button type="button" class="group-header" (click)="toggleGroup('figuras')">
+                    <span class="group-label">ELEMENTOS</span>
+                    <span class="group-chevron" [class.collapsed]="isGroupCollapsed('figuras')">›</span>
+                </button>
+
+                <div class="palette-list" [class.hidden]="isGroupCollapsed('figuras')">
+
+                    <!-- Clase -->
+                    <div class="palette-item" draggable="true" data-kind="clase"
+                        (dragstart)="onPaletteDragStart($event, paletteGroups[0].items[0])">
+                        <div class="pi-visual">
+                            <svg viewBox="0 0 72 46" xmlns="http://www.w3.org/2000/svg">
+                                <rect x="1" y="1" width="70" height="44" fill="none" stroke="currentColor"
+                                    stroke-width="1.6" />
+                                <line x1="1" y1="15" x2="71" y2="15" stroke="currentColor" stroke-width="1.4" />
+                                <line x1="1" y1="29" x2="71" y2="29" stroke="currentColor" stroke-width="1.4" />
+                                <text x="36" y="11" text-anchor="middle" font-size="6.5" fill="currentColor"
+                                    font-family="sans-serif" font-weight="bold">ClassName</text>
+                                <text x="5" y="24" font-size="5.5" fill="currentColor" font-family="monospace">+ attr:
+                                    String</text>
+                                <text x="5" y="40" font-size="5.5" fill="currentColor" font-family="monospace">+
+                                    method(): void</text>
+                            </svg>
+                        </div>
+                        <span class="pi-label">Clase</span>
+                    </div>
+
+                    <!-- Clase Abstracta -->
+                    <div class="palette-item" draggable="true" data-kind="clase-abstracta"
+                        (dragstart)="onPaletteDragStart($event, paletteGroups[0].items[1])">
+                        <div class="pi-visual">
+                            <svg viewBox="0 0 72 46" xmlns="http://www.w3.org/2000/svg">
+                                <rect x="1" y="1" width="70" height="44" fill="none" stroke="currentColor"
+                                    stroke-width="1.6" stroke-dasharray="5,3" />
+                                <line x1="1" y1="16" x2="71" y2="16" stroke="currentColor" stroke-width="1.4"
+                                    stroke-dasharray="5,3" />
+                                <line x1="1" y1="29" x2="71" y2="29" stroke="currentColor" stroke-width="1.4"
+                                    stroke-dasharray="5,3" />
+                                <text x="36" y="8" text-anchor="middle" font-size="5" fill="currentColor"
+                                    font-family="sans-serif" font-style="italic">«abstract»</text>
+                                <text x="36" y="14" text-anchor="middle" font-size="6" fill="currentColor"
+                                    font-family="sans-serif" font-style="italic" font-weight="bold">AbstractClass</text>
+                                <text x="5" y="24" font-size="5.5" fill="currentColor" font-family="monospace"># attr:
+                                    int</text>
+                                <text x="5" y="40" font-size="5.5" fill="currentColor" font-family="monospace">+
+                                    method(): void</text>
+                            </svg>
+                        </div>
+                        <span class="pi-label">Clase Abstracta</span>
+                    </div>
+
+                    <!-- Interfaz -->
+                    <div class="palette-item" draggable="true" data-kind="interfaz"
+                        (dragstart)="onPaletteDragStart($event, paletteGroups[0].items[2])">
+                        <div class="pi-visual">
+                            <svg viewBox="0 0 72 46" xmlns="http://www.w3.org/2000/svg">
+                                <!-- lollipop style -->
+                                <circle cx="36" cy="16" r="10" fill="none" stroke="currentColor" stroke-width="1.6" />
+                                <line x1="36" y1="26" x2="36" y2="34" stroke="currentColor" stroke-width="1.6" />
+                                <line x1="24" y1="34" x2="48" y2="34" stroke="currentColor" stroke-width="1.6" />
+                                <text x="36" y="43" text-anchor="middle" font-size="5.5" fill="currentColor"
+                                    font-family="sans-serif">«interface»</text>
+                            </svg>
+                        </div>
+                        <span class="pi-label">Interfaz</span>
+                    </div>
+
+                    <!-- Enumeración -->
+                    <div class="palette-item" draggable="true" data-kind="enumeracion"
+                        (dragstart)="onPaletteDragStart($event, paletteGroups[0].items[3])">
+                        <div class="pi-visual">
+                            <svg viewBox="0 0 72 46" xmlns="http://www.w3.org/2000/svg">
+                                <rect x="1" y="1" width="70" height="44" fill="none" stroke="currentColor"
+                                    stroke-width="1.6" />
+                                <line x1="1" y1="18" x2="71" y2="18" stroke="currentColor" stroke-width="1.4" />
+                                <text x="36" y="8" text-anchor="middle" font-size="5" fill="currentColor"
+                                    font-family="sans-serif">«enum»</text>
+                                <text x="36" y="15" text-anchor="middle" font-size="6.5" fill="currentColor"
+                                    font-family="sans-serif" font-weight="bold">Estado</text>
+                                <text x="5" y="27" font-size="5.5" fill="currentColor"
+                                    font-family="monospace">ACTIVO</text>
+                                <text x="5" y="35" font-size="5.5" fill="currentColor"
+                                    font-family="monospace">INACTIVO</text>
+                                <text x="5" y="43" font-size="5.5" fill="currentColor"
+                                    font-family="monospace">PENDIENTE</text>
+                            </svg>
+                        </div>
+                        <span class="pi-label">Enumeración</span>
+                    </div>
+
+                    <!-- Nota -->
+                    <div class="palette-item" draggable="true" data-kind="nota"
+                        (dragstart)="onPaletteDragStart($event, paletteGroups[3].items[2])">
+                        <div class="pi-visual">
+                            <svg viewBox="0 0 72 46" xmlns="http://www.w3.org/2000/svg">
+                                <polygon points="1,1 58,1 71,14 71,45 1,45" fill="none" stroke="currentColor"
+                                    stroke-width="1.6" />
+                                <polyline points="58,1 58,14 71,14" fill="none" stroke="currentColor"
+                                    stroke-width="1.4" />
+                                <line x1="8" y1="23" x2="60" y2="23" stroke="currentColor" stroke-width="1.1" />
+                                <line x1="8" y1="30" x2="60" y2="30" stroke="currentColor" stroke-width="1.1" />
+                                <line x1="8" y1="37" x2="45" y2="37" stroke="currentColor" stroke-width="1.1" />
+                            </svg>
+                        </div>
+                        <span class="pi-label">Nota / Comentario</span>
+                    </div>
+
+                </div>
+            </div><!-- /ELEMENTOS -->
+
+            <!-- ── RELACIONES ── -->
+            <div class="palette-group">
+                <button type="button" class="group-header" (click)="toggleGroup('relaciones')">
+                    <span class="group-label">RELACIONES</span>
+                    <span class="group-chevron" [class.collapsed]="isGroupCollapsed('relaciones')">›</span>
+                </button>
+
+                <div class="palette-list" [class.hidden]="isGroupCollapsed('relaciones')">
+
+                    <!-- Asociación -->
+                    <div class="palette-item palette-item--rel" draggable="true" data-kind="asociacion"
+                        (dragstart)="onPaletteDragStart($event, paletteGroups[2].items[0])">
+                        <div class="pi-visual pi-visual--rel">
+                            <svg viewBox="0 0 100 18" xmlns="http://www.w3.org/2000/svg">
+                                <line x1="2" y1="9" x2="98" y2="9" stroke="currentColor" stroke-width="1.8" />
+                            </svg>
+                        </div>
+                        <span class="pi-label">Asociación</span>
+                    </div>
+
+                    <!-- Navegabilidad -->
+                    <div class="palette-item palette-item--rel" draggable="true" data-kind="navegabilidad"
+                        (dragstart)="onPaletteDragStart($event, paletteGroups[3].items[1])">
+                        <div class="pi-visual pi-visual--rel">
+                            <svg viewBox="0 0 100 18" xmlns="http://www.w3.org/2000/svg">
+                                <line x1="2" y1="9" x2="84" y2="9" stroke="currentColor" stroke-width="1.8" />
+                                <polygon points="84,4 98,9 84,14" fill="currentColor" />
+                            </svg>
+                        </div>
+                        <span class="pi-label">Navegabilidad</span>
+                    </div>
+
+                    <!-- Agregación -->
+                    <div class="palette-item palette-item--rel" draggable="true" data-kind="agregacion"
+                        (dragstart)="onPaletteDragStart($event, paletteGroups[2].items[2])">
+                        <div class="pi-visual pi-visual--rel">
+                            <svg viewBox="0 0 110 18" xmlns="http://www.w3.org/2000/svg">
+                                <polygon points="2,9 12,4 22,9 12,14" fill="none" stroke="currentColor"
+                                    stroke-width="1.5" />
+                                <line x1="22" y1="9" x2="88" y2="9" stroke="currentColor" stroke-width="1.8" />
+                                <polygon points="88,4 102,9 88,14" fill="currentColor" />
+                            </svg>
+                        </div>
+                        <span class="pi-label">Agregación</span>
+                    </div>
+
+                    <!-- Composición -->
+                    <div class="palette-item palette-item--rel" draggable="true" data-kind="composicion"
+                        (dragstart)="onPaletteDragStart($event, paletteGroups[2].items[3])">
+                        <div class="pi-visual pi-visual--rel">
+                            <svg viewBox="0 0 110 18" xmlns="http://www.w3.org/2000/svg">
+                                <polygon points="2,9 12,4 22,9 12,14" fill="currentColor" stroke="currentColor"
+                                    stroke-width="1.3" />
+                                <line x1="22" y1="9" x2="88" y2="9" stroke="currentColor" stroke-width="1.8" />
+                                <polygon points="88,4 102,9 88,14" fill="currentColor" />
+                            </svg>
+                        </div>
+                        <span class="pi-label">Composición</span>
+                    </div>
+
+                    <!-- Herencia / Generalización -->
+                    <div class="palette-item palette-item--rel" draggable="true" data-kind="herencia"
+                        (dragstart)="onPaletteDragStart($event, paletteGroups[2].items[1])">
+                        <div class="pi-visual pi-visual--rel">
+                            <svg viewBox="0 0 110 18" xmlns="http://www.w3.org/2000/svg">
+                                <line x1="2" y1="9" x2="86" y2="9" stroke="currentColor" stroke-width="1.8" />
+                                <polygon points="86,3 106,9 86,15" fill="none" stroke="currentColor"
+                                    stroke-width="1.5" />
+                            </svg>
+                        </div>
+                        <span class="pi-label">Generalización (Herencia)</span>
+                    </div>
+
+                    <!-- Dependencia -->
+                    <div class="palette-item palette-item--rel" draggable="true" data-kind="dependencia"
+                        (dragstart)="onPaletteDragStart($event, paletteGroups[2].items[4])">
+                        <div class="pi-visual pi-visual--rel">
+                            <svg viewBox="0 0 110 18" xmlns="http://www.w3.org/2000/svg">
+                                <line x1="2" y1="9" x2="84" y2="9" stroke="currentColor" stroke-width="1.8"
+                                    stroke-dasharray="7,4" />
+                                <polygon points="84,4 98,9 84,14" fill="currentColor" />
+                            </svg>
+                        </div>
+                        <span class="pi-label">Dependencia</span>
+                    </div>
+
+                    <!-- Realización -->
+                    <div class="palette-item palette-item--rel" draggable="true" data-kind="realizacion"
+                        (dragstart)="onPaletteDragStart($event, paletteGroups[2].items[5])">
+                        <div class="pi-visual pi-visual--rel">
+                            <svg viewBox="0 0 110 18" xmlns="http://www.w3.org/2000/svg">
+                                <line x1="2" y1="9" x2="84" y2="9" stroke="currentColor" stroke-width="1.8"
+                                    stroke-dasharray="7,4" />
+                                <polygon points="84,3 104,9 84,15" fill="none" stroke="currentColor"
+                                    stroke-width="1.5" />
+                            </svg>
+                        </div>
+                        <span class="pi-label">Realización (Implementación)</span>
+                    </div>
+
+                </div>
+            </div><!-- /RELACIONES -->
+
+            <!-- ── EXTRAS ── -->
+            <div class="palette-group">
+                <button type="button" class="group-header" (click)="toggleGroup('extras')">
+                    <span class="group-label">EXTRAS</span>
+                    <span class="group-chevron" [class.collapsed]="isGroupCollapsed('extras')">›</span>
+                </button>
+
+                <div class="palette-list" [class.hidden]="isGroupCollapsed('extras')">
+
+                    <!-- Multiplicidad -->
+                    <div class="palette-item palette-item--rel" draggable="true" data-kind="multiplicidad"
+                        (dragstart)="onPaletteDragStart($event, paletteGroups[3].items[0])">
+                        <div class="pi-visual pi-visual--rel">
+                            <svg viewBox="0 0 100 18" xmlns="http://www.w3.org/2000/svg">
+                                <text x="2" y="13" font-size="10" font-weight="bold" fill="currentColor"
+                                    font-family="monospace">1..*</text>
+                                <line x1="30" y1="9" x2="72" y2="9" stroke="currentColor" stroke-width="1.5"
+                                    stroke-dasharray="4,3" />
+                                <text x="74" y="8" font-size="7" fill="currentColor" font-family="monospace">0..1</text>
+                            </svg>
+                        </div>
+                        <span class="pi-label">Multiplicidad</span>
+                    </div>
+
+                    <!-- Nota extra -->
+                    <div class="palette-item" draggable="true" data-kind="nota-extra"
+                        (dragstart)="onPaletteDragStart($event, paletteGroups[3].items[2])">
+                        <div class="pi-visual">
+                            <svg viewBox="0 0 72 46" xmlns="http://www.w3.org/2000/svg">
+                                <polygon points="1,1 56,1 71,16 71,45 1,45" fill="none" stroke="currentColor"
+                                    stroke-width="1.6" />
+                                <polyline points="56,1 56,16 71,16" fill="none" stroke="currentColor"
+                                    stroke-width="1.4" />
+                                <line x1="8" y1="25" x2="58" y2="25" stroke="currentColor" stroke-width="1.1" />
+                                <line x1="8" y1="33" x2="58" y2="33" stroke="currentColor" stroke-width="1.1" />
+                                <line x1="8" y1="40" x2="42" y2="40" stroke="currentColor" stroke-width="1.1" />
+                            </svg>
+                        </div>
+                        <span class="pi-label">Nota / Comentario</span>
+                    </div>
+
+                </div>
+            </div><!-- /EXTRAS -->
+
+        </aside><!-- /palette-panel -->
+
+        <!-- ════════════════════════════════════
+         CANVAS STAGE
+         ════════════════════════════════════ -->
         <div class="stage-wrapper">
             <div class="canvas-stage" #canvasStage (dragover)="onCanvasDragOver($event)" (drop)="onCanvasDrop($event)">
+
                 <div class="canvas-stage-hint" *ngIf="canvasNodes.length === 0">
-                    Suelta aquí elementos UML para iniciar el diagrama.
+                    <span class="hint-icon">📐</span>
+                    <span>Suelta aquí elementos UML para iniciar el diagrama.</span>
                 </div>
 
                 <div class="canvas-node" *ngFor="let node of canvasNodes; trackBy: trackByNode"
                     [attr.data-kind]="node.kind" [class.dragging]="draggingNodeId === node.id" [style.left.px]="node.x"
                     [style.top.px]="node.y" (pointerdown)="startNodeDrag($event, node.id)">
-                    <button type="button" class="node-remove" title="Eliminar nodo"
-                        (click)="removeNode(node.id, $event)">
-                        x
-                    </button>
+
+                    <button type="button" class="node-remove" title="Eliminar"
+                        (click)="removeNode(node.id, $event)">×</button>
+
+                    <span class="node-icon">{{ nodeIcon(node.kind) }}</span>
+                    <span class="node-badge" *ngIf="nodeBadge(node.kind)">{{ nodeBadge(node.kind) }}</span>
                     <span class="node-label">{{ node.label }}</span>
                     <span class="node-kind">{{ node.kind }}</span>
                 </div>
+
             </div>
         </div>
-    </div>
+
+    </div><!-- /canvas-layout -->
 </section>

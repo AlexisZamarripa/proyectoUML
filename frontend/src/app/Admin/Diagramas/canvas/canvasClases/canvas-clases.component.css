@@ -1,4 +1,8 @@
-/* ===== CANVAS CARD ===== */
+/* ===================================================
+   CANVAS CLASES — DIAGRAMA UML
+   =================================================== */
+
+/* ── Card ── */
 .canvas-card {
     border: 1px solid var(--border-color);
     border-radius: 0.875rem;
@@ -9,7 +13,7 @@
     gap: 0.75rem;
 }
 
-/* ===== HEADER ===== */
+/* ── Header ── */
 .canvas-head {
     display: flex;
     justify-content: space-between;
@@ -41,9 +45,10 @@
     margin: 0;
     font-size: 0.82rem;
     color: var(--text-secondary);
+    line-height: 1.5;
 }
 
-/* ===== ACTIONS ===== */
+/* ── Buttons ── */
 .canvas-actions {
     display: inline-flex;
     gap: 0.5rem;
@@ -55,11 +60,14 @@
     border-radius: 0.62rem;
     background: rgba(148, 163, 184, 0.08);
     color: var(--text-primary);
-    padding: 0.45rem 0.8rem;
+    padding: 0.42rem 0.78rem;
     font-size: 0.74rem;
     font-weight: 600;
     cursor: pointer;
-    transition: background 0.15s ease, border-color 0.15s ease;
+    transition: background 0.15s, border-color 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
 }
 
 .btn-secondary:hover:not(:disabled) {
@@ -67,91 +75,203 @@
     background: rgba(59, 130, 246, 0.14);
 }
 
+.btn-secondary.btn-danger:hover:not(:disabled) {
+    border-color: #ef4444;
+    background: rgba(239, 68, 68, 0.14);
+}
+
 .btn-secondary:disabled {
     opacity: 0.45;
     cursor: not-allowed;
 }
 
-/* ===== LAYOUT ===== */
+.btn-icon {
+    font-size: 0.82rem;
+}
+
+/* ── Layout ── */
 .canvas-layout {
     display: grid;
-    grid-template-columns: 260px 1fr;
+    grid-template-columns: 220px 1fr;
     gap: 0.8rem;
 }
 
-/* ===== PALETTE ===== */
+/* ════════════════════════════════════════
+   PALETTE PANEL
+   ════════════════════════════════════════ */
 .palette-panel {
     border: 1px solid var(--border-color);
     border-radius: 0.75rem;
-    padding: 0.8rem;
-    background: rgba(30, 41, 59, 0.35);
+    background: #0f172a;
     display: flex;
     flex-direction: column;
-    gap: 0.55rem;
+    overflow-y: auto;
+    max-height: 560px;
 }
 
-.palette-title {
-    margin: 0;
-    font-size: 0.83rem;
-    color: var(--text-primary);
+/* Palette brand header */
+.palette-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 0.75rem;
+    background: #1e3a5f;
+    border-bottom: 1px solid rgba(59, 130, 246, 0.3);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    color: #93c5fd;
+    flex-shrink: 0;
 }
 
-.palette-desc {
-    margin: 0;
-    font-size: 0.73rem;
-    color: var(--text-secondary);
+/* ── Group ── */
+.palette-group {
+    border-bottom: 1px solid rgba(148, 163, 184, 0.1);
 }
 
+.palette-group:last-child {
+    border-bottom: none;
+}
+
+.group-header {
+    width: 100%;
+    background: rgba(30, 58, 95, 0.5);
+    border: none;
+    padding: 0.45rem 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    cursor: pointer;
+    color: #60a5fa;
+    text-align: left;
+    transition: background 0.15s;
+}
+
+.group-header:hover {
+    background: rgba(59, 130, 246, 0.15);
+}
+
+.group-label {
+    flex: 1;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: #60a5fa;
+}
+
+.group-chevron {
+    font-size: 1rem;
+    color: #60a5fa;
+    transform: rotate(90deg);
+    transition: transform 0.2s ease;
+    display: inline-block;
+    line-height: 1;
+}
+
+.group-chevron.collapsed {
+    transform: rotate(0deg);
+}
+
+/* ── Palette list ── */
 .palette-list {
     display: flex;
     flex-direction: column;
-    gap: 0.45rem;
+    overflow: hidden;
+    max-height: 800px;
+    opacity: 1;
+    transition: max-height 0.25s ease, opacity 0.2s ease;
 }
 
+.palette-list.hidden {
+    max-height: 0;
+    opacity: 0;
+}
+
+/* ── Palette item (box elements: Clase, Interfaz, etc.) ── */
 .palette-item {
-    border: 1px solid var(--border-color);
-    background: var(--bg-card);
-    border-radius: 0.65rem;
-    padding: 0.52rem 0.62rem;
-    cursor: grab;
     display: flex;
-    flex-direction: column;
-    gap: 0.2rem;
-    transition: transform 0.15s ease, border-color 0.15s ease;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.45rem 0.75rem;
+    cursor: grab;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.06);
+    transition: background 0.14s;
+    user-select: none;
+}
+
+.palette-item:last-child {
+    border-bottom: none;
+}
+
+.palette-item:active {
+    cursor: grabbing;
 }
 
 .palette-item:hover {
-    transform: translateY(-1px);
-    border-color: #3b82f6;
+    background: rgba(59, 130, 246, 0.1);
 }
 
-.palette-label {
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: var(--text-primary);
+/* Relation items are slimmer */
+.palette-item--rel {
+    padding: 0.3rem 0.75rem;
 }
 
-.palette-hint {
-    font-size: 0.7rem;
-    line-height: 1.35;
-    color: var(--text-muted);
+/* SVG preview box for class-like elements */
+.pi-visual {
+    width: 64px;
+    height: 42px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #94a3b8;
 }
 
-/* ===== STAGE ===== */
+.pi-visual svg {
+    width: 100%;
+    height: 100%;
+}
+
+/* SVG preview for relation lines */
+.pi-visual--rel {
+    width: 80px;
+    height: 18px;
+    color: #94a3b8;
+}
+
+.pi-label {
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: #cbd5e1;
+    line-height: 1.3;
+}
+
+/* Hover: lighten SVG strokes */
+.palette-item:hover .pi-visual {
+    color: #e2e8f0;
+}
+
+.palette-item:hover .pi-label {
+    color: #f8fafc;
+}
+
+/* ════════════════════════════════════════
+   CANVAS STAGE
+   ════════════════════════════════════════ */
 .stage-wrapper {
     min-width: 0;
 }
 
 .canvas-stage {
-    min-height: 370px;
-    border: 1px dashed var(--border-color);
+    min-height: 460px;
+    border: 1px dashed rgba(148, 163, 184, 0.3);
     border-radius: 0.75rem;
     position: relative;
     overflow: hidden;
-    background-color: rgba(15, 23, 42, 0.65);
+    background-color: rgba(8, 15, 30, 0.8);
     background-image:
-        linear-gradient(rgba(148, 163, 184, 0.08) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(148, 163, 184, 0.08) 1px, transparent 1px);
+        linear-gradient(rgba(148, 163, 184, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(148, 163, 184, 0.05) 1px, transparent 1px);
     background-size: 24px 24px;
 }
 
@@ -159,111 +279,181 @@
     position: absolute;
     inset: 0;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
+    gap: 0.5rem;
     text-align: center;
     padding: 1rem;
-    font-size: 0.84rem;
-    color: var(--text-muted);
     pointer-events: none;
 }
 
-/* ===== NODES ===== */
+.hint-icon {
+    font-size: 2rem;
+    opacity: 0.4;
+}
+
+.canvas-stage-hint span:last-child {
+    font-size: 0.84rem;
+    color: var(--text-muted);
+}
+
+/* ════════════════════════════════════════
+   NODES
+   ════════════════════════════════════════ */
 .canvas-node {
     position: absolute;
-    min-width: 128px;
-    max-width: 170px;
-    padding: 0.52rem 0.62rem;
-    border-radius: 0.68rem;
-    border: 1px solid rgba(59, 130, 246, 0.46);
-    background: rgba(30, 41, 59, 0.96);
+    min-width: 130px;
+    max-width: 175px;
+    padding: 0.5rem 0.6rem;
+    border-radius: 0.65rem;
+    border: 1px solid rgba(59, 130, 246, 0.45);
+    background: rgba(15, 23, 42, 0.97);
     color: var(--text-primary);
     display: flex;
     flex-direction: column;
-    gap: 0.2rem;
+    gap: 0.18rem;
     cursor: grab;
     user-select: none;
     touch-action: none;
-    box-shadow: 0 7px 18px rgba(2, 6, 23, 0.35);
+    box-shadow: 0 6px 18px rgba(2, 6, 23, 0.4);
 }
 
 .canvas-node.dragging {
     cursor: grabbing;
-    box-shadow: 0 10px 24px rgba(2, 6, 23, 0.5);
+    box-shadow: 0 12px 28px rgba(2, 6, 23, 0.6);
+    z-index: 100;
 }
 
-/* Variantes por tipo de nodo */
-.canvas-node[data-kind='actor'],
-.canvas-node[data-kind='participante'] {
-    border-color: rgba(16, 185, 129, 0.5);
-    background: rgba(6, 78, 59, 0.86);
+/* Per-kind colors */
+.canvas-node[data-kind='clase'] {
+    border-color: rgba(59, 130, 246, 0.55);
+    background: rgba(23, 37, 84, 0.96);
 }
 
-.canvas-node[data-kind='mensaje'],
-.canvas-node[data-kind='relacion'],
+.canvas-node[data-kind='clase-abstracta'] {
+    border-color: rgba(251, 146, 60, 0.55);
+    background: rgba(67, 20, 7, 0.96);
+}
+
+.canvas-node[data-kind='interfaz'] {
+    border-color: rgba(52, 211, 153, 0.55);
+    background: rgba(6, 56, 42, 0.96);
+}
+
+.canvas-node[data-kind='enumeracion'] {
+    border-color: rgba(167, 139, 250, 0.55);
+    background: rgba(46, 16, 101, 0.96);
+}
+
+.canvas-node[data-kind='herencia'],
+.canvas-node[data-kind='realizacion'],
+.canvas-node[data-kind='asociacion'],
+.canvas-node[data-kind='navegabilidad'] {
+    border-color: rgba(251, 191, 36, 0.5);
+    background: rgba(78, 36, 3, 0.94);
+}
+
+.canvas-node[data-kind='agregacion'],
+.canvas-node[data-kind='composicion'] {
+    border-color: rgba(248, 113, 113, 0.55);
+    background: rgba(90, 5, 5, 0.94);
+}
+
 .canvas-node[data-kind='dependencia'] {
-    border-color: rgba(251, 191, 36, 0.55);
-    background: rgba(120, 53, 15, 0.86);
+    border-color: rgba(251, 191, 36, 0.4);
+    background: rgba(78, 36, 3, 0.9);
 }
 
-.canvas-node[data-kind='sistema'],
-.canvas-node[data-kind='paquete'],
-.canvas-node[data-kind='subpaquete'] {
-    border-color: rgba(139, 92, 246, 0.56);
-    background: rgba(76, 29, 149, 0.85);
+.canvas-node[data-kind='multiplicidad'],
+.canvas-node[data-kind='navegabilidad'] {
+    border-color: rgba(129, 140, 248, 0.5);
+    background: rgba(38, 18, 100, 0.94);
+}
+
+.canvas-node[data-kind='nota'],
+.canvas-node[data-kind='nota-extra'] {
+    border-color: rgba(209, 213, 219, 0.3);
+    background: rgba(30, 30, 20, 0.95);
+    border-style: dashed;
+}
+
+/* Node internals */
+.node-icon {
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.node-badge {
+    font-size: 0.63rem;
+    font-weight: 700;
+    color: rgba(226, 232, 240, 0.85);
+    font-style: italic;
+    letter-spacing: 0.04em;
 }
 
 .node-label {
     font-size: 0.78rem;
     font-weight: 600;
-    color: #ffffff;
-    max-width: 150px;
+    color: #fff;
+    max-width: 148px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
 .node-kind {
-    font-size: 0.68rem;
+    font-size: 0.64rem;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: rgba(226, 232, 240, 0.84);
+    letter-spacing: 0.06em;
+    color: rgba(148, 163, 184, 0.7);
 }
 
 .node-remove {
     position: absolute;
     top: 0.2rem;
     right: 0.2rem;
-    width: 18px;
-    height: 18px;
+    width: 17px;
+    height: 17px;
     border-radius: 999px;
     border: none;
-    background: rgba(15, 23, 42, 0.45);
+    background: rgba(15, 23, 42, 0.5);
     color: #e2e8f0;
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     line-height: 1;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    transition: background 0.15s;
 }
 
 .node-remove:hover {
     background: rgba(239, 68, 68, 0.9);
 }
 
-/* ===== RESPONSIVE ===== */
-@media (max-width: 1200px) {
+/* ════════════════════════════════════════
+   RESPONSIVE
+   ════════════════════════════════════════ */
+@media (max-width: 1100px) {
     .canvas-layout {
         grid-template-columns: 1fr;
     }
 
     .palette-panel {
-        order: 2;
+        max-height: none;
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+
+    .palette-group {
+        flex: 1 1 48%;
+        border-bottom: none;
+        border-right: 1px solid rgba(148, 163, 184, 0.1);
     }
 }
 
-@media (max-width: 760px) {
+@media (max-width: 700px) {
     .canvas-head {
         align-items: flex-start;
     }
@@ -277,15 +467,16 @@
     }
 
     .canvas-stage {
-        min-height: 300px;
+        min-height: 320px;
     }
 
     .canvas-node {
-        min-width: 114px;
-        max-width: 138px;
+        min-width: 112px;
+        max-width: 140px;
     }
 
-    .node-label {
-        max-width: 112px;
+    .palette-group {
+        flex: 1 1 100%;
+        border-right: none;
     }
 }

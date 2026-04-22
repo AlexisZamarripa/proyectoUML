@@ -4,7 +4,6 @@
             <h3 class="canvas-title">Canvas: {{ diagram.nombre }}</h3>
             <p class="canvas-subtitle">Diagrama de Casos de Uso</p>
         </div>
-
         <div class="canvas-actions">
             <button type="button" class="btn-secondary" (click)="guardarLienzo()">Guardar estructura</button>
             <button type="button" class="btn-secondary" [disabled]="canvasNodes.length === 0"
@@ -13,26 +12,54 @@
     </div>
 
     <p class="canvas-description">
-        Representa actores y funcionalidades del sistema. Arrastra elementos desde la paleta para construir la base del
-        diagrama.
+        Representa actores y funcionalidades del sistema. Arrastra elementos desde la paleta para construir el diagrama.
     </p>
 
     <div class="canvas-layout">
+
+        <!-- ── Paleta con acordeón ── -->
         <aside class="palette-panel">
             <h4 class="palette-title">Paleta de componentes</h4>
-            <p class="palette-desc">Drag and drop sobre el área de trabajo.</p>
+            <p class="palette-desc">Arrastra y suelta sobre el área de trabajo.</p>
 
-            <div class="palette-list">
-                <div class="palette-item" *ngFor="let item of palette; trackBy: trackByPalette" draggable="true"
-                    (dragstart)="onPaletteDragStart($event, item)">
-                    <span class="palette-label">{{ item.label }}</span>
-                    <span class="palette-hint">{{ item.hint }}</span>
+            <div class="accordion">
+                <div class="acc-section" *ngFor="let section of paletteSections; trackBy: trackBySection">
+
+                    <button type="button" class="acc-header" [class.acc-header--open]="isSectionOpen(section.id)"
+                        (click)="toggleSection(section.id)" [attr.aria-expanded]="isSectionOpen(section.id)">
+                        <span class="acc-label">
+                            <span class="acc-dot" [style.background]="section.color"></span>
+                            {{ section.label }}
+                        </span>
+                        <span class="acc-arrow" [class.acc-arrow--open]="isSectionOpen(section.id)">▼</span>
+                    </button>
+
+                    <div class="acc-body" [class.acc-body--open]="isSectionOpen(section.id)">
+                        <div class="palette-list">
+
+                            <div class="palette-item" *ngFor="let item of section.items; trackBy: trackByPalette"
+                                [attr.data-kind]="item.kind" draggable="true"
+                                (dragstart)="onPaletteDragStart($event, item)">
+
+                                <!-- Icono SVG -->
+                                <span class="palette-icon" [innerHTML]="item.icon"></span>
+
+                                <span class="palette-text">
+                                    <span class="palette-label">{{ item.label }}</span>
+                                    <span class="palette-hint">{{ item.hint }}</span>
+                                </span>
+                            </div>
+
+                        </div>
+                    </div>
                 </div>
             </div>
         </aside>
 
+        <!-- ── Lienzo ── -->
         <div class="stage-wrapper">
             <div class="canvas-stage" #canvasStage (dragover)="onCanvasDragOver($event)" (drop)="onCanvasDrop($event)">
+
                 <div class="canvas-stage-hint" *ngIf="canvasNodes.length === 0">
                     Suelta aquí elementos UML para iniciar el diagrama.
                 </div>
@@ -40,14 +67,19 @@
                 <div class="canvas-node" *ngFor="let node of canvasNodes; trackBy: trackByNode"
                     [attr.data-kind]="node.kind" [class.dragging]="draggingNodeId === node.id" [style.left.px]="node.x"
                     [style.top.px]="node.y" (pointerdown)="startNodeDrag($event, node.id)">
+
                     <button type="button" class="node-remove" title="Eliminar nodo"
-                        (click)="removeNode(node.id, $event)">
-                        x
-                    </button>
+                        (click)="removeNode(node.id, $event)">×</button>
+
+                    <!-- Icono SVG en el nodo -->
+                    <span class="node-icon" [innerHTML]="getIconForKind(node.kind)"></span>
+
                     <span class="node-label">{{ node.label }}</span>
                     <span class="node-kind">{{ node.kind }}</span>
                 </div>
+
             </div>
         </div>
+
     </div>
 </section>
