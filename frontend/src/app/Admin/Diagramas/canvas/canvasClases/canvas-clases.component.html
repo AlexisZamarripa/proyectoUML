@@ -1,6 +1,6 @@
 <section class="canvas-card">
 
-    <!-- ── HEADER ── -->
+    <!-- HEADER -->
     <div class="canvas-head">
         <div class="canvas-head-text">
             <h3 class="canvas-title">Canvas: {{ diagram.nombre }}</h3>
@@ -10,28 +10,36 @@
             <button type="button" class="btn-secondary" (click)="guardarLienzo()">
                 <span class="btn-icon">💾</span> Guardar
             </button>
-            <button type="button" class="btn-secondary btn-danger" [disabled]="canvasNodes.length === 0"
-                (click)="clearCanvas()">
+            <button type="button" class="btn-secondary btn-danger"
+                [disabled]="canvasNodes.length === 0 && relations.length === 0" (click)="clearCanvas()">
                 <span class="btn-icon">🗑️</span> Limpiar
             </button>
         </div>
     </div>
 
-    <p class="canvas-description">
-        Arrastra elementos desde la paleta para construir el diagrama. Mueve nodos libremente
-        y elimínalos con <strong>×</strong>.
+    <!-- Mode banner -->
+    <div class="mode-banner" *ngIf="pendingRelation">
+        <span class="mode-icon">🔗</span>
+        <span *ngIf="!pendingRelation.sourceId">
+            Modo <strong>{{ pendingRelation.kind }}</strong> — Haz clic en el nodo <strong>origen</strong>
+        </span>
+        <span *ngIf="pendingRelation.sourceId">
+            Modo <strong>{{ pendingRelation.kind }}</strong> — Ahora haz clic en el nodo <strong>destino</strong>
+        </span>
+        <button type="button" class="btn-cancel" (click)="cancelRelation()">✕ Cancelar</button>
+    </div>
+
+    <p class="canvas-description" *ngIf="!pendingRelation">
+        Arrastra <strong>clases</strong> al canvas. Para conectarlas, arrastra una
+        <strong>relación</strong> y haz clic en origen → destino. Clic sobre una línea para eliminarla.
     </p>
 
-    <!-- ── LAYOUT ── -->
     <div class="canvas-layout">
 
-        <!-- ════════════════════════════════════
-         PALETTE PANEL
-         ════════════════════════════════════ -->
+        <!-- PALETTE -->
         <aside class="palette-panel">
-
             <div class="palette-header">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
                     <rect x="3" y="3" width="8" height="8" />
                     <rect x="13" y="3" width="8" height="8" />
                     <rect x="3" y="13" width="8" height="8" />
@@ -40,17 +48,15 @@
                 <span>DIAGRAMA DE CLASES</span>
             </div>
 
-            <!-- ── ELEMENTOS ── -->
+            <!-- ELEMENTOS -->
             <div class="palette-group">
                 <button type="button" class="group-header" (click)="toggleGroup('figuras')">
                     <span class="group-label">ELEMENTOS</span>
                     <span class="group-chevron" [class.collapsed]="isGroupCollapsed('figuras')">›</span>
                 </button>
-
                 <div class="palette-list" [class.hidden]="isGroupCollapsed('figuras')">
 
-                    <!-- Clase -->
-                    <div class="palette-item" draggable="true" data-kind="clase"
+                    <div class="palette-item" draggable="true"
                         (dragstart)="onPaletteDragStart($event, paletteGroups[0].items[0])">
                         <div class="pi-visual">
                             <svg viewBox="0 0 72 46" xmlns="http://www.w3.org/2000/svg">
@@ -69,8 +75,7 @@
                         <span class="pi-label">Clase</span>
                     </div>
 
-                    <!-- Clase Abstracta -->
-                    <div class="palette-item" draggable="true" data-kind="clase-abstracta"
+                    <div class="palette-item" draggable="true"
                         (dragstart)="onPaletteDragStart($event, paletteGroups[0].items[1])">
                         <div class="pi-visual">
                             <svg viewBox="0 0 72 46" xmlns="http://www.w3.org/2000/svg">
@@ -93,24 +98,26 @@
                         <span class="pi-label">Clase Abstracta</span>
                     </div>
 
-                    <!-- Interfaz -->
-                    <div class="palette-item" draggable="true" data-kind="interfaz"
+                    <div class="palette-item" draggable="true"
                         (dragstart)="onPaletteDragStart($event, paletteGroups[0].items[2])">
                         <div class="pi-visual">
                             <svg viewBox="0 0 72 46" xmlns="http://www.w3.org/2000/svg">
-                                <!-- lollipop style -->
-                                <circle cx="36" cy="16" r="10" fill="none" stroke="currentColor" stroke-width="1.6" />
-                                <line x1="36" y1="26" x2="36" y2="34" stroke="currentColor" stroke-width="1.6" />
-                                <line x1="24" y1="34" x2="48" y2="34" stroke="currentColor" stroke-width="1.6" />
-                                <text x="36" y="43" text-anchor="middle" font-size="5.5" fill="currentColor"
+                                <rect x="1" y="1" width="70" height="44" fill="none" stroke="currentColor"
+                                    stroke-width="1.6" stroke-dasharray="4,3" />
+                                <line x1="1" y1="16" x2="71" y2="16" stroke="currentColor" stroke-width="1.4"
+                                    stroke-dasharray="4,3" />
+                                <text x="36" y="8" text-anchor="middle" font-size="5" fill="currentColor"
                                     font-family="sans-serif">«interface»</text>
+                                <text x="36" y="14" text-anchor="middle" font-size="6" fill="currentColor"
+                                    font-family="sans-serif" font-weight="bold">IServicio</text>
+                                <text x="5" y="27" font-size="5.5" fill="currentColor" font-family="monospace">+
+                                    method(): void</text>
                             </svg>
                         </div>
                         <span class="pi-label">Interfaz</span>
                     </div>
 
-                    <!-- Enumeración -->
-                    <div class="palette-item" draggable="true" data-kind="enumeracion"
+                    <div class="palette-item" draggable="true"
                         (dragstart)="onPaletteDragStart($event, paletteGroups[0].items[3])">
                         <div class="pi-visual">
                             <svg viewBox="0 0 72 46" xmlns="http://www.w3.org/2000/svg">
@@ -132,8 +139,7 @@
                         <span class="pi-label">Enumeración</span>
                     </div>
 
-                    <!-- Nota -->
-                    <div class="palette-item" draggable="true" data-kind="nota"
+                    <div class="palette-item" draggable="true"
                         (dragstart)="onPaletteDragStart($event, paletteGroups[3].items[2])">
                         <div class="pi-visual">
                             <svg viewBox="0 0 72 46" xmlns="http://www.w3.org/2000/svg">
@@ -150,33 +156,30 @@
                     </div>
 
                 </div>
-            </div><!-- /ELEMENTOS -->
+            </div>
 
-            <!-- ── RELACIONES ── -->
+            <!-- RELACIONES -->
             <div class="palette-group">
                 <button type="button" class="group-header" (click)="toggleGroup('relaciones')">
                     <span class="group-label">RELACIONES</span>
                     <span class="group-chevron" [class.collapsed]="isGroupCollapsed('relaciones')">›</span>
                 </button>
-
                 <div class="palette-list" [class.hidden]="isGroupCollapsed('relaciones')">
 
-                    <!-- Asociación -->
-                    <div class="palette-item palette-item--rel" draggable="true" data-kind="asociacion"
+                    <div class="palette-item palette-item--rel" draggable="true"
                         (dragstart)="onPaletteDragStart($event, paletteGroups[2].items[0])">
                         <div class="pi-visual pi-visual--rel">
-                            <svg viewBox="0 0 100 18" xmlns="http://www.w3.org/2000/svg">
+                            <svg viewBox="0 0 100 18">
                                 <line x1="2" y1="9" x2="98" y2="9" stroke="currentColor" stroke-width="1.8" />
                             </svg>
                         </div>
                         <span class="pi-label">Asociación</span>
                     </div>
 
-                    <!-- Navegabilidad -->
-                    <div class="palette-item palette-item--rel" draggable="true" data-kind="navegabilidad"
+                    <div class="palette-item palette-item--rel" draggable="true"
                         (dragstart)="onPaletteDragStart($event, paletteGroups[3].items[1])">
                         <div class="pi-visual pi-visual--rel">
-                            <svg viewBox="0 0 100 18" xmlns="http://www.w3.org/2000/svg">
+                            <svg viewBox="0 0 100 18">
                                 <line x1="2" y1="9" x2="84" y2="9" stroke="currentColor" stroke-width="1.8" />
                                 <polygon points="84,4 98,9 84,14" fill="currentColor" />
                             </svg>
@@ -184,11 +187,10 @@
                         <span class="pi-label">Navegabilidad</span>
                     </div>
 
-                    <!-- Agregación -->
-                    <div class="palette-item palette-item--rel" draggable="true" data-kind="agregacion"
+                    <div class="palette-item palette-item--rel" draggable="true"
                         (dragstart)="onPaletteDragStart($event, paletteGroups[2].items[2])">
                         <div class="pi-visual pi-visual--rel">
-                            <svg viewBox="0 0 110 18" xmlns="http://www.w3.org/2000/svg">
+                            <svg viewBox="0 0 110 18">
                                 <polygon points="2,9 12,4 22,9 12,14" fill="none" stroke="currentColor"
                                     stroke-width="1.5" />
                                 <line x1="22" y1="9" x2="88" y2="9" stroke="currentColor" stroke-width="1.8" />
@@ -198,11 +200,10 @@
                         <span class="pi-label">Agregación</span>
                     </div>
 
-                    <!-- Composición -->
-                    <div class="palette-item palette-item--rel" draggable="true" data-kind="composicion"
+                    <div class="palette-item palette-item--rel" draggable="true"
                         (dragstart)="onPaletteDragStart($event, paletteGroups[2].items[3])">
                         <div class="pi-visual pi-visual--rel">
-                            <svg viewBox="0 0 110 18" xmlns="http://www.w3.org/2000/svg">
+                            <svg viewBox="0 0 110 18">
                                 <polygon points="2,9 12,4 22,9 12,14" fill="currentColor" stroke="currentColor"
                                     stroke-width="1.3" />
                                 <line x1="22" y1="9" x2="88" y2="9" stroke="currentColor" stroke-width="1.8" />
@@ -212,11 +213,10 @@
                         <span class="pi-label">Composición</span>
                     </div>
 
-                    <!-- Herencia / Generalización -->
-                    <div class="palette-item palette-item--rel" draggable="true" data-kind="herencia"
+                    <div class="palette-item palette-item--rel" draggable="true"
                         (dragstart)="onPaletteDragStart($event, paletteGroups[2].items[1])">
                         <div class="pi-visual pi-visual--rel">
-                            <svg viewBox="0 0 110 18" xmlns="http://www.w3.org/2000/svg">
+                            <svg viewBox="0 0 110 18">
                                 <line x1="2" y1="9" x2="86" y2="9" stroke="currentColor" stroke-width="1.8" />
                                 <polygon points="86,3 106,9 86,15" fill="none" stroke="currentColor"
                                     stroke-width="1.5" />
@@ -225,11 +225,10 @@
                         <span class="pi-label">Generalización (Herencia)</span>
                     </div>
 
-                    <!-- Dependencia -->
-                    <div class="palette-item palette-item--rel" draggable="true" data-kind="dependencia"
+                    <div class="palette-item palette-item--rel" draggable="true"
                         (dragstart)="onPaletteDragStart($event, paletteGroups[2].items[4])">
                         <div class="pi-visual pi-visual--rel">
-                            <svg viewBox="0 0 110 18" xmlns="http://www.w3.org/2000/svg">
+                            <svg viewBox="0 0 110 18">
                                 <line x1="2" y1="9" x2="84" y2="9" stroke="currentColor" stroke-width="1.8"
                                     stroke-dasharray="7,4" />
                                 <polygon points="84,4 98,9 84,14" fill="currentColor" />
@@ -238,94 +237,218 @@
                         <span class="pi-label">Dependencia</span>
                     </div>
 
-                    <!-- Realización -->
-                    <div class="palette-item palette-item--rel" draggable="true" data-kind="realizacion"
+                    <div class="palette-item palette-item--rel" draggable="true"
                         (dragstart)="onPaletteDragStart($event, paletteGroups[2].items[5])">
                         <div class="pi-visual pi-visual--rel">
-                            <svg viewBox="0 0 110 18" xmlns="http://www.w3.org/2000/svg">
+                            <svg viewBox="0 0 110 18">
                                 <line x1="2" y1="9" x2="84" y2="9" stroke="currentColor" stroke-width="1.8"
                                     stroke-dasharray="7,4" />
                                 <polygon points="84,3 104,9 84,15" fill="none" stroke="currentColor"
                                     stroke-width="1.5" />
                             </svg>
                         </div>
-                        <span class="pi-label">Realización (Implementación)</span>
+                        <span class="pi-label">Realización</span>
                     </div>
 
                 </div>
-            </div><!-- /RELACIONES -->
+            </div>
 
-            <!-- ── EXTRAS ── -->
-            <div class="palette-group">
-                <button type="button" class="group-header" (click)="toggleGroup('extras')">
-                    <span class="group-label">EXTRAS</span>
-                    <span class="group-chevron" [class.collapsed]="isGroupCollapsed('extras')">›</span>
-                </button>
+        </aside>
 
-                <div class="palette-list" [class.hidden]="isGroupCollapsed('extras')">
-
-                    <!-- Multiplicidad -->
-                    <div class="palette-item palette-item--rel" draggable="true" data-kind="multiplicidad"
-                        (dragstart)="onPaletteDragStart($event, paletteGroups[3].items[0])">
-                        <div class="pi-visual pi-visual--rel">
-                            <svg viewBox="0 0 100 18" xmlns="http://www.w3.org/2000/svg">
-                                <text x="2" y="13" font-size="10" font-weight="bold" fill="currentColor"
-                                    font-family="monospace">1..*</text>
-                                <line x1="30" y1="9" x2="72" y2="9" stroke="currentColor" stroke-width="1.5"
-                                    stroke-dasharray="4,3" />
-                                <text x="74" y="8" font-size="7" fill="currentColor" font-family="monospace">0..1</text>
-                            </svg>
-                        </div>
-                        <span class="pi-label">Multiplicidad</span>
-                    </div>
-
-                    <!-- Nota extra -->
-                    <div class="palette-item" draggable="true" data-kind="nota-extra"
-                        (dragstart)="onPaletteDragStart($event, paletteGroups[3].items[2])">
-                        <div class="pi-visual">
-                            <svg viewBox="0 0 72 46" xmlns="http://www.w3.org/2000/svg">
-                                <polygon points="1,1 56,1 71,16 71,45 1,45" fill="none" stroke="currentColor"
-                                    stroke-width="1.6" />
-                                <polyline points="56,1 56,16 71,16" fill="none" stroke="currentColor"
-                                    stroke-width="1.4" />
-                                <line x1="8" y1="25" x2="58" y2="25" stroke="currentColor" stroke-width="1.1" />
-                                <line x1="8" y1="33" x2="58" y2="33" stroke="currentColor" stroke-width="1.1" />
-                                <line x1="8" y1="40" x2="42" y2="40" stroke="currentColor" stroke-width="1.1" />
-                            </svg>
-                        </div>
-                        <span class="pi-label">Nota / Comentario</span>
-                    </div>
-
-                </div>
-            </div><!-- /EXTRAS -->
-
-        </aside><!-- /palette-panel -->
-
-        <!-- ════════════════════════════════════
-         CANVAS STAGE
-         ════════════════════════════════════ -->
+        <!-- CANVAS STAGE -->
         <div class="stage-wrapper">
-            <div class="canvas-stage" #canvasStage (dragover)="onCanvasDragOver($event)" (drop)="onCanvasDrop($event)">
+            <div class="canvas-stage" #canvasStage [class.connecting]="!!pendingRelation"
+                (dragover)="onCanvasDragOver($event)" (drop)="onCanvasDrop($event)"
+                (mousemove)="onStageMouseMove($event)" (mouseleave)="ghostLine = null" (click)="onStageClick($event)">
 
-                <div class="canvas-stage-hint" *ngIf="canvasNodes.length === 0">
+                <div class="canvas-stage-hint" *ngIf="canvasNodes.length === 0 && relations.length === 0">
                     <span class="hint-icon">📐</span>
                     <span>Suelta aquí elementos UML para iniciar el diagrama.</span>
                 </div>
 
-                <div class="canvas-node" *ngFor="let node of canvasNodes; trackBy: trackByNode"
-                    [attr.data-kind]="node.kind" [class.dragging]="draggingNodeId === node.id" [style.left.px]="node.x"
-                    [style.top.px]="node.y" (pointerdown)="startNodeDrag($event, node.id)">
+                <!-- ═══════════════════════════════════════════════════
+                     SVG OVERLAY — relaciones
+                     Markers generados dinámicamente por color para que
+                     cada tipo de relación tenga la punta correcta.
+                ════════════════════════════════════════════════════ -->
+                <svg class="relations-svg" #relationsSvg [attr.width]="stageSize.w" [attr.height]="stageSize.h"
+                    style="pointer-events:none">
+                    <defs>
+                        <!-- Un <marker> por cada variante de color/tipo -->
+                        <ng-container *ngFor="let mk of relMarkerDefs; trackBy: trackByMarkerId">
 
-                    <button type="button" class="node-remove" title="Eliminar"
+                            <!-- Flecha sólida (arrow) -->
+                            <marker *ngIf="mk.type === 'arrow'" [attr.id]="mk.id" markerWidth="10" markerHeight="7"
+                                refX="9" refY="3.5" orient="auto">
+                                <polygon points="0 0,10 3.5,0 7" [attr.fill]="mk.color" />
+                            </marker>
+
+                            <!-- Triángulo abierto (herencia / realización) -->
+                            <marker *ngIf="mk.type === 'open'" [attr.id]="mk.id" markerWidth="12" markerHeight="9"
+                                refX="11" refY="4.5" orient="auto">
+                                <polygon points="0 0,11 4.5,0 9" fill="#0d1b2e" [attr.stroke]="mk.color"
+                                    stroke-width="1.2" />
+                            </marker>
+
+                            <!-- Diamante vacío (agregación) -->
+                            <marker *ngIf="mk.type === 'diamond'" [attr.id]="mk.id" markerWidth="16" markerHeight="10"
+                                refX="1" refY="5" orient="auto">
+                                <polygon points="8 0,16 5,8 10,0 5" fill="#0d1b2e" [attr.stroke]="mk.color"
+                                    stroke-width="1.2" />
+                            </marker>
+
+                            <!-- Diamante relleno (composición) -->
+                            <marker *ngIf="mk.type === 'diamondf'" [attr.id]="mk.id" markerWidth="16" markerHeight="10"
+                                refX="1" refY="5" orient="auto">
+                                <polygon points="8 0,16 5,8 10,0 5" [attr.fill]="mk.color" />
+                            </marker>
+
+                        </ng-container>
+                    </defs>
+
+                    <!-- Relaciones guardadas -->
+                    <g *ngFor="let rel of relations; trackBy: trackByRelation">
+                        <ng-container *ngIf="getRelLine(rel) as pts">
+                            <!-- Hit-area invisible: pointer-events:stroke para recibir clics
+                                 incluso cuando el SVG padre tiene pointer-events:none -->
+                            <line [attr.x1]="pts.x1" [attr.y1]="pts.y1" [attr.x2]="pts.x2" [attr.y2]="pts.y2"
+                                stroke="rgba(0,0,0,0.01)" stroke-width="16"
+                                style="pointer-events:stroke; cursor:pointer"
+                                (click)="removeRelation(rel.id, $event)" />
+                            <!-- Línea visible -->
+                            <line [attr.x1]="pts.x1" [attr.y1]="pts.y1" [attr.x2]="pts.x2" [attr.y2]="pts.y2"
+                                [attr.stroke]="relColor(rel.kind)" [attr.stroke-dasharray]="relDash(rel.kind)"
+                                [attr.marker-end]="relMarkerEnd(rel.kind)"
+                                [attr.marker-start]="relMarkerStart(rel.kind)" stroke-width="1.8" class="rel-line"
+                                style="cursor:pointer; pointer-events:none" />
+                            <!-- Etiqueta opcional -->
+                            <text *ngIf="rel.label" [attr.x]="(pts.x1 + pts.x2) / 2"
+                                [attr.y]="(pts.y1 + pts.y2) / 2 - 6" class="rel-label-text" text-anchor="middle">
+                                {{ rel.label }}
+                            </text>
+                        </ng-container>
+                    </g>
+
+                    <!-- Línea fantasma (mientras se elige el destino) -->
+                    <line *ngIf="ghostLine" [attr.x1]="ghostLine.x1" [attr.y1]="ghostLine.y1" [attr.x2]="ghostLine.x2"
+                        [attr.y2]="ghostLine.y2"
+                        [attr.stroke]="pendingRelation ? relColor(pendingRelation.kind) : '#60a5fa'" stroke-width="1.6"
+                        stroke-dasharray="6,3" opacity="0.75" style="pointer-events:none" />
+                </svg>
+
+                <!-- UML NODES -->
+                <div class="uml-node" *ngFor="let node of canvasNodes; trackBy: trackByNode"
+                    [attr.data-node-id]="node.id" [attr.data-kind]="node.kind"
+                    [class.dragging]="draggingNodeId === node.id"
+                    [class.is-source]="pendingRelation?.sourceId === node.id"
+                    [class.connectable]="!!pendingRelation && pendingRelation.sourceId !== node.id"
+                    [style.left.px]="node.x" [style.top.px]="node.y" (pointerdown)="onNodePointerDown($event, node.id)">
+
+                    <button type="button" class="node-delete" title="Eliminar nodo"
                         (click)="removeNode(node.id, $event)">×</button>
 
-                    <span class="node-icon">{{ nodeIcon(node.kind) }}</span>
-                    <span class="node-badge" *ngIf="nodeBadge(node.kind)">{{ nodeBadge(node.kind) }}</span>
-                    <span class="node-label">{{ node.label }}</span>
-                    <span class="node-kind">{{ node.kind }}</span>
-                </div>
+                    <!-- CLASE / CLASE-ABSTRACTA -->
+                    <ng-container *ngIf="isClassLike(node.kind)">
+                        <div class="uml-stereotype" *ngIf="node.stereotype">
+                            <span>{{ node.stereotype }}</span>
+                        </div>
+                        <div class="uml-section uml-section--name"
+                            [class.abstract-name]="node.kind === 'clase-abstracta'">
+                            <span class="uml-class-name" contenteditable="true" spellcheck="false"
+                                (blur)="onNameBlur($event, node.id)" (keydown.enter)="blurTarget($event)"
+                                (pointerdown)="$event.stopPropagation()">{{ node.label }}</span>
+                        </div>
+                        <div class="uml-section uml-section--attrs" (pointerdown)="$event.stopPropagation()">
+                            <div class="uml-row"
+                                *ngFor="let attr of node.attributes; let i = index; trackBy: trackByIndex">
+                                <span class="uml-visibility">{{ attr.visibility }}</span>
+                                <span class="uml-field" contenteditable="true" spellcheck="false"
+                                    (blur)="onAttrBlur($event, node.id, i)" (keydown.enter)="blurTarget($event)">{{
+                                    attr.text }}</span>
+                                <button type="button" class="row-remove"
+                                    (click)="removeAttr(node.id, i, $event)">×</button>
+                            </div>
+                            <button type="button" class="add-row-btn" (click)="addAttr(node.id, $event)">+
+                                atributo</button>
+                        </div>
+                        <div class="uml-section uml-section--methods" (pointerdown)="$event.stopPropagation()">
+                            <div class="uml-row"
+                                *ngFor="let method of node.methods; let i = index; trackBy: trackByIndex">
+                                <span class="uml-visibility">{{ method.visibility }}</span>
+                                <span class="uml-field" contenteditable="true" spellcheck="false"
+                                    (blur)="onMethodBlur($event, node.id, i)" (keydown.enter)="blurTarget($event)">{{
+                                    method.text }}</span>
+                                <button type="button" class="row-remove"
+                                    (click)="removeMethod(node.id, i, $event)">×</button>
+                            </div>
+                            <button type="button" class="add-row-btn" (click)="addMethod(node.id, $event)">+
+                                método</button>
+                        </div>
+                    </ng-container>
 
-            </div>
+                    <!-- INTERFAZ -->
+                    <ng-container *ngIf="node.kind === 'interfaz'">
+                        <div class="uml-stereotype"><span>«interface»</span></div>
+                        <div class="uml-section uml-section--name">
+                            <span class="uml-class-name" contenteditable="true" spellcheck="false"
+                                (blur)="onNameBlur($event, node.id)" (keydown.enter)="blurTarget($event)"
+                                (pointerdown)="$event.stopPropagation()">{{ node.label }}</span>
+                        </div>
+                        <div class="uml-section uml-section--methods" (pointerdown)="$event.stopPropagation()">
+                            <div class="uml-row"
+                                *ngFor="let method of node.methods; let i = index; trackBy: trackByIndex">
+                                <span class="uml-visibility">{{ method.visibility }}</span>
+                                <span class="uml-field" contenteditable="true" spellcheck="false"
+                                    (blur)="onMethodBlur($event, node.id, i)" (keydown.enter)="blurTarget($event)">{{
+                                    method.text }}</span>
+                                <button type="button" class="row-remove"
+                                    (click)="removeMethod(node.id, i, $event)">×</button>
+                            </div>
+                            <button type="button" class="add-row-btn" (click)="addMethod(node.id, $event)">+
+                                método</button>
+                        </div>
+                    </ng-container>
+
+                    <!-- ENUMERACIÓN -->
+                    <ng-container *ngIf="node.kind === 'enumeracion'">
+                        <div class="uml-stereotype"><span>«enum»</span></div>
+                        <div class="uml-section uml-section--name">
+                            <span class="uml-class-name" contenteditable="true" spellcheck="false"
+                                (blur)="onNameBlur($event, node.id)" (keydown.enter)="blurTarget($event)"
+                                (pointerdown)="$event.stopPropagation()">{{ node.label }}</span>
+                        </div>
+                        <div class="uml-section uml-section--attrs" (pointerdown)="$event.stopPropagation()">
+                            <div class="uml-row enum-row"
+                                *ngFor="let attr of node.attributes; let i = index; trackBy: trackByIndex">
+                                <span class="uml-field" contenteditable="true" spellcheck="false"
+                                    (blur)="onAttrBlur($event, node.id, i)" (keydown.enter)="blurTarget($event)">{{
+                                    attr.text }}</span>
+                                <button type="button" class="row-remove"
+                                    (click)="removeAttr(node.id, i, $event)">×</button>
+                            </div>
+                            <button type="button" class="add-row-btn" (click)="addAttr(node.id, $event)">+
+                                valor</button>
+                        </div>
+                    </ng-container>
+
+                    <!-- NOTA -->
+                    <ng-container *ngIf="node.kind === 'nota' || node.kind === 'nota-extra'">
+                        <div class="uml-section uml-section--name uml-rel-name">
+                            <span class="node-rel-icon">📝</span>
+                            <span class="uml-class-name uml-rel-label" contenteditable="true" spellcheck="false"
+                                (blur)="onNameBlur($event, node.id)" (keydown.enter)="blurTarget($event)"
+                                (pointerdown)="$event.stopPropagation()">{{ node.label }}</span>
+                        </div>
+                        <div class="uml-section uml-section--note" (pointerdown)="$event.stopPropagation()">
+                            <span class="uml-note-body" contenteditable="true" spellcheck="false"
+                                (blur)="onNoteBlur($event, node.id)" (keydown.enter)="$event.stopPropagation()">{{
+                                node.noteText }}</span>
+                        </div>
+                    </ng-container>
+
+                </div><!-- /uml-node -->
+
+            </div><!-- /canvas-stage -->
         </div>
 
     </div><!-- /canvas-layout -->

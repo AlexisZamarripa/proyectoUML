@@ -1,22 +1,36 @@
-import { Component, ElementRef, EventEmitter, Input, OnDestroy, OnInit, Output, ViewChild } from '@angular/core';
+import {
+    AfterViewChecked, Component, ElementRef, EventEmitter,
+    Input, OnDestroy, OnInit, Output, ViewChild
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { CanvasNode, DiagramaApiService, UmlDiagram } from '../../../../services/diagrama-api.service';
 
-export interface PaletteItem {
-    kind: string;
-    label: string;
-    iconType: 'svg' | 'badge' | 'text';
-    icon?: string;
+/* ── Interfaces ── */
+export interface PkgCanvasNode extends CanvasNode {
+    noteText?: string;
 }
 
-export interface PaletteGroup {
-    id: string;           // clave para persistir en localStorage
-    title: string;
-    collapsed: boolean;
-    items: PaletteItem[];
+export interface PkgRelation {
+    id: string;
+    kind: string;       /* dependencia | importacion | acceso */
+    sourceId: string;
+    targetId: string;
+    label?: string;
 }
 
-const STORAGE_KEY = 'canvas-paquetes-palette-collapsed';
+export interface PendingRelation { kind: string; sourceId?: string; }
+export interface GhostLine { x1: number; y1: number; x2: number; y2: number; }
+export interface RelLine { x1: number; y1: number; x2: number; y2: number; }
+
+export interface PaletteItem { kind: string; label: string; }
+export interface PaletteGroup { id: string; title: string; items: PaletteItem[]; }
+
+/* Kinds que inician modo-conexión en lugar de soltar un nodo */
+const RELATION_KINDS = new Set(['dependencia', 'importacion', 'acceso']);
+
+/* Fallbacks de tamaño de nodo antes de que el DOM esté listo */
+const NODE_DEFAULT_W = 180;
+const NODE_DEFAULT_H = 80;
 
 @Component({
     selector: 'app-canvas-paquetes',
@@ -25,40 +39,55 @@ const STORAGE_KEY = 'canvas-paquetes-palette-collapsed';
     templateUrl: './canvasPaquetes.component.html',
     styleUrls: ['./canvasPaquetes.component.css']
 })
-export class CanvasPaquetesComponent implements OnInit, OnDestroy {
+export class CanvasPaquetesComponent implements OnInit, OnDestroy, AfterViewChecked {
+
     @Input() diagram!: UmlDiagram;
     @Output() diagramUpdated = new EventEmitter<UmlDiagram>();
 
-    canvasNodes: CanvasNode[] = [];
+    canvasNodes: PkgCanvasNode[] = [];
+    relations: PkgRelation[] = [];
+
     @ViewChild('canvasStage') canvasStageRef?: ElementRef<HTMLDivElement>;
 
+    /* drag-move state */
     draggingNodeId: string | null = null;
     private dragOffsetX = 0;
     private dragOffsetY = 0;
     private hasPendingNodeMove = false;
 
+    /* relation-connect state */
+    pendingRelation: PendingRelation | null = null;
+    ghostLine: GhostLine | null = null;
+
+    /* SVG overlay size */
+    stageSize = { w: 800, h: 520 };
+    private needsSizeUpdate = false;
+
+    /* Accordion state */
+    collapsedGroups = new Set<string>();
+
     readonly paletteGroups: PaletteGroup[] = [
         {
-            id: 'elementos', title: 'Elementos', collapsed: false,
+            id: 'elementos', title: 'Elementos',
             items: [
-                { kind: 'paquete', label: 'Paquete', iconType: 'svg' },
-                { kind: 'subpaquete', label: 'Subpaquete', iconType: 'svg' },
-                { kind: 'nota', label: 'Nota / Comentario', iconType: 'svg' },
+                { kind: 'paquete', label: 'Paquete' },
+                { kind: 'subpaquete', label: 'Subpaquete' },
+                { kind: 'nota', label: 'Nota / Comentario' },
             ],
         },
         {
-            id: 'relaciones', title: 'Relaciones', collapsed: false,
+            id: 'relaciones', title: 'Relaciones',
             items: [
-                { kind: 'dependencia', label: 'Dependencia', iconType: 'svg' },
-                { kind: 'importacion', label: 'Importación', iconType: 'svg' },
-                { kind: 'acceso', label: 'Acceso', iconType: 'svg' },
+                { kind: 'dependencia', label: 'Dependencia' },
+                { kind: 'importacion', label: 'Importación' },
+                { kind: 'acceso', label: 'Acceso' },
             ],
         },
         {
-            id: 'extras', title: 'Extras', collapsed: false,
+            id: 'extras', title: 'Extras',
             items: [
-                { kind: 'agrupacion', label: 'Agrupación', iconType: 'svg' },
-                { kind: 'nota-extra', label: 'Nota / Comentario', iconType: 'svg' },
+                { kind: 'agrupacion', label: 'Agrupación' },
+                { kind: 'nota-extra', label: 'Nota / Comentario' },
             ],
         },
     ];
@@ -66,53 +95,69 @@ export class CanvasPaquetesComponent implements OnInit, OnDestroy {
     constructor(private diagramaApiService: DiagramaApiService) { }
 
     ngOnInit(): void {
-        this.restoreCollapsedState();
-
         if (this.diagram) {
-            this.canvasNodes = this.diagram.nodes.map((n) => ({ ...n }));
+            const raw = this.diagram as any;
+            this.canvasNodes = ((raw.nodes ?? []) as PkgCanvasNode[]).map(n => ({ ...n }));
+            this.relations = (raw.relations ?? []) as PkgRelation[];
             if (this.canvasNodes.length === 0) {
                 this.canvasNodes = this.buildStarterNodes();
-                this.persistCanvasNodes();
+                this.persistAll();
             }
         }
     }
 
+    ngAfterViewChecked(): void {
+        if (this.needsSizeUpdate) { this.updateStageSize(); this.needsSizeUpdate = false; }
+    }
+
     ngOnDestroy(): void { this.removeDragListeners(); }
 
-    // ── Acordeón ──────────────────────────────────────────────────────────────
-    toggleGroup(group: PaletteGroup): void {
-        group.collapsed = !group.collapsed;
-        this.saveCollapsedState();
+    /* ── Accordion ── */
+    toggleGroup(id: string): void {
+        this.collapsedGroups.has(id)
+            ? this.collapsedGroups.delete(id)
+            : this.collapsedGroups.add(id);
     }
 
-    private saveCollapsedState(): void {
-        try {
-            const state: Record<string, boolean> = {};
-            this.paletteGroups.forEach((g) => (state[g.id] = g.collapsed));
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-        } catch { /* localStorage bloqueado */ }
+    isGroupCollapsed(id: string): boolean {
+        return this.collapsedGroups.has(id);
     }
 
-    private restoreCollapsedState(): void {
-        try {
-            const raw = localStorage.getItem(STORAGE_KEY);
-            if (!raw) return;
-            const state: Record<string, boolean> = JSON.parse(raw);
-            this.paletteGroups.forEach((g) => {
-                if (g.id in state) g.collapsed = state[g.id];
-            });
-        } catch { /* dato corrupto, ignorar */ }
-    }
-
-    // ── Canvas ────────────────────────────────────────────────────────────────
-    guardarLienzo(): void { this.persistCanvasNodes(); }
+    /* ── Canvas actions ── */
+    guardarLienzo(): void { this.persistAll(); }
 
     clearCanvas(): void {
-        if (this.canvasNodes.length === 0) return;
+        if (this.canvasNodes.length === 0 && this.relations.length === 0) return;
         this.canvasNodes = [];
-        this.persistCanvasNodes();
+        this.relations = [];
+        this.pendingRelation = null;
+        this.ghostLine = null;
+        this.persistAll();
     }
 
+    /* ── Inline editing ── */
+    onNameBlur(event: FocusEvent, nodeId: string): void {
+        const text = (event.target as HTMLElement).textContent?.trim() ?? '';
+        this.canvasNodes = this.canvasNodes.map(n =>
+            n.id === nodeId ? { ...n, label: text || n.label } : n
+        );
+        this.persistAll();
+    }
+
+    onNoteBlur(event: FocusEvent, nodeId: string): void {
+        const text = (event.target as HTMLElement).textContent?.trim() ?? '';
+        this.canvasNodes = this.canvasNodes.map(n =>
+            n.id === nodeId ? { ...n, noteText: text } : n
+        );
+        this.persistAll();
+    }
+
+    blurTarget(event: Event): void {
+        (event.target as HTMLElement).blur();
+        event.preventDefault();
+    }
+
+    /* ── Palette drag ── */
     onPaletteDragStart(event: DragEvent, item: PaletteItem): void {
         if (!event.dataTransfer) return;
         event.dataTransfer.effectAllowed = 'copy';
@@ -131,32 +176,101 @@ export class CanvasPaquetesComponent implements OnInit, OnDestroy {
         const label = event.dataTransfer?.getData('application/x-uml-label');
         if (!kind || !label) return;
 
+        /* Relaciones → entrar en modo conexión */
+        if (RELATION_KINDS.has(kind)) {
+            this.pendingRelation = { kind };
+            return;
+        }
+
         const stage = event.currentTarget;
         if (!(stage instanceof HTMLElement)) return;
-
         const rect = stage.getBoundingClientRect();
-        const x = this.clamp(event.clientX - rect.left - 72, 12, rect.width - 148);
-        const y = this.clamp(event.clientY - rect.top - 24, 12, rect.height - 60);
+        const x = this.clamp(event.clientX - rect.left - 80, 12, rect.width - 200);
+        const y = this.clamp(event.clientY - rect.top - 30, 12, rect.height - 100);
 
-        this.canvasNodes = [...this.canvasNodes, {
-            id: this.buildNodeId(), kind,
-            label: this.buildNodeLabel(kind, label), x, y,
-        }];
-        this.persistCanvasNodes();
+        const node: PkgCanvasNode = {
+            id: this.buildId(),
+            kind,
+            label: this.buildNodeLabel(kind, label),
+            x,
+            y,
+            ...(kind === 'nota' || kind === 'nota-extra'
+                ? { noteText: 'Escribe tu nota aquí...' }
+                : {}),
+        };
+
+        this.canvasNodes = [...this.canvasNodes, node];
+        this.needsSizeUpdate = true;
+        this.persistAll();
     }
 
+    /* ── Stage click: maneja modo conexión ── */
+    onStageClick(event: MouseEvent): void {
+        if (!this.pendingRelation) return;
+
+        const target = event.target as HTMLElement;
+        const nodeEl = target.closest('[data-node-id]') as HTMLElement | null;
+
+        if (!nodeEl) { this.cancelRelation(); return; }
+
+        const nodeId = nodeEl.getAttribute('data-node-id')!;
+
+        if (!this.pendingRelation.sourceId) {
+            /* Primer clic: origen */
+            this.pendingRelation = { ...this.pendingRelation, sourceId: nodeId };
+        } else {
+            /* Segundo clic: destino */
+            if (nodeId === this.pendingRelation.sourceId) return;
+            const rel: PkgRelation = {
+                id: this.buildId(),
+                kind: this.pendingRelation.kind,
+                sourceId: this.pendingRelation.sourceId,
+                targetId: nodeId,
+            };
+            this.relations = [...this.relations, rel];
+            this.pendingRelation = null;
+            this.ghostLine = null;
+            this.persistAll();
+        }
+    }
+
+    /* ── Stage mousemove: línea fantasma ── */
+    onStageMouseMove(event: MouseEvent): void {
+        if (!this.pendingRelation?.sourceId) { this.ghostLine = null; return; }
+        const stage = this.canvasStageRef?.nativeElement;
+        if (!stage) return;
+        const rect = stage.getBoundingClientRect();
+        const src = this.canvasNodes.find(n => n.id === this.pendingRelation!.sourceId);
+        if (!src) return;
+        const sp = this.nodeCenter(src);
+        this.ghostLine = {
+            x1: sp.x, y1: sp.y,
+            x2: event.clientX - rect.left,
+            y2: event.clientY - rect.top,
+        };
+    }
+
+    cancelRelation(): void { this.pendingRelation = null; this.ghostLine = null; }
+
+    /* ── Eliminar relación ── */
+    removeRelation(relId: string, event: MouseEvent): void {
+        event.stopPropagation();
+        this.relations = this.relations.filter(r => r.id !== relId);
+        this.persistAll();
+    }
+
+    /* ── Drag de nodos ── */
     startNodeDrag(event: PointerEvent, nodeId: string): void {
+        if (this.pendingRelation) return;
         if (event.button !== 0) return;
         const stage = this.canvasStageRef?.nativeElement;
-        const node = this.canvasNodes.find((n) => n.id === nodeId);
+        const node = this.canvasNodes.find(n => n.id === nodeId);
         if (!stage || !node) return;
-
         const rect = stage.getBoundingClientRect();
         this.draggingNodeId = nodeId;
         this.dragOffsetX = event.clientX - rect.left - node.x;
         this.dragOffsetY = event.clientY - rect.top - node.y;
         this.hasPendingNodeMove = false;
-
         window.addEventListener('pointermove', this.onWindowPointerMove);
         window.addEventListener('pointerup', this.onWindowPointerUp);
         event.preventDefault();
@@ -164,22 +278,70 @@ export class CanvasPaquetesComponent implements OnInit, OnDestroy {
 
     removeNode(nodeId: string, event: MouseEvent): void {
         event.stopPropagation();
-        this.canvasNodes = this.canvasNodes.filter((n) => n.id !== nodeId);
-        this.persistCanvasNodes();
+        this.canvasNodes = this.canvasNodes.filter(n => n.id !== nodeId);
+        this.relations = this.relations.filter(r => r.sourceId !== nodeId && r.targetId !== nodeId);
+        this.persistAll();
     }
 
-    trackByNode(_i: number, n: CanvasNode): string { return n.id; }
-    trackByGroup(_i: number, g: PaletteGroup): string { return g.id; }
-    trackByItem(_i: number, p: PaletteItem): string { return p.kind; }
+    /* ── SVG line helpers ── */
+    getRelLine(rel: PkgRelation): RelLine | null {
+        const src = this.canvasNodes.find(n => n.id === rel.sourceId);
+        const tgt = this.canvasNodes.find(n => n.id === rel.targetId);
+        if (!src || !tgt) return null;
+        const sc = this.nodeCenter(src);
+        const tc = this.nodeCenter(tgt);
+        const p1 = this.nodeBorderPoint(src, sc, tc);
+        const p2 = this.nodeBorderPoint(tgt, tc, sc);
+        return { x1: p1.x, y1: p1.y, x2: p2.x, y2: p2.y };
+    }
+
+    relColor(kind: string): string {
+        const map: Record<string, string> = {
+            dependencia: '#fbbf24',
+            importacion: '#fbbf24',
+            acceso: '#34d399',
+        };
+        return map[kind] ?? '#94a3b8';
+    }
+
+    relDash(kind: string): string {
+        return kind === 'dependencia' || kind === 'importacion' ? '8,4' : 'none';
+    }
+
+    relMarkerEnd(kind: string): string {
+        if (kind === 'importacion') return `url(#pk-open-${kind})`;
+        return `url(#pk-arrow-${kind})`;
+    }
+
+    relLabel(kind: string): string {
+        if (kind === 'importacion') return '«import»';
+        if (kind === 'acceso') return '«access»';
+        return '';
+    }
+
+    get relMarkerDefs(): Array<{ id: string; type: 'arrow' | 'open'; color: string }> {
+        return [
+            { id: 'pk-arrow-dependencia', type: 'arrow', color: this.relColor('dependencia') },
+            { id: 'pk-open-importacion', type: 'open', color: this.relColor('importacion') },
+            { id: 'pk-arrow-acceso', type: 'arrow', color: this.relColor('acceso') },
+        ];
+    }
+
+    /* ── trackBy ── */
+    trackByNode(_: number, n: PkgCanvasNode): string { return n.id; }
+    trackByRelation(_: number, r: PkgRelation): string { return r.id; }
+    trackByMarkerId(_: number, m: { id: string }): string { return m.id; }
+
+    /* ── Private ── */
 
     private readonly onWindowPointerMove = (event: PointerEvent): void => {
         if (!this.draggingNodeId) return;
         const stage = this.canvasStageRef?.nativeElement;
         if (!stage) return;
         const rect = stage.getBoundingClientRect();
-        const x = this.clamp(event.clientX - rect.left - this.dragOffsetX, 12, rect.width - 148);
+        const x = this.clamp(event.clientX - rect.left - this.dragOffsetX, 12, rect.width - 200);
         const y = this.clamp(event.clientY - rect.top - this.dragOffsetY, 12, rect.height - 60);
-        this.canvasNodes = this.canvasNodes.map((n) =>
+        this.canvasNodes = this.canvasNodes.map(n =>
             n.id !== this.draggingNodeId ? n : { ...n, x, y }
         );
         this.hasPendingNodeMove = true;
@@ -189,25 +351,77 @@ export class CanvasPaquetesComponent implements OnInit, OnDestroy {
         if (!this.draggingNodeId) { this.removeDragListeners(); return; }
         this.draggingNodeId = null;
         this.removeDragListeners();
-        if (this.hasPendingNodeMove) { this.persistCanvasNodes(); this.hasPendingNodeMove = false; }
+        if (this.hasPendingNodeMove) { this.persistAll(); this.hasPendingNodeMove = false; }
     };
 
-    private buildStarterNodes(): CanvasNode[] {
+    private nodeCenter(node: PkgCanvasNode): { x: number; y: number } {
+        const el = this.canvasStageRef?.nativeElement
+            ?.querySelector(`[data-node-id="${node.id}"]`) as HTMLElement | null;
+        const w = (el && el.offsetWidth > 0) ? el.offsetWidth : NODE_DEFAULT_W;
+        const h = (el && el.offsetHeight > 0) ? el.offsetHeight : NODE_DEFAULT_H;
+        return { x: node.x + w / 2, y: node.y + h / 2 };
+    }
+
+    private nodeBorderPoint(
+        node: PkgCanvasNode,
+        from: { x: number; y: number },
+        to: { x: number; y: number }
+    ): { x: number; y: number } {
+        const el = this.canvasStageRef?.nativeElement
+            ?.querySelector(`[data-node-id="${node.id}"]`) as HTMLElement | null;
+        const w = (el && el.offsetWidth > 0) ? el.offsetWidth : NODE_DEFAULT_W;
+        const h = (el && el.offsetHeight > 0) ? el.offsetHeight : NODE_DEFAULT_H;
+
+        const cx = node.x + w / 2;
+        const cy = node.y + h / 2;
+        const dx = to.x - from.x;
+        const dy = to.y - from.y;
+        if (dx === 0 && dy === 0) return { x: cx, y: cy };
+
+        const hw = w / 2;
+        const hh = h / 2;
+        const candidates: number[] = [];
+
+        if (dx !== 0) {
+            const t = (dx > 0 ? hw : -hw) / dx;
+            const y = cy + t * dy;
+            if (y >= cy - hh && y <= cy + hh) candidates.push(t);
+        }
+        if (dy !== 0) {
+            const t = (dy > 0 ? hh : -hh) / dy;
+            const x = cx + t * dx;
+            if (x >= cx - hw && x <= cx + hw) candidates.push(t);
+        }
+
+        const t = candidates.length ? Math.min(...candidates) : 0;
+        return { x: cx + t * dx, y: cy + t * dy };
+    }
+
+    private updateStageSize(): void {
+        const stage = this.canvasStageRef?.nativeElement;
+        if (!stage) return;
+        this.stageSize = { w: stage.offsetWidth, h: stage.offsetHeight };
+    }
+
+    private buildStarterNodes(): PkgCanvasNode[] {
         return [
-            { id: this.buildNodeId(), kind: 'paquete', label: 'Paquete 1', x: 56, y: 72 },
-            { id: this.buildNodeId(), kind: 'subpaquete', label: 'Subpaquete 1', x: 260, y: 80 },
-            { id: this.buildNodeId(), kind: 'dependencia', label: 'Dependencia 1', x: 172, y: 216 },
+            { id: this.buildId(), kind: 'paquete', label: 'Paquete 1', x: 56, y: 72 },
+            { id: this.buildId(), kind: 'subpaquete', label: 'Subpaquete 1', x: 300, y: 80 },
         ];
     }
 
     private buildNodeLabel(kind: string, base: string): string {
-        const count = this.canvasNodes.filter((n) => n.kind === kind).length + 1;
+        const count = this.canvasNodes.filter(n => n.kind === kind).length + 1;
         return `${base} ${count}`;
     }
 
-    private persistCanvasNodes(): void {
+    private persistAll(): void {
         if (!this.diagram) return;
-        this.diagramaApiService.update(this.diagram.id, { nodes: this.canvasNodes.map((n) => ({ ...n })) }).subscribe({
+        const payload = {
+            nodes: this.canvasNodes.map(n => ({ ...n })),
+            relations: this.relations,
+        } as any;
+        this.diagramaApiService.update(this.diagram.id, payload).subscribe({
             next: (updated) => this.diagramUpdated.emit(updated),
             error: (err: unknown) => console.error('Error al guardar canvas:', err),
         });
@@ -217,7 +431,7 @@ export class CanvasPaquetesComponent implements OnInit, OnDestroy {
         return max <= min ? min : Math.min(Math.max(v, min), max);
     }
 
-    private buildNodeId(): string {
+    private buildId(): string {
         return typeof crypto !== 'undefined' && 'randomUUID' in crypto
             ? crypto.randomUUID()
             : `node-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
