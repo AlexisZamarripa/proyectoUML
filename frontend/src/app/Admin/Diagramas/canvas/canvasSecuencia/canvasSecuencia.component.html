@@ -1,179 +1,400 @@
 <section class="canvas-card">
+
+    <!-- ── HEADER ── -->
     <div class="canvas-head">
         <div class="canvas-head-text">
             <h3 class="canvas-title">Canvas: {{ diagram.nombre }}</h3>
-            <p class="canvas-subtitle">Diagrama de Secuencia</p>
+            <p class="canvas-subtitle">Diagrama de Secuencia UML</p>
         </div>
         <div class="canvas-actions">
-            <button type="button" class="btn-secondary" (click)="guardarLienzo()">Guardar estructura</button>
-            <button type="button" class="btn-secondary" [disabled]="canvasNodes.length === 0"
-                (click)="clearCanvas()">Limpiar canvas</button>
+            <button type="button" class="btn-secondary" (click)="guardarLienzo()">
+                <span class="btn-icon">💾</span> Guardar
+            </button>
+            <button type="button" class="btn-secondary btn-danger"
+                [disabled]="canvasNodes.length === 0 && messages.length === 0 && fragments.length === 0"
+                (click)="clearCanvas()">
+                <span class="btn-icon">🗑️</span> Limpiar
+            </button>
         </div>
     </div>
 
-    <p class="canvas-description">
-        Muestra el flujo temporal de mensajes entre participantes. Arrastra elementos desde la paleta para construir la
-        base del diagrama.
+    <!-- ── MODE BANNER ── -->
+    <div class="mode-banner" *ngIf="pendingMessage">
+        <span class="mode-icon">✉️</span>
+        <span *ngIf="!pendingMessage.sourceId">
+            Modo <strong>{{ pendingMessage.kind }}</strong> — Haz clic en el participante <strong>origen</strong>
+        </span>
+        <span *ngIf="pendingMessage.sourceId">
+            Ahora haz clic en el participante <strong>destino</strong> (o el mismo para auto-referencia)
+        </span>
+        <button type="button" class="btn-cancel" (click)="cancelMessage()">✕ Cancelar</button>
+    </div>
+
+    <p class="canvas-description" *ngIf="!pendingMessage">
+        Arrastra <strong>participantes</strong> para añadirlos. Arrastra un <strong>mensaje</strong> y haz clic en
+        origen → destino para conectarlos. Los <strong>fragmentos</strong> se sueltan libremente y son
+        redimensionables.
     </p>
 
     <div class="canvas-layout">
 
-        <!-- ===== PALETA ===== -->
+        <!-- ════════════════════════════════════════
+             PALETTE PANEL
+             ════════════════════════════════════════ -->
         <aside class="palette-panel">
+
             <div class="palette-header">
-                <svg class="palette-header-icon" viewBox="0 0 24 24" fill="none">
-                    <rect x="3" y="3" width="8" height="8" rx="1" stroke="currentColor" stroke-width="1.6" />
-                    <rect x="13" y="3" width="8" height="8" rx="1" stroke="currentColor" stroke-width="1.6" />
-                    <rect x="3" y="13" width="8" height="8" rx="1" stroke="currentColor" stroke-width="1.6" />
-                    <rect x="13" y="13" width="8" height="8" rx="1" stroke="currentColor" stroke-width="1.6" />
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="2" y1="6" x2="22" y2="6" />
+                    <line x1="6" y1="6" x2="6" y2="20" />
+                    <line x1="18" y1="6" x2="18" y2="20" />
+                    <line x1="6" y1="13" x2="18" y2="13" stroke-dasharray="3,2" />
                 </svg>
-                <div>
-                    <h4 class="palette-title">Diagrama de Secuencia</h4>
-                    <p class="palette-desc">Arrastra al área de trabajo</p>
-                </div>
+                <span>SECUENCIA</span>
             </div>
 
-            <div class="palette-groups">
-                <div class="palette-group" *ngFor="let group of paletteGroups; trackBy: trackByGroup"
-                    [class.is-collapsed]="group.collapsed">
+            <div class="palette-scroll">
+                <div class="palette-group" *ngFor="let group of paletteGroups; trackBy: trackByGroup">
 
-                    <!-- Cabecera acordeón -->
-                    <button type="button" class="palette-group-header" (click)="toggleGroup(group)">
-                        <span class="palette-group-title">{{ group.title }}</span>
-                        <svg class="palette-chevron" viewBox="0 0 16 16" fill="none">
-                            <polyline points="4,6 8,10 12,6" stroke="currentColor" stroke-width="1.8"
-                                stroke-linecap="round" stroke-linejoin="round" />
-                        </svg>
+                    <button type="button" class="group-header" (click)="toggleGroup(group.id)">
+                        <span class="group-label">{{ group.title | uppercase }}</span>
+                        <span class="group-chevron" [class.collapsed]="isGroupCollapsed(group.id)">›</span>
                     </button>
 
-                    <!-- Lista colapsable -->
-                    <div class="palette-list-wrapper">
-                        <div class="palette-list">
-                            <div class="palette-item" *ngFor="let item of group.items; trackBy: trackByItem"
-                                draggable="true" (dragstart)="onPaletteDragStart($event, item)"
-                                [attr.data-kind]="item.kind">
+                    <div class="palette-list" [class.hidden]="isGroupCollapsed(group.id)">
 
-                                <span class="palette-icon">
-                                    <!-- Actor -->
-                                    <svg *ngIf="item.kind === 'actor'" viewBox="0 0 32 48" fill="none">
-                                        <circle cx="16" cy="8" r="5.5" stroke="currentColor" stroke-width="1.8" />
-                                        <line x1="16" y1="14" x2="16" y2="32" stroke="currentColor"
-                                            stroke-width="1.8" />
-                                        <line x1="4" y1="20" x2="28" y2="20" stroke="currentColor" stroke-width="1.8" />
-                                        <line x1="16" y1="32" x2="6" y2="44" stroke="currentColor" stroke-width="1.8" />
-                                        <line x1="16" y1="32" x2="26" y2="44" stroke="currentColor"
-                                            stroke-width="1.8" />
-                                    </svg>
-                                    <!-- Objeto -->
-                                    <svg *ngIf="item.kind === 'objeto'" viewBox="0 0 48 28" fill="none">
-                                        <rect x="2" y="2" width="44" height="24" rx="1" stroke="currentColor"
-                                            stroke-width="1.8" />
-                                    </svg>
-                                    <!-- Sistema -->
-                                    <svg *ngIf="item.kind === 'sistema'" viewBox="0 0 48 32" fill="none">
-                                        <rect x="2" y="2" width="44" height="28" rx="1" stroke="currentColor"
-                                            stroke-width="1.8" />
-                                        <line x1="2" y1="10" x2="46" y2="10" stroke="currentColor" stroke-width="1.4"
-                                            stroke-dasharray="3 2" />
-                                    </svg>
-                                    <!-- Base de datos -->
-                                    <svg *ngIf="item.kind === 'basedatos'" viewBox="0 0 40 44" fill="none">
-                                        <ellipse cx="20" cy="9" rx="17" ry="7" stroke="currentColor"
-                                            stroke-width="1.8" />
-                                        <path d="M3 9 Q3 35 20 35 Q37 35 37 9" stroke="currentColor" stroke-width="1.8"
-                                            fill="none" />
-                                        <path d="M3 18 Q3 26 20 26 Q37 26 37 18" stroke="currentColor"
-                                            stroke-width="1.4" fill="none" />
-                                    </svg>
-                                    <!-- Línea de vida -->
-                                    <svg *ngIf="item.kind === 'lineadevida'" viewBox="0 0 16 48" fill="none">
-                                        <line x1="8" y1="2" x2="8" y2="46" stroke="currentColor" stroke-width="1.6"
-                                            stroke-dasharray="4 3" />
-                                    </svg>
-                                    <!-- Activación -->
-                                    <svg *ngIf="item.kind === 'activacion'" viewBox="0 0 16 48" fill="none">
-                                        <rect x="4" y="4" width="8" height="40" rx="1" stroke="currentColor"
-                                            stroke-width="1.6" />
-                                    </svg>
-                                    <!-- Mensaje síncrono -->
-                                    <svg *ngIf="item.kind === 'msg-sincrono'" viewBox="0 0 56 16" fill="none">
-                                        <line x1="2" y1="8" x2="46" y2="8" stroke="currentColor" stroke-width="1.8" />
-                                        <polygon points="42,3 54,8 42,13" fill="currentColor" />
-                                    </svg>
-                                    <!-- Mensaje asíncrono -->
-                                    <svg *ngIf="item.kind === 'msg-asincrono'" viewBox="0 0 56 16" fill="none">
-                                        <line x1="2" y1="8" x2="50" y2="8" stroke="currentColor" stroke-width="1.8" />
-                                        <polyline points="42,3 54,8 42,13" fill="none" stroke="currentColor"
-                                            stroke-width="1.8" />
-                                    </svg>
-                                    <!-- Mensaje de retorno -->
-                                    <svg *ngIf="item.kind === 'msg-retorno'" viewBox="0 0 56 16" fill="none">
-                                        <line x1="2" y1="8" x2="50" y2="8" stroke="currentColor" stroke-width="1.8"
-                                            stroke-dasharray="5 3" />
-                                        <polyline points="42,3 54,8 42,13" fill="none" stroke="currentColor"
-                                            stroke-width="1.8" />
-                                    </svg>
-                                    <!-- Mensaje de creación -->
-                                    <svg *ngIf="item.kind === 'msg-creacion'" viewBox="0 0 56 20" fill="none">
-                                        <line x1="2" y1="14" x2="46" y2="14" stroke="currentColor" stroke-width="1.8" />
-                                        <polygon points="42,9 54,14 42,19" fill="none" stroke="currentColor"
-                                            stroke-width="1.8" />
-                                        <text x="1" y="9" font-size="7" fill="currentColor"
-                                            font-family="monospace">«create»</text>
-                                    </svg>
-                                    <!-- Mensaje de destrucción -->
-                                    <svg *ngIf="item.kind === 'msg-destruccion'" viewBox="0 0 64 20" fill="none">
-                                        <line x1="2" y1="10" x2="46" y2="10" stroke="currentColor" stroke-width="1.8" />
-                                        <polygon points="42,5 54,10 42,15" fill="currentColor" />
-                                        <line x1="55" y1="3" x2="63" y2="17" stroke="currentColor" stroke-width="2" />
-                                        <line x1="63" y1="3" x2="55" y2="17" stroke="currentColor" stroke-width="2" />
-                                    </svg>
-                                    <!-- Fragmentos badge -->
-                                    <span *ngIf="item.iconType === 'badge'" class="palette-icon-badge">{{ item.icon
-                                        }}</span>
-                                    <!-- Condición texto -->
-                                    <span *ngIf="item.kind === 'condicion'" class="palette-icon-text">{{ item.icon
-                                        }}</span>
-                                    <!-- Nota -->
-                                    <svg *ngIf="item.kind === 'nota'" viewBox="0 0 40 44" fill="none">
-                                        <path d="M4 4 H28 L36 12 V40 H4 Z" stroke="currentColor" stroke-width="1.8" />
-                                        <polyline points="28,4 28,12 36,12" stroke="currentColor" stroke-width="1.4"
-                                            fill="none" />
-                                        <line x1="10" y1="20" x2="30" y2="20" stroke="currentColor" stroke-width="1.2"
-                                            opacity="0.6" />
-                                        <line x1="10" y1="27" x2="26" y2="27" stroke="currentColor" stroke-width="1.2"
-                                            opacity="0.6" />
-                                    </svg>
-                                </span>
+                        <div class="palette-item" *ngFor="let item of group.items; trackBy: trackByItem"
+                            draggable="true" (dragstart)="onPaletteDragStart($event, item)" [attr.data-kind]="item.kind"
+                            [title]="item.hint">
 
-                                <span class="palette-label">{{ item.label }}</span>
+                            <span class="pi-visual">
+
+                                <!-- ACTOR -->
+                                <svg *ngIf="item.kind === 'actor'" viewBox="0 0 32 48" fill="none" stroke="currentColor"
+                                    stroke-width="1.8" stroke-linecap="round">
+                                    <circle cx="16" cy="8" r="5.5" />
+                                    <line x1="16" y1="14" x2="16" y2="32" />
+                                    <line x1="4" y1="20" x2="28" y2="20" />
+                                    <line x1="16" y1="32" x2="6" y2="44" />
+                                    <line x1="16" y1="32" x2="26" y2="44" />
+                                </svg>
+
+                                <!-- OBJETO -->
+                                <svg *ngIf="item.kind === 'objeto'" viewBox="0 0 48 28" fill="none"
+                                    stroke="currentColor" stroke-width="1.8">
+                                    <rect x="2" y="2" width="44" height="24" rx="1" />
+                                    <line x1="2" y1="10" x2="46" y2="10" stroke-width="1" />
+                                </svg>
+
+                                <!-- SISTEMA -->
+                                <svg *ngIf="item.kind === 'sistema'" viewBox="0 0 48 32" fill="none"
+                                    stroke="currentColor" stroke-width="1.8">
+                                    <rect x="2" y="2" width="44" height="28" rx="2" />
+                                    <line x1="2" y1="10" x2="46" y2="10" />
+                                    <rect x="8" y="14" width="14" height="10" rx="1" stroke-width="1" />
+                                    <rect x="26" y="14" width="14" height="10" rx="1" stroke-width="1" />
+                                </svg>
+
+                                <!-- BASE DE DATOS -->
+                                <svg *ngIf="item.kind === 'basedatos'" viewBox="0 0 40 44" fill="none"
+                                    stroke="currentColor" stroke-width="1.8">
+                                    <ellipse cx="20" cy="9" rx="17" ry="7" />
+                                    <path d="M3 9 Q3 35 20 35 Q37 35 37 9" fill="none" />
+                                    <path d="M3 18 Q3 26 20 26 Q37 26 37 18" stroke-width="1.2" fill="none" />
+                                </svg>
+
+                                <!-- MSG SÍNCRONO -->
+                                <svg *ngIf="item.kind === 'msg-sincrono'" viewBox="0 0 56 16" fill="none">
+                                    <line x1="2" y1="8" x2="44" y2="8" stroke="currentColor" stroke-width="1.8" />
+                                    <polygon points="40,3 54,8 40,13" fill="currentColor" />
+                                </svg>
+
+                                <!-- MSG ASÍNCRONO -->
+                                <svg *ngIf="item.kind === 'msg-asincrono'" viewBox="0 0 56 16" fill="none">
+                                    <line x1="2" y1="8" x2="48" y2="8" stroke="currentColor" stroke-width="1.8" />
+                                    <polyline points="40,3 54,8 40,13" fill="none" stroke="currentColor"
+                                        stroke-width="1.8" />
+                                </svg>
+
+                                <!-- MSG RETORNO -->
+                                <svg *ngIf="item.kind === 'msg-retorno'" viewBox="0 0 56 16" fill="none">
+                                    <line x1="2" y1="8" x2="48" y2="8" stroke="currentColor" stroke-width="1.8"
+                                        stroke-dasharray="5,3" />
+                                    <polyline points="40,3 54,8 40,13" fill="none" stroke="currentColor"
+                                        stroke-width="1.8" />
+                                </svg>
+
+                                <!-- MSG CREACIÓN -->
+                                <svg *ngIf="item.kind === 'msg-creacion'" viewBox="0 0 56 20" fill="none">
+                                    <text x="1" y="8" font-size="6" fill="currentColor"
+                                        font-family="monospace">«create»</text>
+                                    <line x1="2" y1="14" x2="44" y2="14" stroke="currentColor" stroke-width="1.8" />
+                                    <polygon points="40,9 54,14 40,19" fill="none" stroke="currentColor"
+                                        stroke-width="1.6" />
+                                </svg>
+
+                                <!-- MSG DESTRUCCIÓN -->
+                                <svg *ngIf="item.kind === 'msg-destruccion'" viewBox="0 0 64 20" fill="none">
+                                    <line x1="2" y1="10" x2="44" y2="10" stroke="currentColor" stroke-width="1.8" />
+                                    <polygon points="40,5 54,10 40,15" fill="currentColor" />
+                                    <line x1="55" y1="3" x2="63" y2="17" stroke="currentColor" stroke-width="2" />
+                                    <line x1="63" y1="3" x2="55" y2="17" stroke="currentColor" stroke-width="2" />
+                                </svg>
+
+                                <!-- MSG AUTO-REFERENCIA -->
+                                <svg *ngIf="item.kind === 'msg-autoreferencia'" viewBox="0 0 40 32" fill="none">
+                                    <path d="M8 6 C24 6, 32 6, 32 16 C32 26, 24 26, 8 26" stroke="currentColor"
+                                        stroke-width="1.8" fill="none" />
+                                    <polyline points="14,21 8,26 14,31" fill="none" stroke="currentColor"
+                                        stroke-width="1.8" />
+                                </svg>
+
+                                <!-- FRAGMENTOS BADGE -->
+                                <span *ngIf="item.iconType === 'badge'" class="pi-badge">{{ item.icon }}</span>
+
+                            </span>
+
+                            <div class="pi-info">
+                                <span class="pi-label">{{ item.label }}</span>
+                                <span class="pi-hint">{{ item.hint }}</span>
                             </div>
                         </div>
-                    </div>
 
+                    </div>
                 </div>
             </div>
+
+            <!-- Panel mensajes lista -->
+            <div class="msg-list-panel" *ngIf="messages.length > 0">
+                <div class="msg-list-header">
+                    <span>Mensajes ({{ messages.length }})</span>
+                </div>
+                <div class="msg-list">
+                    <div class="msg-list-item" *ngFor="let msg of messages; trackBy: trackByMsg">
+                        <span class="msg-list-dot" [style.background]="msgColor(msg.kind)"></span>
+                        <span class="msg-list-label" [contentEditable]="editingMsgId === msg.id"
+                            [class.editing]="editingMsgId === msg.id" (dblclick)="startEditMsg(msg.id, $event)"
+                            (blur)="onMsgLabelBlur($event, msg.id)" (keydown)="onMsgLabelKeydown($event, msg.id)">{{
+                            msg.label }}</span>
+                        <div class="msg-list-actions">
+                            <button type="button" class="msg-btn" title="Subir" (click)="moveMsgUp(msg.id)">↑</button>
+                            <button type="button" class="msg-btn" title="Bajar" (click)="moveMsgDown(msg.id)">↓</button>
+                            <button type="button" class="msg-btn msg-btn-del" title="Eliminar"
+                                (click)="removeMessage(msg.id, $event)">✕</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </aside>
 
-        <!-- ===== STAGE ===== -->
+        <!-- ════════════════════════════════════════
+             CANVAS STAGE
+             ════════════════════════════════════════ -->
         <div class="stage-wrapper">
-            <div class="canvas-stage" #canvasStage (dragover)="onCanvasDragOver($event)" (drop)="onCanvasDrop($event)">
+            <div class="canvas-stage" #canvasStage [class.connecting]="!!pendingMessage"
+                (dragover)="onCanvasDragOver($event)" (drop)="onCanvasDrop($event)"
+                (mousemove)="onStageMouseMove($event)" (mouseleave)="ghostLine = null" (click)="onStageClick($event)">
 
-                <div class="canvas-stage-hint" *ngIf="canvasNodes.length === 0">
-                    Suelta aquí elementos UML para iniciar el diagrama.
+                <!-- Hint vacío -->
+                <div class="canvas-stage-hint" *ngIf="canvasNodes.length === 0 && messages.length === 0">
+                    <span class="hint-icon">⟷</span>
+                    <span>Arrastra participantes y mensajes para construir el diagrama.</span>
                 </div>
 
-                <div class="canvas-node" *ngFor="let node of canvasNodes; trackBy: trackByNode"
-                    [attr.data-kind]="node.kind" [class.dragging]="draggingNodeId === node.id" [style.left.px]="node.x"
-                    [style.top.px]="node.y" (pointerdown)="startNodeDrag($event, node.id)">
+                <!-- ════════════════════════════════════════
+                     SVG OVERLAY — lifelines, activaciones, mensajes
+                     ════════════════════════════════════════ -->
+                <svg class="seq-svg" [attr.width]="stageSize.w" [attr.height]="stageSize.h">
 
-                    <button type="button" class="node-remove" title="Eliminar nodo"
-                        (click)="removeNode(node.id, $event)">✕</button>
-                    <span class="node-label">{{ node.label }}</span>
-                    <span class="node-kind">{{ node.kind }}</span>
+                    <defs>
+                        <ng-container *ngFor="let mk of msgMarkerDefs; trackBy: trackByMarkerId">
+                            <marker *ngIf="mk.type === 'arrow'" [attr.id]="mk.id" markerWidth="10" markerHeight="7"
+                                refX="9" refY="3.5" orient="auto">
+                                <polygon points="0 0,10 3.5,0 7" [attr.fill]="mk.color" />
+                            </marker>
+                            <marker *ngIf="mk.type === 'open'" [attr.id]="mk.id" markerWidth="10" markerHeight="8"
+                                refX="9" refY="4" orient="auto">
+                                <polyline points="0,0 10,4 0,8" [attr.stroke]="mk.color" stroke-width="1.5"
+                                    fill="none" />
+                            </marker>
+                        </ng-container>
+                        <!-- marcador X para destrucción -->
+                        <marker id="seq-x-destroy" markerWidth="14" markerHeight="14" refX="7" refY="7" orient="auto">
+                            <line x1="2" y1="2" x2="12" y2="12" stroke="#f87171" stroke-width="2" />
+                            <line x1="12" y1="2" x2="2" y2="12" stroke="#f87171" stroke-width="2" />
+                        </marker>
+                    </defs>
+
+                    <!-- Lifelines (líneas de vida) -->
+                    <ng-container *ngFor="let node of canvasNodes; trackBy: trackByNode">
+                        <line [attr.x1]="lifelineX(node)" [attr.y1]="lifelineTop(node)" [attr.x2]="lifelineX(node)"
+                            [attr.y2]="lifelineBottom()" stroke="rgba(148,163,184,0.35)" stroke-width="1.5"
+                            stroke-dasharray="6,4" />
+
+                        <!-- Barras de activación -->
+                        <rect *ngFor="let act of getActivations(node)" [attr.x]="lifelineX(node) - 7" [attr.y]="act.y"
+                            width="14" [attr.height]="act.h" fill="rgba(59,130,246,0.25)" stroke="#3b82f6"
+                            stroke-width="1" rx="2" />
+                    </ng-container>
+
+                    <!-- Fragmentos (detrás de mensajes) -->
+                    <ng-container *ngFor="let frag of fragments; trackBy: trackByFrag">
+                        <rect [attr.x]="frag.x" [attr.y]="frag.y" [attr.width]="frag.width" [attr.height]="frag.height"
+                            [attr.stroke]="fragColor(frag.kind)" stroke-width="1.5" fill="rgba(0,0,0,0.15)" rx="2" />
+                        <!-- etiqueta kind -->
+                        <rect [attr.x]="frag.x" [attr.y]="frag.y" width="42" height="20"
+                            [attr.fill]="fragColor(frag.kind)" opacity="0.85" />
+                        <text [attr.x]="frag.x + 6" [attr.y]="frag.y + 13" font-size="9" font-weight="bold"
+                            font-family="monospace" fill="#fff">{{ fragLabel(frag.kind) }}</text>
+                        <!-- condición -->
+                        <text [attr.x]="frag.x + 48" [attr.y]="frag.y + 13" font-size="9" font-family="monospace"
+                            fill="rgba(226,232,240,0.75)" font-style="italic">[{{ frag.condition }}]</text>
+                        <!-- línea separadora -->
+                        <line [attr.x1]="frag.x" [attr.y1]="frag.y + 22" [attr.x2]="frag.x + frag.width"
+                            [attr.y2]="frag.y + 22" [attr.stroke]="fragColor(frag.kind)" stroke-width="0.8"
+                            stroke-dasharray="4,2" />
+                    </ng-container>
+
+                    <!-- Mensajes -->
+                    <ng-container *ngFor="let msg of messages; trackBy: trackByMsg">
+
+                        <!-- Mensaje normal (no auto-referencia) -->
+                        <ng-container *ngIf="!isSelfMsg(msg)">
+                            <ng-container *ngIf="getMsgLine(msg) as pts">
+
+                                <!-- Etiqueta del mensaje -->
+                                <text [attr.x]="(pts.x1 + pts.x2) / 2" [attr.y]="pts.y1 - 6" text-anchor="middle"
+                                    font-size="10" font-family="'Consolas', monospace" [attr.fill]="msgColor(msg.kind)"
+                                    class="msg-label-text" (click)="startEditMsg(msg.id, $event)">
+                                    {{ msg.label }}
+                                </text>
+
+                                <!-- Línea -->
+                                <line [attr.x1]="pts.x1" [attr.y1]="pts.y1" [attr.x2]="pts.x2" [attr.y2]="pts.y2"
+                                    [attr.stroke]="msgColor(msg.kind)" [attr.stroke-dasharray]="msgDash(msg.kind)"
+                                    [attr.marker-end]="msg.kind !== 'msg-destruccion' ? msgMarkerEnd(msg.kind) : ''"
+                                    stroke-width="1.8" />
+
+                                <!-- X de destrucción al final -->
+                                <g *ngIf="msg.kind === 'msg-destruccion'">
+                                    <line [attr.x1]="pts.x2 - 8" [attr.y1]="pts.y2 - 8" [attr.x2]="pts.x2 + 8"
+                                        [attr.y2]="pts.y2 + 8" stroke="#f87171" stroke-width="2.5" />
+                                    <line [attr.x1]="pts.x2 + 8" [attr.y1]="pts.y2 - 8" [attr.x2]="pts.x2 - 8"
+                                        [attr.y2]="pts.y2 + 8" stroke="#f87171" stroke-width="2.5" />
+                                </g>
+
+                                <!-- Hit-area para eliminar -->
+                                <line [attr.x1]="pts.x1" [attr.y1]="pts.y1" [attr.x2]="pts.x2" [attr.y2]="pts.y2"
+                                    stroke="transparent" stroke-width="16"
+                                    style="cursor:pointer; pointer-events: stroke"
+                                    (click)="removeMessage(msg.id, $event)" />
+
+                            </ng-container>
+                        </ng-container>
+
+                        <!-- Auto-referencia -->
+                        <ng-container *ngIf="isSelfMsg(msg)">
+                            <path [attr.d]="selfMsgPath(msg)" [attr.stroke]="msgColor(msg.kind)" stroke-width="1.8"
+                                fill="none" [attr.marker-end]="msgMarkerEnd(msg.kind)" />
+                            <ng-container *ngFor="let node of canvasNodes">
+                                <text *ngIf="node.id === msg.sourceId" [attr.x]="lifelineX(node) + 44"
+                                    [attr.y]="msgY(msg) + 15" font-size="10" font-family="monospace"
+                                    [attr.fill]="msgColor(msg.kind)">{{ msg.label }}</text>
+                            </ng-container>
+                        </ng-container>
+
+                    </ng-container>
+
+                    <!-- Ghost line -->
+                    <line *ngIf="ghostLine" [attr.x1]="ghostLine.x1" [attr.y1]="ghostLine.y1" [attr.x2]="ghostLine.x2"
+                        [attr.y2]="ghostLine.y2" stroke="#60a5fa" stroke-width="1.6" stroke-dasharray="6,3"
+                        opacity="0.75" />
+
+                </svg>
+
+                <!-- ════════════════════════════════════════
+                     NODOS (cabeceras lifeline)
+                     ════════════════════════════════════════ -->
+                <div class="lifeline-node" *ngFor="let node of canvasNodes; trackBy: trackByNode"
+                    [attr.data-node-id]="node.id" [attr.data-kind]="node.kind"
+                    [class.dragging]="draggingNodeId === node.id"
+                    [class.is-source]="pendingMessage?.sourceId === node.id"
+                    [class.connectable]="!!pendingMessage && pendingMessage.sourceId !== node.id"
+                    [style.left.px]="node.x" [style.top.px]="node.y" (pointerdown)="onNodePointerDown($event, node.id)">
+
+                    <button type="button" class="node-delete" title="Eliminar"
+                        (click)="removeNode(node.id, $event)">×</button>
+
+                    <!-- ACTOR -->
+                    <div class="lnode-body" *ngIf="node.kind === 'actor'">
+                        <svg class="lnode-icon" viewBox="0 0 32 48" fill="none" stroke="currentColor" stroke-width="1.8"
+                            stroke-linecap="round">
+                            <circle cx="16" cy="8" r="5.5" />
+                            <line x1="16" y1="14" x2="16" y2="32" />
+                            <line x1="4" y1="20" x2="28" y2="20" />
+                            <line x1="16" y1="32" x2="6" y2="44" />
+                            <line x1="16" y1="32" x2="26" y2="44" />
+                        </svg>
+                        <span class="lnode-name" contenteditable="true" spellcheck="false"
+                            (blur)="onNameBlur($event, node.id)" (keydown.enter)="blurTarget($event)"
+                            (pointerdown)="$event.stopPropagation()">{{ node.label }}</span>
+                    </div>
+
+                    <!-- OBJETO -->
+                    <div class="lnode-body lnode-rect" *ngIf="node.kind === 'objeto'">
+                        <span class="lnode-stereotype">«object»</span>
+                        <span class="lnode-name" contenteditable="true" spellcheck="false"
+                            (blur)="onNameBlur($event, node.id)" (keydown.enter)="blurTarget($event)"
+                            (pointerdown)="$event.stopPropagation()">{{ node.label }}</span>
+                    </div>
+
+                    <!-- SISTEMA -->
+                    <div class="lnode-body lnode-rect lnode-sistema" *ngIf="node.kind === 'sistema'">
+                        <span class="lnode-stereotype">«system»</span>
+                        <span class="lnode-name" contenteditable="true" spellcheck="false"
+                            (blur)="onNameBlur($event, node.id)" (keydown.enter)="blurTarget($event)"
+                            (pointerdown)="$event.stopPropagation()">{{ node.label }}</span>
+                    </div>
+
+                    <!-- BASE DE DATOS -->
+                    <div class="lnode-body lnode-rect lnode-db" *ngIf="node.kind === 'basedatos'">
+                        <svg class="lnode-icon lnode-icon-sm" viewBox="0 0 40 26" fill="none" stroke="currentColor"
+                            stroke-width="1.6">
+                            <ellipse cx="20" cy="6" rx="17" ry="5" />
+                            <path d="M3 6 Q3 20 20 20 Q37 20 37 6" fill="none" />
+                            <path d="M3 12 Q3 16 20 16 Q37 16 37 12" stroke-width="1" fill="none" />
+                        </svg>
+                        <span class="lnode-name" contenteditable="true" spellcheck="false"
+                            (blur)="onNameBlur($event, node.id)" (keydown.enter)="blurTarget($event)"
+                            (pointerdown)="$event.stopPropagation()">{{ node.label }}</span>
+                    </div>
+
+                </div><!-- /lifeline-node -->
+
+                <!-- ════════════════════════════════════════
+                     FRAGMENTOS (HTML draggable overlay)
+                     ════════════════════════════════════════ -->
+                <div class="seq-fragment" *ngFor="let frag of fragments; trackBy: trackByFrag"
+                    [attr.data-kind]="frag.kind" [style.left.px]="frag.x" [style.top.px]="frag.y"
+                    [style.width.px]="frag.width" [style.height.px]="frag.height"
+                    (pointerdown)="onFragPointerDown($event, frag.id)">
+
+                    <button type="button" class="frag-delete" (click)="removeFragment(frag.id, $event)">×</button>
+
+                    <div class="frag-header" [style.background]="fragColor(frag.kind)">
+                        <span class="frag-kind-label">{{ fragLabel(frag.kind) }}</span>
+                        <span class="frag-condition" contenteditable="true" spellcheck="false"
+                            (blur)="onFragConditionBlur($event, frag.id)" (pointerdown)="$event.stopPropagation()">[{{
+                            frag.condition }}]</span>
+                    </div>
+
+                    <div class="frag-resize-handle" (pointerdown)="onFragResizeDown($event, frag.id)">⤡</div>
                 </div>
-            </div>
-        </div>
 
-    </div>
+            </div><!-- /canvas-stage -->
+        </div><!-- /stage-wrapper -->
+
+    </div><!-- /canvas-layout -->
+
 </section>

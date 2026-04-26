@@ -1,20 +1,68 @@
-import { Component, ElementRef, EventEmitter, Input, OnDestroy, OnInit, Output, ViewChild } from '@angular/core';
+import {
+    AfterViewChecked, Component, ElementRef, EventEmitter,
+    Input, OnDestroy, OnInit, Output, ViewChild
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { CanvasNode, DiagramaApiService, UmlDiagram } from '../../../../services/diagrama-api.service';
+
+/* ── Interfaces ── */
+export interface SeqNode extends CanvasNode {
+    width?: number;
+}
+
+export interface SeqMessage {
+    id: string;
+    kind: string;        /* msg-sincrono | msg-asincrono | msg-retorno | msg-creacion | msg-destruccion | msg-autoreferencia */
+    sourceId: string;
+    targetId: string;
+    label: string;
+    order: number;       /* posición vertical relativa (orden) */
+}
+
+export interface SeqFragment {
+    id: string;
+    kind: string;        /* frag-alt | frag-loop | frag-opt | frag-par */
+    label: string;
+    condition: string;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+}
+
+export interface PendingMessage { kind: string; sourceId?: string; }
+export interface GhostLine { x1: number; y1: number; x2: number; y2: number; }
 
 export interface PaletteItem {
     kind: string;
     label: string;
     hint: string;
     iconType: 'svg' | 'badge' | 'text';
-    icon?: string;   // sólo para badge/text
+    icon?: string;
 }
 
 export interface PaletteGroup {
+    id: string;
     title: string;
     collapsed: boolean;
     items: PaletteItem[];
 }
+
+const MESSAGE_KINDS = new Set([
+    'msg-sincrono', 'msg-asincrono', 'msg-retorno',
+    'msg-creacion', 'msg-destruccion', 'msg-autoreferencia'
+]);
+const FRAGMENT_KINDS = new Set(['frag-alt', 'frag-loop', 'frag-opt', 'frag-par']);
+
+/* Layout constants */
+const LIFELINE_HEAD_H = 60;
+const LIFELINE_X_GAP = 200;   /* separación horizontal entre lifelines */
+const LIFELINE_START_X = 80;
+const MSG_Y_START = 120;
+const MSG_Y_GAP = 60;         /* separación vertical entre mensajes */
+const ACTIVATION_W = 14;
+const NODE_DEFAULT_W = 140;
+const NODE_DEFAULT_H = 60;
 
 @Component({
     selector: 'app-canvas-secuencia',
@@ -23,21 +71,52 @@ export interface PaletteGroup {
     templateUrl: './canvasSecuencia.component.html',
     styleUrls: ['./canvasSecuencia.component.css']
 })
-export class CanvasSecuenciaComponent implements OnInit, OnDestroy {
+export class CanvasSecuenciaComponent implements OnInit, OnDestroy, AfterViewChecked {
+
     @Input() diagram!: UmlDiagram;
     @Output() diagramUpdated = new EventEmitter<UmlDiagram>();
 
-    canvasNodes: CanvasNode[] = [];
+    canvasNodes: SeqNode[] = [];       /* participantes (cabeceras de lifeline) */
+    messages: SeqMessage[] = [];
+    fragments: SeqFragment[] = [];
+
     @ViewChild('canvasStage') canvasStageRef?: ElementRef<HTMLDivElement>;
 
+    /* drag participantes */
     draggingNodeId: string | null = null;
     private dragOffsetX = 0;
     private dragOffsetY = 0;
     private hasPendingNodeMove = false;
 
+    /* drag fragmentos */
+    draggingFragId: string | null = null;
+    private fragDragOffX = 0;
+    private fragDragOffY = 0;
+
+    /* drag resize fragmento */
+    resizingFragId: string | null = null;
+    private resizeStartX = 0;
+    private resizeStartY = 0;
+    private resizeStartW = 0;
+    private resizeStartH = 0;
+
+    /* modo conexión mensajes */
+    pendingMessage: PendingMessage | null = null;
+    ghostLine: GhostLine | null = null;
+
+    /* SVG overlay size */
+    stageSize = { w: 900, h: 600 };
+    private needsSizeUpdate = false;
+
+    /* accordion */
+    collapsedGroups = new Set<string>();
+
+    /* edición inline de mensajes */
+    editingMsgId: string | null = null;
+
     readonly paletteGroups: PaletteGroup[] = [
         {
-            title: 'Participantes', collapsed: false,
+            id: 'participantes', title: 'Participantes', collapsed: false,
             items: [
                 { kind: 'actor', label: 'Actor', hint: 'Persona o rol externo', iconType: 'svg' },
                 { kind: 'objeto', label: 'Objeto', hint: 'Instancia de clase', iconType: 'svg' },
@@ -46,36 +125,23 @@ export class CanvasSecuenciaComponent implements OnInit, OnDestroy {
             ],
         },
         {
-            title: 'Elementos', collapsed: false,
+            id: 'mensajes', title: 'Mensajes', collapsed: false,
             items: [
-                { kind: 'lineadevida', label: 'Línea de vida', hint: 'Existencia temporal', iconType: 'svg' },
-                { kind: 'activacion', label: 'Activación', hint: 'Bloque de ejecución', iconType: 'svg' },
+                { kind: 'msg-sincrono', label: 'Síncrono', hint: 'Llamada que espera respuesta', iconType: 'svg' },
+                { kind: 'msg-asincrono', label: 'Asíncrono', hint: 'Llamada sin esperar respuesta', iconType: 'svg' },
+                { kind: 'msg-retorno', label: 'Retorno', hint: 'Respuesta a llamada previa', iconType: 'svg' },
+                { kind: 'msg-creacion', label: 'Creación', hint: 'Instancia un nuevo objeto', iconType: 'svg' },
+                { kind: 'msg-destruccion', label: 'Destrucción', hint: 'Termina la vida del objeto', iconType: 'svg' },
+                { kind: 'msg-autoreferencia', label: 'Auto-ref.', hint: 'Llamada a sí mismo', iconType: 'svg' },
             ],
         },
         {
-            title: 'Mensajes', collapsed: false,
+            id: 'fragmentos', title: 'Fragmentos', collapsed: false,
             items: [
-                { kind: 'msg-sincrono', label: 'Mensaje síncrono', hint: 'Llamada que espera respuesta', iconType: 'svg' },
-                { kind: 'msg-asincrono', label: 'Mensaje asíncrono', hint: 'Llamada sin esperar respuesta', iconType: 'svg' },
-                { kind: 'msg-retorno', label: 'Mensaje de retorno', hint: 'Respuesta a llamada previa', iconType: 'svg' },
-                { kind: 'msg-creacion', label: 'Mensaje de creación', hint: 'Instancia un nuevo objeto', iconType: 'svg' },
-                { kind: 'msg-destruccion', label: 'Mensaje de destrucción', hint: 'Termina la vida del objeto', iconType: 'svg' },
-            ],
-        },
-        {
-            title: 'Fragmentos', collapsed: false,
-            items: [
-                { kind: 'frag-alt', label: 'Fragmento ALT', hint: 'Alternativa condicional', iconType: 'badge', icon: 'alt' },
-                { kind: 'frag-loop', label: 'Fragmento LOOP', hint: 'Bucle repetitivo', iconType: 'badge', icon: 'loop' },
-                { kind: 'frag-opt', label: 'Fragmento OPT', hint: 'Opcional si condición', iconType: 'badge', icon: 'opt' },
-                { kind: 'frag-par', label: 'Fragmento PAR', hint: 'Ejecución en paralelo', iconType: 'badge', icon: 'par' },
-            ],
-        },
-        {
-            title: 'Extras', collapsed: false,
-            items: [
-                { kind: 'condicion', label: 'Condición / Guard', hint: 'Restricción sobre un flujo', iconType: 'text', icon: '[cond]' },
-                { kind: 'nota', label: 'Nota / Comentario', hint: 'Anotación libre', iconType: 'svg' },
+                { kind: 'frag-alt', label: 'ALT', hint: 'Alternativa condicional', iconType: 'badge', icon: 'alt' },
+                { kind: 'frag-loop', label: 'LOOP', hint: 'Bucle repetitivo', iconType: 'badge', icon: 'loop' },
+                { kind: 'frag-opt', label: 'OPT', hint: 'Opcional si condición', iconType: 'badge', icon: 'opt' },
+                { kind: 'frag-par', label: 'PAR', hint: 'Ejecución en paralelo', iconType: 'badge', icon: 'par' },
             ],
         },
     ];
@@ -84,28 +150,46 @@ export class CanvasSecuenciaComponent implements OnInit, OnDestroy {
 
     ngOnInit(): void {
         if (this.diagram) {
-            this.canvasNodes = this.diagram.nodes.map((node) => ({ ...node }));
+            const raw = this.diagram as any;
+            this.canvasNodes = ((raw.nodes ?? []) as SeqNode[]).map(n => ({ ...n }));
+            this.messages = ((raw.messages ?? []) as SeqMessage[]).slice().sort((a, b) => a.order - b.order);
+            this.fragments = ((raw.fragments ?? []) as SeqFragment[]).map(f => ({ ...f }));
             if (this.canvasNodes.length === 0) {
                 this.canvasNodes = this.buildStarterNodes();
-                this.persistCanvasNodes();
+                this.messages = this.buildStarterMessages();
+                this.persistAll();
             }
         }
     }
 
+    ngAfterViewChecked(): void {
+        if (this.needsSizeUpdate) { this.updateStageSize(); this.needsSizeUpdate = false; }
+    }
+
     ngOnDestroy(): void { this.removeDragListeners(); }
 
-    toggleGroup(group: PaletteGroup): void {
-        group.collapsed = !group.collapsed;
+    /* ── Accordion ── */
+    toggleGroup(id: string): void {
+        this.collapsedGroups.has(id) ? this.collapsedGroups.delete(id) : this.collapsedGroups.add(id);
     }
+    isGroupCollapsed(id: string): boolean { return this.collapsedGroups.has(id); }
 
-    guardarLienzo(): void { this.persistCanvasNodes(); }
+    /* ── Acciones canvas ── */
+    guardarLienzo(): void { this.persistAll(); }
 
     clearCanvas(): void {
-        if (this.canvasNodes.length === 0) return;
+        if (this.canvasNodes.length === 0 && this.messages.length === 0 && this.fragments.length === 0) return;
         this.canvasNodes = [];
-        this.persistCanvasNodes();
+        this.messages = [];
+        this.fragments = [];
+        this.pendingMessage = null;
+        this.ghostLine = null;
+        this.persistAll();
     }
 
+    cancelMessage(): void { this.pendingMessage = null; this.ghostLine = null; }
+
+    /* ── Palette drag ── */
     onPaletteDragStart(event: DragEvent, item: PaletteItem): void {
         if (!event.dataTransfer) return;
         event.dataTransfer.effectAllowed = 'copy';
@@ -124,31 +208,167 @@ export class CanvasSecuenciaComponent implements OnInit, OnDestroy {
         const label = event.dataTransfer?.getData('application/x-uml-label');
         if (!kind || !label) return;
 
-        const stage = event.currentTarget;
+        /* mensajes → modo conexión */
+        if (MESSAGE_KINDS.has(kind)) {
+            this.pendingMessage = { kind };
+            return;
+        }
+
+        /* fragmentos → soltar en posición */
+        if (FRAGMENT_KINDS.has(kind)) {
+            const stage = event.currentTarget as HTMLElement;
+            const rect = stage.getBoundingClientRect();
+            const x = this.clamp(event.clientX - rect.left - 80, 12, rect.width - 260);
+            const y = this.clamp(event.clientY - rect.top - 40, 12, rect.height - 120);
+            const frag: SeqFragment = {
+                id: this.buildId(), kind, label: this.fragLabel(kind),
+                condition: 'condición', x, y, width: 220, height: 100,
+            };
+            this.fragments = [...this.fragments, frag];
+            this.needsSizeUpdate = true;
+            this.persistAll();
+            return;
+        }
+
+        /* participantes */
+        const stage = event.currentTarget as HTMLElement;
         if (!(stage instanceof HTMLElement)) return;
-
         const rect = stage.getBoundingClientRect();
-        const x = this.clamp(event.clientX - rect.left - 72, 12, rect.width - 148);
-        const y = this.clamp(event.clientY - rect.top - 24, 12, rect.height - 60);
 
-        this.canvasNodes = [...this.canvasNodes, {
-            id: this.buildNodeId(), kind, label: this.buildNodeLabel(kind, label), x, y,
-        }];
-        this.persistCanvasNodes();
+        /* auto-posicionar en la siguiente columna libre */
+        const nextX = this.nextLifelineX();
+        const x = this.clamp(nextX, 20, rect.width - 160);
+        const y = 16;
+
+        const node: SeqNode = {
+            id: this.buildId(), kind,
+            label: this.buildNodeLabel(kind, label),
+            x, y,
+        };
+        this.canvasNodes = [...this.canvasNodes, node];
+        this.needsSizeUpdate = true;
+        this.persistAll();
     }
 
-    startNodeDrag(event: PointerEvent, nodeId: string): void {
+    /* ── Stage click: maneja modo conexión ── */
+    onStageClick(event: MouseEvent): void {
+        if (!this.pendingMessage) return;
+
+        const target = event.target as HTMLElement;
+        const nodeEl = target.closest('[data-node-id]') as HTMLElement | null;
+
+        if (!nodeEl) { this.cancelMessage(); return; }
+
+        const nodeId = nodeEl.getAttribute('data-node-id')!;
+
+        if (!this.pendingMessage.sourceId) {
+            this.pendingMessage = { ...this.pendingMessage, sourceId: nodeId };
+        } else {
+            const order = this.messages.length > 0
+                ? Math.max(...this.messages.map(m => m.order)) + 1
+                : 0;
+            const msg: SeqMessage = {
+                id: this.buildId(),
+                kind: this.pendingMessage.kind,
+                sourceId: this.pendingMessage.sourceId,
+                targetId: nodeId,
+                label: this.buildMsgLabel(this.pendingMessage.kind),
+                order,
+            };
+            this.messages = [...this.messages, msg];
+            this.pendingMessage = null;
+            this.ghostLine = null;
+            this.persistAll();
+        }
+    }
+
+    /* ── Stage mousemove: ghost line ── */
+    onStageMouseMove(event: MouseEvent): void {
+        if (!this.pendingMessage?.sourceId) { this.ghostLine = null; return; }
+        const stage = this.canvasStageRef?.nativeElement;
+        if (!stage) return;
+        const rect = stage.getBoundingClientRect();
+        const src = this.canvasNodes.find(n => n.id === this.pendingMessage!.sourceId)!;
+        if (!src) return;
+        const sx = src.x + NODE_DEFAULT_W / 2;
+        this.ghostLine = {
+            x1: sx, y1: MSG_Y_START + this.messages.length * MSG_Y_GAP,
+            x2: event.clientX - rect.left,
+            y2: event.clientY - rect.top,
+        };
+    }
+
+    /* ── Edición inline nodos ── */
+    onNameBlur(event: FocusEvent, nodeId: string): void {
+        const text = (event.target as HTMLElement).textContent?.trim() ?? '';
+        this.canvasNodes = this.canvasNodes.map(n =>
+            n.id === nodeId ? { ...n, label: text || n.label } : n
+        );
+        this.persistAll();
+    }
+
+    blurTarget(event: Event): void {
+        (event.target as HTMLElement).blur();
+        event.preventDefault();
+    }
+
+    /* ── Edición inline mensajes ── */
+    startEditMsg(msgId: string, event: MouseEvent): void {
+        event.stopPropagation();
+        this.editingMsgId = msgId;
+    }
+
+    onMsgLabelBlur(event: FocusEvent, msgId: string): void {
+        const text = (event.target as HTMLElement).textContent?.trim() ?? '';
+        this.messages = this.messages.map(m =>
+            m.id === msgId ? { ...m, label: text || m.label } : m
+        );
+        this.editingMsgId = null;
+        this.persistAll();
+    }
+
+    onMsgLabelKeydown(event: KeyboardEvent, msgId: string): void {
+        if (event.key === 'Enter') { (event.target as HTMLElement).blur(); event.preventDefault(); }
+        if (event.key === 'Escape') { this.editingMsgId = null; }
+    }
+
+    /* ── Reordenar mensajes ── */
+    moveMsgUp(msgId: string): void {
+        const idx = this.messages.findIndex(m => m.id === msgId);
+        if (idx <= 0) return;
+        const arr = [...this.messages];
+        [arr[idx - 1], arr[idx]] = [arr[idx], arr[idx - 1]];
+        this.messages = arr.map((m, i) => ({ ...m, order: i }));
+        this.persistAll();
+    }
+
+    moveMsgDown(msgId: string): void {
+        const idx = this.messages.findIndex(m => m.id === msgId);
+        if (idx < 0 || idx >= this.messages.length - 1) return;
+        const arr = [...this.messages];
+        [arr[idx], arr[idx + 1]] = [arr[idx + 1], arr[idx]];
+        this.messages = arr.map((m, i) => ({ ...m, order: i }));
+        this.persistAll();
+    }
+
+    removeMessage(msgId: string, event: MouseEvent): void {
+        event.stopPropagation();
+        this.messages = this.messages.filter(m => m.id !== msgId);
+        this.persistAll();
+    }
+
+    /* ── Drag participantes ── */
+    onNodePointerDown(event: PointerEvent, nodeId: string): void {
+        if (this.pendingMessage) return;
         if (event.button !== 0) return;
         const stage = this.canvasStageRef?.nativeElement;
-        const node = this.canvasNodes.find((n) => n.id === nodeId);
+        const node = this.canvasNodes.find(n => n.id === nodeId);
         if (!stage || !node) return;
-
         const rect = stage.getBoundingClientRect();
         this.draggingNodeId = nodeId;
         this.dragOffsetX = event.clientX - rect.left - node.x;
-        this.dragOffsetY = event.clientY - rect.top - node.y;
+        this.dragOffsetY = 0; /* lifelines se mueven sólo en X */
         this.hasPendingNodeMove = false;
-
         window.addEventListener('pointermove', this.onWindowPointerMove);
         window.addEventListener('pointerup', this.onWindowPointerUp);
         event.preventDefault();
@@ -156,22 +376,187 @@ export class CanvasSecuenciaComponent implements OnInit, OnDestroy {
 
     removeNode(nodeId: string, event: MouseEvent): void {
         event.stopPropagation();
-        this.canvasNodes = this.canvasNodes.filter((n) => n.id !== nodeId);
-        this.persistCanvasNodes();
+        this.canvasNodes = this.canvasNodes.filter(n => n.id !== nodeId);
+        this.messages = this.messages.filter(m => m.sourceId !== nodeId && m.targetId !== nodeId);
+        this.persistAll();
     }
 
-    trackByNode(_i: number, node: CanvasNode): string { return node.id; }
-    trackByGroup(_i: number, g: PaletteGroup): string { return g.title; }
-    trackByItem(_i: number, item: PaletteItem): string { return item.kind; }
+    /* ── Drag fragmentos ── */
+    onFragPointerDown(event: PointerEvent, fragId: string): void {
+        if (event.button !== 0) return;
+        const stage = this.canvasStageRef?.nativeElement;
+        const frag = this.fragments.find(f => f.id === fragId);
+        if (!stage || !frag) return;
+        const rect = stage.getBoundingClientRect();
+        this.draggingFragId = fragId;
+        this.fragDragOffX = event.clientX - rect.left - frag.x;
+        this.fragDragOffY = event.clientY - rect.top - frag.y;
+        window.addEventListener('pointermove', this.onFragPointerMove);
+        window.addEventListener('pointerup', this.onFragPointerUp);
+        event.preventDefault();
+        event.stopPropagation();
+    }
+
+    onFragResizeDown(event: PointerEvent, fragId: string): void {
+        if (event.button !== 0) return;
+        const stage = this.canvasStageRef?.nativeElement;
+        const frag = this.fragments.find(f => f.id === fragId);
+        if (!stage || !frag) return;
+        const rect = stage.getBoundingClientRect();
+        this.resizingFragId = fragId;
+        this.resizeStartX = event.clientX - rect.left;
+        this.resizeStartY = event.clientY - rect.top;
+        this.resizeStartW = frag.width;
+        this.resizeStartH = frag.height;
+        window.addEventListener('pointermove', this.onFragResizeMove);
+        window.addEventListener('pointerup', this.onFragResizeUp);
+        event.preventDefault();
+        event.stopPropagation();
+    }
+
+    removeFragment(fragId: string, event: MouseEvent): void {
+        event.stopPropagation();
+        this.fragments = this.fragments.filter(f => f.id !== fragId);
+        this.persistAll();
+    }
+
+    onFragConditionBlur(event: FocusEvent, fragId: string): void {
+        const text = (event.target as HTMLElement).textContent?.trim() ?? '';
+        this.fragments = this.fragments.map(f =>
+            f.id === fragId ? { ...f, condition: text || f.condition } : f
+        );
+        this.persistAll();
+    }
+
+    /* ── SVG helpers ── */
+    lifelineX(node: SeqNode): number {
+        return node.x + NODE_DEFAULT_W / 2;
+    }
+
+    lifelineTop(node: SeqNode): number {
+        return node.y + LIFELINE_HEAD_H;
+    }
+
+    lifelineBottom(): number {
+        return this.stageSize.h - 20;
+    }
+
+    msgY(msg: SeqMessage): number {
+        const idx = this.messages.findIndex(m => m.id === msg.id);
+        return MSG_Y_START + (idx >= 0 ? idx : msg.order) * MSG_Y_GAP;
+    }
+
+    getMsgLine(msg: SeqMessage): { x1: number; y1: number; x2: number; y2: number } | null {
+        const src = this.canvasNodes.find(n => n.id === msg.sourceId);
+        const tgt = this.canvasNodes.find(n => n.id === msg.targetId);
+        if (!src || !tgt) return null;
+        const y = this.msgY(msg);
+        return {
+            x1: this.lifelineX(src),
+            y1: y,
+            x2: this.lifelineX(tgt),
+            y2: y,
+        };
+    }
+
+    isSelfMsg(msg: SeqMessage): boolean {
+        return msg.sourceId === msg.targetId;
+    }
+
+    selfMsgPath(msg: SeqMessage): string {
+        const src = this.canvasNodes.find(n => n.id === msg.sourceId);
+        if (!src) return '';
+        const x = this.lifelineX(src);
+        const y = this.msgY(msg);
+        const offset = 40;
+        return `M ${x} ${y} C ${x + offset} ${y}, ${x + offset} ${y + 30}, ${x} ${y + 30}`;
+    }
+
+    /* Activation bar: por cada participante, calcular los rangos de mensajes donde es destino */
+    getActivations(node: SeqNode): Array<{ y: number; h: number }> {
+        const results: Array<{ y: number; h: number }> = [];
+        let start: number | null = null;
+
+        this.messages.forEach((msg, i) => {
+            const y = MSG_Y_START + i * MSG_Y_GAP;
+            const isTarget = msg.targetId === node.id && !this.isSelfMsg(msg);
+            if (isTarget && start === null) start = y - 5;
+            if (!isTarget && start !== null) {
+                results.push({ y: start, h: y - start });
+                start = null;
+            }
+        });
+        if (start !== null) {
+            results.push({ y: start, h: this.lifelineBottom() - start - 20 });
+        }
+        return results;
+    }
+
+    msgColor(kind: string): string {
+        const map: Record<string, string> = {
+            'msg-sincrono': '#fbbf24',
+            'msg-asincrono': '#34d399',
+            'msg-retorno': '#94a3b8',
+            'msg-creacion': '#6ee7b7',
+            'msg-destruccion': '#f87171',
+            'msg-autoreferencia': '#a78bfa',
+        };
+        return map[kind] ?? '#94a3b8';
+    }
+
+    msgDash(kind: string): string {
+        return kind === 'msg-retorno' ? '8,4' : 'none';
+    }
+
+    msgMarkerEnd(kind: string): string {
+        if (kind === 'msg-destruccion') return '';
+        if (kind === 'msg-retorno' || kind === 'msg-asincrono') return `url(#seq-open-${kind})`;
+        return `url(#seq-arrow-${kind})`;
+    }
+
+    fragColor(kind: string): string {
+        const map: Record<string, string> = {
+            'frag-alt': '#818cf8',
+            'frag-loop': '#34d399',
+            'frag-opt': '#fbbf24',
+            'frag-par': '#fb923c',
+        };
+        return map[kind] ?? '#94a3b8';
+    }
+
+    fragLabel(kind: string): string {
+        return kind.replace('frag-', '').toUpperCase();
+    }
+
+    get msgMarkerDefs(): Array<{ id: string; type: 'arrow' | 'open'; color: string }> {
+        return [
+            { id: 'seq-arrow-msg-sincrono', type: 'arrow', color: this.msgColor('msg-sincrono') },
+            { id: 'seq-arrow-msg-creacion', type: 'arrow', color: this.msgColor('msg-creacion') },
+            { id: 'seq-arrow-msg-autoreferencia', type: 'arrow', color: this.msgColor('msg-autoreferencia') },
+            { id: 'seq-open-msg-asincrono', type: 'open', color: this.msgColor('msg-asincrono') },
+            { id: 'seq-open-msg-retorno', type: 'open', color: this.msgColor('msg-retorno') },
+        ];
+    }
+
+    /* ── trackBy ── */
+    trackByNode(_: number, n: SeqNode): string { return n.id; }
+    trackByMsg(_: number, m: SeqMessage): string { return m.id; }
+    trackByFrag(_: number, f: SeqFragment): string { return f.id; }
+    trackByMarkerId(_: number, m: { id: string }): string { return m.id; }
+    trackByGroup(_: number, g: PaletteGroup): string { return g.id; }
+    trackByItem(_: number, i: PaletteItem): string { return i.kind; }
+
+    /* ── Private ── */
 
     private readonly onWindowPointerMove = (event: PointerEvent): void => {
         if (!this.draggingNodeId) return;
         const stage = this.canvasStageRef?.nativeElement;
         if (!stage) return;
         const rect = stage.getBoundingClientRect();
-        const x = this.clamp(event.clientX - rect.left - this.dragOffsetX, 12, rect.width - 148);
-        const y = this.clamp(event.clientY - rect.top - this.dragOffsetY, 12, rect.height - 60);
-        this.canvasNodes = this.canvasNodes.map((n) => n.id !== this.draggingNodeId ? n : { ...n, x, y });
+        const x = this.clamp(event.clientX - rect.left - this.dragOffsetX, 12, rect.width - 160);
+        this.canvasNodes = this.canvasNodes.map(n =>
+            n.id !== this.draggingNodeId ? n : { ...n, x }
+        );
         this.hasPendingNodeMove = true;
     };
 
@@ -179,42 +564,132 @@ export class CanvasSecuenciaComponent implements OnInit, OnDestroy {
         if (!this.draggingNodeId) { this.removeDragListeners(); return; }
         this.draggingNodeId = null;
         this.removeDragListeners();
-        if (this.hasPendingNodeMove) { this.persistCanvasNodes(); this.hasPendingNodeMove = false; }
+        if (this.hasPendingNodeMove) { this.persistAll(); this.hasPendingNodeMove = false; }
     };
 
-    private buildStarterNodes(): CanvasNode[] {
+    private readonly onFragPointerMove = (event: PointerEvent): void => {
+        if (!this.draggingFragId) return;
+        const stage = this.canvasStageRef?.nativeElement;
+        if (!stage) return;
+        const rect = stage.getBoundingClientRect();
+        const x = this.clamp(event.clientX - rect.left - this.fragDragOffX, 8, rect.width - 200);
+        const y = this.clamp(event.clientY - rect.top - this.fragDragOffY, 8, rect.height - 80);
+        this.fragments = this.fragments.map(f =>
+            f.id !== this.draggingFragId ? f : { ...f, x, y }
+        );
+    };
+
+    private readonly onFragPointerUp = (): void => {
+        if (!this.draggingFragId) { this.removeFragListeners(); return; }
+        this.draggingFragId = null;
+        this.removeFragListeners();
+        this.persistAll();
+    };
+
+    private readonly onFragResizeMove = (event: PointerEvent): void => {
+        if (!this.resizingFragId) return;
+        const stage = this.canvasStageRef?.nativeElement;
+        if (!stage) return;
+        const rect = stage.getBoundingClientRect();
+        const dx = (event.clientX - rect.left) - this.resizeStartX;
+        const dy = (event.clientY - rect.top) - this.resizeStartY;
+        const newW = Math.max(120, this.resizeStartW + dx);
+        const newH = Math.max(60, this.resizeStartH + dy);
+        this.fragments = this.fragments.map(f =>
+            f.id !== this.resizingFragId ? f : { ...f, width: newW, height: newH }
+        );
+    };
+
+    private readonly onFragResizeUp = (): void => {
+        if (!this.resizingFragId) { this.removeResizeListeners(); return; }
+        this.resizingFragId = null;
+        this.removeResizeListeners();
+        this.persistAll();
+    };
+
+    private buildStarterNodes(): SeqNode[] {
         return [
-            { id: this.buildNodeId(), kind: 'actor', label: 'Actor 1', x: 54, y: 66 },
-            { id: this.buildNodeId(), kind: 'objeto', label: 'Objeto 1', x: 280, y: 66 },
-            { id: this.buildNodeId(), kind: 'msg-sincrono', label: 'Mensaje 1', x: 168, y: 200 },
+            { id: this.buildId(), kind: 'actor', label: 'Usuario', x: LIFELINE_START_X, y: 16 },
+            { id: this.buildId(), kind: 'objeto', label: 'Servicio', x: LIFELINE_START_X + LIFELINE_X_GAP, y: 16 },
+            { id: this.buildId(), kind: 'basedatos', label: 'Base de datos', x: LIFELINE_START_X + LIFELINE_X_GAP * 2, y: 16 },
         ];
     }
 
-    private buildNodeLabel(kind: string, baseLabel: string): string {
-        const count = this.canvasNodes.filter((n) => n.kind === kind).length + 1;
-        return `${baseLabel} ${count}`;
+    private buildStarterMessages(): SeqMessage[] {
+        if (this.canvasNodes.length < 2) return [];
+        const [a, b, c] = this.canvasNodes;
+        return [
+            { id: this.buildId(), kind: 'msg-sincrono', sourceId: a.id, targetId: b.id, label: 'solicitar()', order: 0 },
+            { id: this.buildId(), kind: 'msg-sincrono', sourceId: b.id, targetId: c.id, label: 'consultar()', order: 1 },
+            { id: this.buildId(), kind: 'msg-retorno', sourceId: c.id, targetId: b.id, label: 'datos', order: 2 },
+            { id: this.buildId(), kind: 'msg-retorno', sourceId: b.id, targetId: a.id, label: 'respuesta', order: 3 },
+        ];
     }
 
-    private persistCanvasNodes(): void {
+    private buildNodeLabel(kind: string, base: string): string {
+        const count = this.canvasNodes.filter(n => n.kind === kind).length + 1;
+        return `${base} ${count}`;
+    }
+
+    private buildMsgLabel(kind: string): string {
+        const map: Record<string, string> = {
+            'msg-sincrono': 'mensaje()',
+            'msg-asincrono': 'señal()',
+            'msg-retorno': 'retorno',
+            'msg-creacion': '«create»',
+            'msg-destruccion': '«destroy»',
+            'msg-autoreferencia': 'proceso()',
+        };
+        return map[kind] ?? 'mensaje';
+    }
+
+    private nextLifelineX(): number {
+        if (this.canvasNodes.length === 0) return LIFELINE_START_X;
+        const maxX = Math.max(...this.canvasNodes.map(n => n.x));
+        return maxX + LIFELINE_X_GAP;
+    }
+
+    private persistAll(): void {
         if (!this.diagram) return;
-        this.diagramaApiService.update(this.diagram.id, { nodes: this.canvasNodes.map((n) => ({ ...n })) }).subscribe({
-            next: (updated) => this.diagramUpdated.emit(updated),
+        const payload = {
+            nodes: this.canvasNodes.map(n => ({ ...n })),
+            messages: this.messages,
+            fragments: this.fragments,
+        } as any;
+        this.diagramaApiService.update(this.diagram.id, payload).subscribe({
+            next: updated => this.diagramUpdated.emit(updated),
             error: (err: unknown) => console.error('Error al guardar canvas:', err),
         });
+    }
+
+    private updateStageSize(): void {
+        const stage = this.canvasStageRef?.nativeElement;
+        if (!stage) return;
+        this.stageSize = { w: stage.offsetWidth, h: stage.offsetHeight };
     }
 
     private clamp(v: number, min: number, max: number): number {
         return max <= min ? min : Math.min(Math.max(v, min), max);
     }
 
-    private buildNodeId(): string {
+    private buildId(): string {
         return typeof crypto !== 'undefined' && 'randomUUID' in crypto
             ? crypto.randomUUID()
-            : `node-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
+            : `id-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
     }
 
     private removeDragListeners(): void {
         window.removeEventListener('pointermove', this.onWindowPointerMove);
         window.removeEventListener('pointerup', this.onWindowPointerUp);
+    }
+
+    private removeFragListeners(): void {
+        window.removeEventListener('pointermove', this.onFragPointerMove);
+        window.removeEventListener('pointerup', this.onFragPointerUp);
+    }
+
+    private removeResizeListeners(): void {
+        window.removeEventListener('pointermove', this.onFragResizeMove);
+        window.removeEventListener('pointerup', this.onFragResizeUp);
     }
 }

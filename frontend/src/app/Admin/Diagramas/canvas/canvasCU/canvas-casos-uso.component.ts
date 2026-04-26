@@ -1,87 +1,36 @@
-import { Component, ElementRef, EventEmitter, Input, OnDestroy, OnInit, Output, ViewChild } from '@angular/core';
+import {
+    AfterViewChecked, Component, ElementRef, EventEmitter,
+    Input, OnDestroy, OnInit, Output, ViewChild
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { CanvasNode, DiagramaApiService, UmlDiagram } from '../../../../services/diagrama-api.service';
 
-export interface PaletteItem {
-    kind: string;
-    label: string;
-    hint: string;
-    icon: SafeHtml;
+/* ── Interfaces ── */
+export interface CuCanvasNode extends CanvasNode {
+    noteText?: string;
 }
 
-export interface PaletteSection {
+export interface CuRelation {
     id: string;
-    label: string;
-    color: string;
-    items: PaletteItem[];
+    kind: string;   /* asociacion | include | extend | generalizacion */
+    sourceId: string;
+    targetId: string;
+    label?: string;
 }
 
-/* ── SVG raw strings — 28×28 viewBox, stroke 2 ───────────────────────────── */
-const RAW_ICONS: Record<string, string> = {
+export interface PendingRelation { kind: string; sourceId?: string; }
+export interface GhostLine { x1: number; y1: number; x2: number; y2: number; }
+export interface RelLine { x1: number; y1: number; x2: number; y2: number; }
 
-    actor: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 28" fill="none"
-        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <circle cx="14" cy="5.5" r="3"/>
-      <line x1="14" y1="8.5"  x2="14"  y2="18"/>
-      <line x1="7"  y1="12.5" x2="21"  y2="12.5"/>
-      <line x1="14" y1="18"   x2="9"   y2="25"/>
-      <line x1="14" y1="18"   x2="19"  y2="25"/>
-    </svg>`,
+export interface PaletteItem { kind: string; label: string; }
+export interface PaletteGroup { id: string; title: string; items: PaletteItem[]; }
 
-    caso: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 28" fill="none"
-        stroke="currentColor" stroke-width="2">
-      <ellipse cx="14" cy="14" rx="11" ry="6.5"/>
-    </svg>`,
+/* Kinds que activan modo-conexión en lugar de soltar un nodo */
+const RELATION_KINDS = new Set(['asociacion', 'include', 'extend', 'generalizacion']);
 
-    sistema: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 28" fill="none"
-        stroke="currentColor" stroke-width="2" stroke-linecap="round">
-      <rect x="2" y="2" width="24" height="24" rx="2"/>
-      <line x1="2" y1="9" x2="26" y2="9"/>
-      <circle cx="5.5" cy="5.6" r="1.2" fill="currentColor" stroke="none"/>
-      <circle cx="9"   cy="5.6" r="1.2" fill="currentColor" stroke="none"/>
-    </svg>`,
-
-    asociacion: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 28" fill="none"
-        stroke="currentColor" stroke-width="2" stroke-linecap="round">
-      <line x1="2" y1="14" x2="26" y2="14"/>
-    </svg>`,
-
-    include: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 28" fill="none"
-        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <line x1="2" y1="17" x2="20" y2="17" stroke-dasharray="4.5 3"/>
-      <polyline points="16,12 23,17 16,22" fill="none"/>
-      <text x="2" y="11" font-size="7" fill="currentColor" stroke="none"
-        font-family="monospace" font-style="italic" font-weight="700">&#171;inc&#187;</text>
-    </svg>`,
-
-    extend: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 28" fill="none"
-        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <line x1="2" y1="17" x2="20" y2="17" stroke-dasharray="4.5 3"/>
-      <polyline points="16,12 23,17 16,22" fill="none"/>
-      <text x="2" y="11" font-size="7" fill="currentColor" stroke="none"
-        font-family="monospace" font-style="italic" font-weight="700">&#171;ext&#187;</text>
-    </svg>`,
-
-    generalizacion: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 28" fill="none"
-        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <line x1="2" y1="14" x2="20" y2="14"/>
-      <polygon points="20,9 27,14 20,19" fill="none" stroke="currentColor"/>
-    </svg>`,
-
-    nota: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 28" fill="none"
-        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M5 2h13l6 6v18H5z"/>
-      <polyline points="18,2 18,8 24,8"/>
-      <line x1="9" y1="14" x2="19" y2="14"/>
-      <line x1="9" y1="18" x2="15" y2="18"/>
-    </svg>`,
-
-    agrupacion: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 28" fill="none"
-        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-dasharray="5 3">
-      <rect x="2" y="2" width="24" height="24" rx="3"/>
-    </svg>`,
-};
+/* Fallbacks de tamaño de nodo antes de que el DOM esté listo */
+const NODE_DEFAULT_W = 180;
+const NODE_DEFAULT_H = 80;
 
 @Component({
     selector: 'app-canvas-casos-uso',
@@ -90,122 +39,123 @@ const RAW_ICONS: Record<string, string> = {
     templateUrl: './canvas-casos-uso.component.html',
     styleUrls: ['./canvas-casos-uso.component.css']
 })
-export class CanvasCasosUsoComponent implements OnInit, OnDestroy {
+export class CanvasCasosUsoComponent implements OnInit, OnDestroy, AfterViewChecked {
+
     @Input() diagram!: UmlDiagram;
     @Output() diagramUpdated = new EventEmitter<UmlDiagram>();
 
-    canvasNodes: CanvasNode[] = [];
+    canvasNodes: CuCanvasNode[] = [];
+    relations: CuRelation[] = [];
+
     @ViewChild('canvasStage') canvasStageRef?: ElementRef<HTMLDivElement>;
 
+    /* drag-move state */
     draggingNodeId: string | null = null;
     private dragOffsetX = 0;
     private dragOffsetY = 0;
     private hasPendingNodeMove = false;
 
-    private readonly ACCORDION_KEY = 'uml_accordion_casos_uso';
-    accordionOpen: Record<string, boolean> = { figuras: true };
+    /* relation-connect state */
+    pendingRelation: PendingRelation | null = null;
+    ghostLine: GhostLine | null = null;
 
-    paletteSections: PaletteSection[] = [];
+    /* SVG overlay size */
+    stageSize = { w: 800, h: 520 };
+    private needsSizeUpdate = false;
 
-    constructor(
-        private diagramaApiService: DiagramaApiService,
-        private sanitizer: DomSanitizer
-    ) { }
+    /* Accordion state */
+    collapsedGroups = new Set<string>();
+
+    readonly paletteGroups: PaletteGroup[] = [
+        {
+            id: 'figuras', title: 'Figuras',
+            items: [
+                { kind: 'actor', label: 'Actor' },
+                { kind: 'caso', label: 'Caso de uso' },
+                { kind: 'sistema', label: 'Límite del sistema' },
+                { kind: 'nota', label: 'Nota / Comentario' },
+            ],
+        },
+        {
+            id: 'relaciones', title: 'Relaciones',
+            items: [
+                { kind: 'asociacion', label: 'Asociación' },
+                { kind: 'include', label: 'Include' },
+                { kind: 'extend', label: 'Extend' },
+                { kind: 'generalizacion', label: 'Generalización' },
+            ],
+        },
+        {
+            id: 'extras', title: 'Extras',
+            items: [
+                { kind: 'agrupacion', label: 'Agrupación' },
+            ],
+        },
+    ];
+
+    constructor(private diagramaApiService: DiagramaApiService) { }
 
     ngOnInit(): void {
-        this.loadAccordionState();
-        this.buildPaletteSections();
-
         if (this.diagram) {
-            this.canvasNodes = this.diagram.nodes.map((n) => ({ ...n }));
+            const raw = this.diagram as any;
+            this.canvasNodes = ((raw.nodes ?? []) as CuCanvasNode[]).map(n => ({ ...n }));
+            this.relations = ((raw.relations ?? []) as CuRelation[]);
             if (this.canvasNodes.length === 0) {
                 this.canvasNodes = this.buildStarterNodes();
-                this.persistCanvasNodes();
+                this.persistAll();
             }
         }
     }
 
-    ngOnDestroy(): void {
-        this.removeDragListeners();
+    ngAfterViewChecked(): void {
+        if (this.needsSizeUpdate) { this.updateStageSize(); this.needsSizeUpdate = false; }
     }
 
-    // ─── Paleta ───────────────────────────────────────────────────────────────
+    ngOnDestroy(): void { this.removeDragListeners(); }
 
-    private s(kind: string): SafeHtml {
-        return this.sanitizer.bypassSecurityTrustHtml(RAW_ICONS[kind] ?? RAW_ICONS['caso']);
+    /* ── Accordion ── */
+    toggleGroup(id: string): void {
+        this.collapsedGroups.has(id) ? this.collapsedGroups.delete(id) : this.collapsedGroups.add(id);
     }
+    isGroupCollapsed(id: string): boolean { return this.collapsedGroups.has(id); }
 
-    private buildPaletteSections(): void {
-        this.paletteSections = [
-            {
-                id: 'figuras', label: 'Figuras', color: '#10b981',
-                items: [
-                    { kind: 'actor', label: 'Actor', hint: 'Rol externo que interactúa', icon: this.s('actor') },
-                    { kind: 'caso', label: 'Caso de uso', hint: 'Funcionalidad del sistema', icon: this.s('caso') },
-                    { kind: 'sistema', label: 'Límite del sistema', hint: 'Frontera del sistema', icon: this.s('sistema') },
-                ]
-            },
-            {
-                id: 'relaciones', label: 'Relaciones', color: '#f59e0b',
-                items: [
-                    { kind: 'asociacion', label: 'Asociación', hint: 'Actor ↔ caso de uso', icon: this.s('asociacion') },
-                    { kind: 'include', label: 'Include', hint: 'Relación «include»', icon: this.s('include') },
-                    { kind: 'extend', label: 'Extend', hint: 'Relación «extend»', icon: this.s('extend') },
-                    { kind: 'generalizacion', label: 'Generalización', hint: 'Herencia entre elementos', icon: this.s('generalizacion') },
-                ]
-            },
-            {
-                id: 'extras', label: 'Extras', color: '#94a3b8',
-                items: [
-                    { kind: 'nota', label: 'Nota', hint: 'Anotación libre', icon: this.s('nota') },
-                    { kind: 'agrupacion', label: 'Agrupación', hint: 'Agrupa elementos', icon: this.s('agrupacion') },
-                ]
-            }
-        ];
-    }
-
-    // ─── Acordeón ────────────────────────────────────────────────────────────
-
-    toggleSection(sectionId: string): void {
-        this.accordionOpen[sectionId] = !this.accordionOpen[sectionId];
-        this.saveAccordionState();
-    }
-
-    isSectionOpen(sectionId: string): boolean {
-        return !!this.accordionOpen[sectionId];
-    }
-
-    private loadAccordionState(): void {
-        try {
-            const stored = localStorage.getItem(this.ACCORDION_KEY);
-            if (stored) { this.accordionOpen = JSON.parse(stored); }
-        } catch { this.accordionOpen = { figuras: true }; }
-    }
-
-    private saveAccordionState(): void {
-        try { localStorage.setItem(this.ACCORDION_KEY, JSON.stringify(this.accordionOpen)); } catch { /* no-op */ }
-    }
-
-    // ─── Canvas actions ───────────────────────────────────────────────────────
-
-    guardarLienzo(): void { this.persistCanvasNodes(); }
+    /* ── Canvas actions ── */
+    guardarLienzo(): void { this.persistAll(); }
 
     clearCanvas(): void {
-        if (this.canvasNodes.length === 0) { return; }
+        if (this.canvasNodes.length === 0 && this.relations.length === 0) return;
         this.canvasNodes = [];
-        this.persistCanvasNodes();
+        this.relations = [];
+        this.pendingRelation = null;
+        this.ghostLine = null;
+        this.persistAll();
     }
 
-    // ─── Icono para nodo en canvas ────────────────────────────────────────────
-
-    getIconForKind(kind: string): SafeHtml {
-        return this.sanitizer.bypassSecurityTrustHtml(RAW_ICONS[kind] ?? RAW_ICONS['caso']);
+    /* ── Inline editing ── */
+    onNameBlur(event: FocusEvent, nodeId: string): void {
+        const text = (event.target as HTMLElement).textContent?.trim() ?? '';
+        this.canvasNodes = this.canvasNodes.map(n =>
+            n.id === nodeId ? { ...n, label: text || n.label } : n
+        );
+        this.persistAll();
     }
 
-    // ─── Drag desde paleta ────────────────────────────────────────────────────
+    onNoteBlur(event: FocusEvent, nodeId: string): void {
+        const text = (event.target as HTMLElement).textContent?.trim() ?? '';
+        this.canvasNodes = this.canvasNodes.map(n =>
+            n.id === nodeId ? { ...n, noteText: text } : n
+        );
+        this.persistAll();
+    }
 
+    blurTarget(event: Event): void {
+        (event.target as HTMLElement).blur();
+        event.preventDefault();
+    }
+
+    /* ── Palette drag ── */
     onPaletteDragStart(event: DragEvent, item: PaletteItem): void {
-        if (!event.dataTransfer) { return; }
+        if (!event.dataTransfer) return;
         event.dataTransfer.effectAllowed = 'copy';
         event.dataTransfer.setData('application/x-uml-kind', item.kind);
         event.dataTransfer.setData('application/x-uml-label', item.label);
@@ -213,72 +163,183 @@ export class CanvasCasosUsoComponent implements OnInit, OnDestroy {
 
     onCanvasDragOver(event: DragEvent): void {
         event.preventDefault();
-        if (event.dataTransfer) { event.dataTransfer.dropEffect = 'copy'; }
+        if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy';
     }
 
     onCanvasDrop(event: DragEvent): void {
         event.preventDefault();
         const kind = event.dataTransfer?.getData('application/x-uml-kind');
         const label = event.dataTransfer?.getData('application/x-uml-label');
-        if (!kind || !label) { return; }
+        if (!kind || !label) return;
+
+        /* Relaciones → modo conexión */
+        if (RELATION_KINDS.has(kind)) {
+            this.pendingRelation = { kind };
+            return;
+        }
+
         const stage = event.currentTarget;
-        if (!(stage instanceof HTMLElement)) { return; }
-
+        if (!(stage instanceof HTMLElement)) return;
         const rect = stage.getBoundingClientRect();
-        const x = this.clamp(event.clientX - rect.left - 60, 12, rect.width - 160);
-        const y = this.clamp(event.clientY - rect.top - 30, 12, rect.height - 90);
+        const x = this.clamp(event.clientX - rect.left - 60, 12, rect.width - 200);
+        const y = this.clamp(event.clientY - rect.top - 30, 12, rect.height - 100);
 
-        const newNode: CanvasNode = {
-            id: this.buildNodeId(),
+        const node: CuCanvasNode = {
+            id: this.buildId(),
             kind,
             label: this.buildNodeLabel(kind, label),
-            x, y,
+            x,
+            y,
+            ...(kind === 'nota' ? { noteText: 'Escribe tu nota aquí...' } : {}),
         };
-        this.canvasNodes = [...this.canvasNodes, newNode];
-        this.persistCanvasNodes();
+
+        this.canvasNodes = [...this.canvasNodes, node];
+        this.needsSizeUpdate = true;
+        this.persistAll();
     }
 
-    // ─── Drag de nodos en canvas ──────────────────────────────────────────────
+    /* ── Stage click: maneja modo conexión ── */
+    onStageClick(event: MouseEvent): void {
+        if (!this.pendingRelation) return;
 
-    startNodeDrag(event: PointerEvent, nodeId: string): void {
-        if (event.button !== 0) { return; }
+        const target = event.target as HTMLElement;
+        const nodeEl = target.closest('[data-node-id]') as HTMLElement | null;
+
+        if (!nodeEl) { this.cancelRelation(); return; }
+
+        const nodeId = nodeEl.getAttribute('data-node-id')!;
+
+        if (!this.pendingRelation.sourceId) {
+            this.pendingRelation = { ...this.pendingRelation, sourceId: nodeId };
+        } else {
+            if (nodeId === this.pendingRelation.sourceId) return;
+            const rel: CuRelation = {
+                id: this.buildId(),
+                kind: this.pendingRelation.kind,
+                sourceId: this.pendingRelation.sourceId,
+                targetId: nodeId,
+            };
+            this.relations = [...this.relations, rel];
+            this.pendingRelation = null;
+            this.ghostLine = null;
+            this.persistAll();
+        }
+    }
+
+    /* ── Stage mousemove: ghost line ── */
+    onStageMouseMove(event: MouseEvent): void {
+        if (!this.pendingRelation?.sourceId) { this.ghostLine = null; return; }
         const stage = this.canvasStageRef?.nativeElement;
-        const node = this.canvasNodes.find((n) => n.id === nodeId);
-        if (!stage || !node) { return; }
+        if (!stage) return;
+        const rect = stage.getBoundingClientRect();
+        const src = this.canvasNodes.find(n => n.id === this.pendingRelation!.sourceId);
+        if (!src) return;
+        const sp = this.nodeCenter(src);
+        this.ghostLine = {
+            x1: sp.x, y1: sp.y,
+            x2: event.clientX - rect.left,
+            y2: event.clientY - rect.top,
+        };
+    }
 
+    cancelRelation(): void { this.pendingRelation = null; this.ghostLine = null; }
+
+    /* ── Eliminar relación ── */
+    removeRelation(relId: string, event: MouseEvent): void {
+        event.stopPropagation();
+        this.relations = this.relations.filter(r => r.id !== relId);
+        this.persistAll();
+    }
+
+    /* ── Drag de nodos ── */
+    onNodePointerDown(event: PointerEvent, nodeId: string): void {
+        if (this.pendingRelation) return;
+        if (event.button !== 0) return;
+        const stage = this.canvasStageRef?.nativeElement;
+        const node = this.canvasNodes.find(n => n.id === nodeId);
+        if (!stage || !node) return;
         const rect = stage.getBoundingClientRect();
         this.draggingNodeId = nodeId;
         this.dragOffsetX = event.clientX - rect.left - node.x;
         this.dragOffsetY = event.clientY - rect.top - node.y;
         this.hasPendingNodeMove = false;
-
-        if (typeof window !== 'undefined') {
-            window.addEventListener('pointermove', this.onWindowPointerMove);
-            window.addEventListener('pointerup', this.onWindowPointerUp);
-        }
+        window.addEventListener('pointermove', this.onWindowPointerMove);
+        window.addEventListener('pointerup', this.onWindowPointerUp);
         event.preventDefault();
     }
 
     removeNode(nodeId: string, event: MouseEvent): void {
         event.stopPropagation();
-        this.canvasNodes = this.canvasNodes.filter((n) => n.id !== nodeId);
-        this.persistCanvasNodes();
+        this.canvasNodes = this.canvasNodes.filter(n => n.id !== nodeId);
+        this.relations = this.relations.filter(r => r.sourceId !== nodeId && r.targetId !== nodeId);
+        this.persistAll();
     }
 
-    trackByNode(_i: number, n: CanvasNode): string { return n.id; }
-    trackBySection(_i: number, s: PaletteSection): string { return s.id; }
-    trackByPalette(_i: number, p: PaletteItem): string { return p.kind; }
+    /* ── SVG line helpers ── */
+    getRelLine(rel: CuRelation): RelLine | null {
+        const src = this.canvasNodes.find(n => n.id === rel.sourceId);
+        const tgt = this.canvasNodes.find(n => n.id === rel.targetId);
+        if (!src || !tgt) return null;
+        const sc = this.nodeCenter(src);
+        const tc = this.nodeCenter(tgt);
+        const p1 = this.nodeBorderPoint(src, sc, tc);
+        const p2 = this.nodeBorderPoint(tgt, tc, sc);
+        return { x1: p1.x, y1: p1.y, x2: p2.x, y2: p2.y };
+    }
 
-    // ─── Window handlers ─────────────────────────────────────────────────────
+    relColor(kind: string): string {
+        const map: Record<string, string> = {
+            asociacion: '#94a3b8',
+            include: '#fbbf24',
+            extend: '#fb923c',
+            generalizacion: '#60a5fa',
+        };
+        return map[kind] ?? '#94a3b8';
+    }
+
+    relDash(kind: string): string {
+        return kind === 'include' || kind === 'extend' ? '8,4' : 'none';
+    }
+
+    relMarkerEnd(kind: string): string {
+        const map: Record<string, string> = {
+            asociacion: '',
+            include: `url(#cu-arrow-include)`,
+            extend: `url(#cu-arrow-extend)`,
+            generalizacion: `url(#cu-open-generalizacion)`,
+        };
+        return map[kind] ?? '';
+    }
+
+    relLabel(kind: string): string {
+        if (kind === 'include') return '«include»';
+        if (kind === 'extend') return '«extend»';
+        return '';
+    }
+
+    get relMarkerDefs(): Array<{ id: string; type: 'arrow' | 'open'; color: string }> {
+        return [
+            { id: 'cu-arrow-include', type: 'arrow', color: this.relColor('include') },
+            { id: 'cu-arrow-extend', type: 'arrow', color: this.relColor('extend') },
+            { id: 'cu-open-generalizacion', type: 'open', color: this.relColor('generalizacion') },
+        ];
+    }
+
+    /* ── trackBy ── */
+    trackByNode(_: number, n: CuCanvasNode): string { return n.id; }
+    trackByRelation(_: number, r: CuRelation): string { return r.id; }
+    trackByMarkerId(_: number, m: { id: string }): string { return m.id; }
+
+    /* ── Private ── */
 
     private readonly onWindowPointerMove = (event: PointerEvent): void => {
-        if (!this.draggingNodeId) { return; }
+        if (!this.draggingNodeId) return;
         const stage = this.canvasStageRef?.nativeElement;
-        if (!stage) { return; }
+        if (!stage) return;
         const rect = stage.getBoundingClientRect();
-        const x = this.clamp(event.clientX - rect.left - this.dragOffsetX, 12, rect.width - 160);
-        const y = this.clamp(event.clientY - rect.top - this.dragOffsetY, 12, rect.height - 90);
-        this.canvasNodes = this.canvasNodes.map((n) =>
+        const x = this.clamp(event.clientX - rect.left - this.dragOffsetX, 12, rect.width - 200);
+        const y = this.clamp(event.clientY - rect.top - this.dragOffsetY, 12, rect.height - 60);
+        this.canvasNodes = this.canvasNodes.map(n =>
             n.id !== this.draggingNodeId ? n : { ...n, x, y }
         );
         this.hasPendingNodeMove = true;
@@ -288,44 +349,94 @@ export class CanvasCasosUsoComponent implements OnInit, OnDestroy {
         if (!this.draggingNodeId) { this.removeDragListeners(); return; }
         this.draggingNodeId = null;
         this.removeDragListeners();
-        if (this.hasPendingNodeMove) { this.persistCanvasNodes(); this.hasPendingNodeMove = false; }
+        if (this.hasPendingNodeMove) { this.persistAll(); this.hasPendingNodeMove = false; }
     };
 
-    // ─── Helpers ─────────────────────────────────────────────────────────────
+    private nodeCenter(node: CuCanvasNode): { x: number; y: number } {
+        const el = this.canvasStageRef?.nativeElement
+            ?.querySelector(`[data-node-id="${node.id}"]`) as HTMLElement | null;
+        const w = (el && el.offsetWidth > 0) ? el.offsetWidth : NODE_DEFAULT_W;
+        const h = (el && el.offsetHeight > 0) ? el.offsetHeight : NODE_DEFAULT_H;
+        return { x: node.x + w / 2, y: node.y + h / 2 };
+    }
 
-    private buildStarterNodes(): CanvasNode[] {
+    private nodeBorderPoint(
+        node: CuCanvasNode,
+        from: { x: number; y: number },
+        to: { x: number; y: number }
+    ): { x: number; y: number } {
+        const el = this.canvasStageRef?.nativeElement
+            ?.querySelector(`[data-node-id="${node.id}"]`) as HTMLElement | null;
+        const w = (el && el.offsetWidth > 0) ? el.offsetWidth : NODE_DEFAULT_W;
+        const h = (el && el.offsetHeight > 0) ? el.offsetHeight : NODE_DEFAULT_H;
+
+        const cx = node.x + w / 2;
+        const cy = node.y + h / 2;
+        const dx = to.x - from.x;
+        const dy = to.y - from.y;
+        if (dx === 0 && dy === 0) return { x: cx, y: cy };
+
+        const hw = w / 2;
+        const hh = h / 2;
+        const candidates: number[] = [];
+
+        if (dx !== 0) {
+            const t = (dx > 0 ? hw : -hw) / dx;
+            const y = cy + t * dy;
+            if (y >= cy - hh && y <= cy + hh) candidates.push(t);
+        }
+        if (dy !== 0) {
+            const t = (dy > 0 ? hh : -hh) / dy;
+            const x = cx + t * dx;
+            if (x >= cx - hw && x <= cx + hw) candidates.push(t);
+        }
+
+        const t = candidates.length ? Math.min(...candidates) : 0;
+        return { x: cx + t * dx, y: cy + t * dy };
+    }
+
+    private updateStageSize(): void {
+        const stage = this.canvasStageRef?.nativeElement;
+        if (!stage) return;
+        this.stageSize = { w: stage.offsetWidth, h: stage.offsetHeight };
+    }
+
+    private buildStarterNodes(): CuCanvasNode[] {
         return [
-            { id: this.buildNodeId(), kind: 'actor', label: 'Actor 1', x: 56, y: 72 },
-            { id: this.buildNodeId(), kind: 'caso', label: 'Caso de uso 1', x: 258, y: 80 },
-            { id: this.buildNodeId(), kind: 'sistema', label: 'Sistema 1', x: 244, y: 220 },
+            { id: this.buildId(), kind: 'actor', label: 'Actor 1', x: 56, y: 120 },
+            { id: this.buildId(), kind: 'caso', label: 'Caso de uso 1', x: 260, y: 100 },
+            { id: this.buildId(), kind: 'sistema', label: 'Sistema', x: 210, y: 50 },
         ];
     }
 
-    private buildNodeLabel(kind: string, baseLabel: string): string {
-        const count = this.canvasNodes.filter((n) => n.kind === kind).length + 1;
-        return `${baseLabel} ${count}`;
+    private buildNodeLabel(kind: string, base: string): string {
+        const count = this.canvasNodes.filter(n => n.kind === kind).length + 1;
+        return `${base} ${count}`;
     }
 
-    private persistCanvasNodes(): void {
-        if (!this.diagram) { return; }
-        const nodes = this.canvasNodes.map((n) => ({ ...n }));
-        this.diagramaApiService.update(this.diagram.id, { nodes }).subscribe({
-            next: (updated) => { this.diagramUpdated.emit(updated); },
+    private persistAll(): void {
+        if (!this.diagram) return;
+        const payload = {
+            nodes: this.canvasNodes.map(n => ({ ...n })),
+            relations: this.relations,
+        } as any;
+        this.diagramaApiService.update(this.diagram.id, payload).subscribe({
+            next: updated => this.diagramUpdated.emit(updated),
             error: (err: unknown) => console.error('Error al guardar canvas:', err),
         });
     }
 
-    private clamp(v: number, mn: number, mx: number): number {
-        return mx <= mn ? mn : Math.min(Math.max(v, mn), mx);
+    private clamp(v: number, min: number, max: number): number {
+        return max <= min ? min : Math.min(Math.max(v, min), max);
     }
 
-    private buildNodeId(): string {
-        if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) { return crypto.randomUUID(); }
-        return `node-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
+    private buildId(): string {
+        return typeof crypto !== 'undefined' && 'randomUUID' in crypto
+            ? crypto.randomUUID()
+            : `node-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
     }
 
     private removeDragListeners(): void {
-        if (typeof window === 'undefined') { return; }
         window.removeEventListener('pointermove', this.onWindowPointerMove);
         window.removeEventListener('pointerup', this.onWindowPointerUp);
     }
