@@ -1,0 +1,287 @@
+<div class="generador-page">
+
+  <button class="back-link" (click)="goBack()">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+      stroke-linecap="round" stroke-linejoin="round">
+      <line x1="19" y1="12" x2="5" y2="12"></line>
+      <polyline points="12 19 5 12 12 5"></polyline>
+    </svg>
+    Volver a Proyectos
+  </button>
+
+  <div class="project-header-card" [style.background]="getProyectoGradient()">
+    <div class="project-header-watermark">
+      <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="0.7">
+        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
+      </svg>
+    </div>
+    <h1 class="project-header-title">{{ proyecto.nombre }}</h1>
+    <p class="project-header-desc">{{ proyecto.descripcion }}</p>
+  </div>
+
+  <div class="main-layout">
+
+    <app-barra [projectId]="proyecto.id" [activeTab]="activeTab"></app-barra>
+
+    <div class="content-area">
+
+      <!-- Header -->
+      <div class="content-header">
+        <div class="content-header-text">
+          <h2 class="content-title">Generador de Prompt</h2>
+          <p class="content-subtitle">Genera un prompt estructurado con toda la información del proyecto para crear el software con IA</p>
+        </div>
+      </div>
+
+      <!-- Tabs de vista -->
+      <div class="view-tabs">
+        <button class="view-tab" [class.active]="viewMode === 'config'" (click)="setViewMode('config')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+          Configuración
+        </button>
+        <button class="view-tab" [class.active]="viewMode === 'preview'" (click)="setViewMode('preview')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+            <circle cx="12" cy="12" r="3"></circle>
+          </svg>
+          Preview del Prompt
+        </button>
+      </div>
+
+      <!-- Loading State -->
+      <div class="loading-card" *ngIf="loading">
+        <div class="loading-spinner"></div>
+        <p class="loading-text">Cargando datos del proyecto...</p>
+      </div>
+
+      <!-- ========== CONFIGURACIÓN ========== -->
+      <ng-container *ngIf="!loading && viewMode === 'config'">
+
+        <!-- Secciones a incluir -->
+        <section class="config-card">
+          <div class="config-card-header">
+            <div>
+              <h3 class="config-card-title">Secciones a incluir</h3>
+              <p class="config-card-desc">Selecciona qué información del proyecto incluir en el prompt</p>
+            </div>
+            <div class="toggle-all-btns">
+              <button class="btn-toggle" (click)="toggleAllSections(true)">Todas</button>
+              <button class="btn-toggle" (click)="toggleAllSections(false)">Ninguna</button>
+            </div>
+          </div>
+
+          <div class="sections-grid">
+            <button
+              *ngFor="let section of config.sections; trackBy: trackBySection"
+              class="section-toggle"
+              [class.enabled]="section.enabled"
+              [class.has-data]="(dataCounts[section.id] || 0) > 0"
+              (click)="toggleSection(section)"
+            >
+              <div class="section-toggle-check">
+                <svg *ngIf="section.enabled" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+              </div>
+              <div class="section-toggle-info">
+                <span class="section-toggle-label">{{ section.label }}</span>
+                <span class="section-toggle-count">{{ dataCounts[section.id] || 0 }} registros</span>
+              </div>
+            </button>
+          </div>
+
+          <div class="sections-summary">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="16" x2="12" y2="12"></line>
+              <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+            {{ enabledCount }} de {{ config.sections.length }} secciones seleccionadas
+          </div>
+        </section>
+
+        <!-- Stack Tecnológico -->
+        <section class="config-card">
+          <h3 class="config-card-title">Stack Tecnológico</h3>
+          <p class="config-card-desc">Configura las tecnologías que el agente de IA debe usar para generar el código</p>
+
+          <div class="stack-grid">
+            <div class="form-group">
+              <label class="form-label">Frontend</label>
+              <div class="input-with-options">
+                <input
+                  type="text"
+                  class="form-input"
+                  [(ngModel)]="config.stackFrontend"
+                  placeholder="Ej: Angular, React..."
+                  list="frontend-options"
+                />
+                <datalist id="frontend-options">
+                  <option *ngFor="let opt of STACKS_FRONTEND" [value]="opt"></option>
+                </datalist>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Backend</label>
+              <div class="input-with-options">
+                <input
+                  type="text"
+                  class="form-input"
+                  [(ngModel)]="config.stackBackend"
+                  placeholder="Ej: NestJS, Express..."
+                  list="backend-options"
+                />
+                <datalist id="backend-options">
+                  <option *ngFor="let opt of STACKS_BACKEND" [value]="opt"></option>
+                </datalist>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Base de Datos</label>
+              <div class="input-with-options">
+                <input
+                  type="text"
+                  class="form-input"
+                  [(ngModel)]="config.stackDatabase"
+                  placeholder="Ej: MySQL, PostgreSQL..."
+                  list="db-options"
+                />
+                <datalist id="db-options">
+                  <option *ngFor="let opt of STACKS_DATABASE" [value]="opt"></option>
+                </datalist>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Arquitectura</label>
+              <div class="input-with-options">
+                <input
+                  type="text"
+                  class="form-input"
+                  [(ngModel)]="config.arquitectura"
+                  placeholder="Ej: Monolito, Microservicios..."
+                  list="arch-options"
+                />
+                <datalist id="arch-options">
+                  <option *ngFor="let opt of ARQUITECTURAS" [value]="opt"></option>
+                </datalist>
+              </div>
+            </div>
+
+            <div class="form-group form-group-full">
+              <label class="form-label">Tecnologías adicionales (opcional)</label>
+              <input
+                type="text"
+                class="form-input"
+                [(ngModel)]="config.stackExtra"
+                placeholder="Ej: Docker, Redis, Socket.IO, JWT..."
+              />
+            </div>
+
+            <div class="form-group form-group-full">
+              <label class="form-label">Alcance del entregable</label>
+              <textarea
+                class="form-input form-textarea"
+                [(ngModel)]="config.alcance"
+                rows="2"
+                placeholder="Describe qué esperas que el agente genere..."
+              ></textarea>
+            </div>
+          </div>
+        </section>
+
+        <!-- Botón generar -->
+        <div class="generate-action">
+          <button
+            class="btn-generate"
+            [disabled]="!dataLoaded || enabledCount === 0"
+            (click)="setViewMode('preview')"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
+            </svg>
+            Generar Prompt
+          </button>
+          <p class="generate-hint" *ngIf="!dataLoaded">Esperando carga de datos...</p>
+          <p class="generate-hint" *ngIf="dataLoaded && enabledCount === 0">Selecciona al menos una sección</p>
+        </div>
+
+      </ng-container>
+
+      <!-- ========== PREVIEW ========== -->
+      <ng-container *ngIf="!loading && viewMode === 'preview'">
+
+        <!-- Estadísticas del prompt -->
+        <div class="prompt-stats" *ngIf="promptOutput && !generating">
+          <div class="prompt-stat">
+            <span class="prompt-stat-value">{{ promptCharCount | number }}</span>
+            <span class="prompt-stat-label">caracteres</span>
+          </div>
+          <div class="prompt-stat">
+            <span class="prompt-stat-value">{{ promptWordCount | number }}</span>
+            <span class="prompt-stat-label">palabras</span>
+          </div>
+          <div class="prompt-stat">
+            <span class="prompt-stat-value">{{ promptLineCount | number }}</span>
+            <span class="prompt-stat-label">líneas</span>
+          </div>
+          <div class="prompt-stat">
+            <span class="prompt-stat-value">{{ enabledCount }}</span>
+            <span class="prompt-stat-label">secciones</span>
+          </div>
+        </div>
+
+        <!-- Acciones de exportar -->
+        <div class="export-bar" *ngIf="promptOutput && !generating">
+          <button class="btn-export btn-copy" (click)="copyToClipboard()">
+            <svg *ngIf="!copied" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+            <svg *ngIf="copied" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+            {{ copied ? '¡Copiado!' : 'Copiar al portapapeles' }}
+          </button>
+          <button class="btn-export btn-download" (click)="downloadAsMarkdown()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            Descargar .md
+          </button>
+        </div>
+
+        <!-- Generating animation -->
+        <div class="generating-card" *ngIf="generating">
+          <div class="loading-spinner"></div>
+          <p class="loading-text">Generando prompt...</p>
+        </div>
+
+        <!-- Output del prompt -->
+        <section class="prompt-output-card" *ngIf="promptOutput && !generating">
+          <pre class="prompt-output">{{ promptOutput }}</pre>
+        </section>
+
+        <div class="prompt-empty" *ngIf="!promptOutput && !generating">
+          <div class="empty-icon">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
+            </svg>
+          </div>
+          <h3 class="empty-title">El prompt se mostrará aquí</h3>
+          <p class="empty-desc">Configura las opciones y genera el prompt para verlo.</p>
+        </div>
+
+      </ng-container>
+
+    </div>
+  </div>
+
+</div>

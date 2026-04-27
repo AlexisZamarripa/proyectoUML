@@ -83,6 +83,13 @@ export class BarraComponent implements OnInit, OnChanges {
           { id: 'diagramas', label: 'Diagramas', icon: 'diagram', route: `${base}/diagramas` },
         ],
       },
+      {
+        id: 'generation',
+        label: 'GENERACIÓN',
+        items: [
+          { id: 'generar-prompt', label: 'Generar Prompt', icon: 'spark', route: `${base}/generar-prompt` },
+        ],
+      },
     ];
   }
 }

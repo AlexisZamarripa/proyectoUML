@@ -11,6 +11,7 @@ import { DocumentosComponent } from './Admin/Documentos/doc.component';
 import { FocusGroupComponent } from './Admin/FocusGroup/focusgroup.component';
 import { SeguimientoComponent } from './Admin/SeguimientoTrans/seguimiento.component';
 import { DiagramasComponent } from './Admin/Diagramas/diagramas.component';
+import { GeneradorPromptComponent } from './Admin/GeneradorPrompt/generador-prompt.component';
 
 export const routes: Routes = [
     { path: 'auth', loadChildren: () => import('./auth/auth.routes').then(m => m.AUTH_ROUTES) },
@@ -25,5 +26,6 @@ export const routes: Routes = [
     { path: 'proyecto/:id/documentos', component: DocumentosComponent },
     { path: 'proyecto/:id/seguimiento', component: SeguimientoComponent },
     { path: 'proyecto/:id/diagramas', component: DiagramasComponent },
+    { path: 'proyecto/:id/generar-prompt', component: GeneradorPromptComponent },
     { path: '**', redirectTo: '/proyectos' },
 ];
