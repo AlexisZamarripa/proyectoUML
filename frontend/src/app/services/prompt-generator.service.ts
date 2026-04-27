@@ -6,7 +6,7 @@ import { ProyectoApiService, Proyecto } from './proyecto-api.service';
 import { StakeholderApiService, Stakeholder } from './stakeholder-api.service';
 import { ProcesoApiService, Proceso } from './proceso-api.service';
 import { EntrevistaApiService, Entrevista } from './Entrevista-api.service';
-import { EncuestaApiService, Encuesta } from './Encuesta-api.service';
+import { EncuestaApiService, Encuesta } from './encuesta-api.service';
 import { ObservacionApiService, Observacion } from './Observacion-api.service';
 import { FocusGroupApiService, FocusGroup } from './FocusGroup.service';
 import { HistoriaUsuarioApiService, HistoriaUsuario } from './HistoriasUsuario-api.service';
@@ -60,22 +60,22 @@ export class PromptGeneratorService {
     private documentoApi: DocumentoApiService,
     private seguimientoApi: SeguimientoApiService,
     private diagramaApi: DiagramaApiService,
-  ) {}
+  ) { }
 
   getDefaultConfig(): PromptConfig {
     return {
       sections: [
-        { id: 'proyecto',      label: 'Información del Proyecto', enabled: true,  icon: 'folder' },
-        { id: 'stakeholders',  label: 'Stakeholders',             enabled: true,  icon: 'users' },
-        { id: 'procesos',      label: 'Procesos de Negocio',      enabled: true,  icon: 'grid' },
-        { id: 'entrevistas',   label: 'Entrevistas',              enabled: true,  icon: 'file' },
-        { id: 'encuestas',     label: 'Encuestas',                enabled: true,  icon: 'clipboard' },
-        { id: 'observaciones', label: 'Observaciones',            enabled: true,  icon: 'eye' },
-        { id: 'focusGroups',   label: 'Focus Groups',             enabled: true,  icon: 'users-group' },
-        { id: 'historias',     label: 'Historias de Usuario',      enabled: true,  icon: 'book' },
-        { id: 'documentos',    label: 'Documentos y Hallazgos',   enabled: true,  icon: 'folder' },
-        { id: 'seguimientos',  label: 'Seguimiento',              enabled: true,  icon: 'trending' },
-        { id: 'diagramas',     label: 'Diagramas UML',            enabled: true,  icon: 'diagram' },
+        { id: 'proyecto', label: 'Información del Proyecto', enabled: true, icon: 'folder' },
+        { id: 'stakeholders', label: 'Stakeholders', enabled: true, icon: 'users' },
+        { id: 'procesos', label: 'Procesos de Negocio', enabled: true, icon: 'grid' },
+        { id: 'entrevistas', label: 'Entrevistas', enabled: true, icon: 'file' },
+        { id: 'encuestas', label: 'Encuestas', enabled: true, icon: 'clipboard' },
+        { id: 'observaciones', label: 'Observaciones', enabled: true, icon: 'eye' },
+        { id: 'focusGroups', label: 'Focus Groups', enabled: true, icon: 'users-group' },
+        { id: 'historias', label: 'Historias de Usuario', enabled: true, icon: 'book' },
+        { id: 'documentos', label: 'Documentos y Hallazgos', enabled: true, icon: 'folder' },
+        { id: 'seguimientos', label: 'Seguimiento', enabled: true, icon: 'trending' },
+        { id: 'diagramas', label: 'Diagramas UML', enabled: true, icon: 'diagram' },
       ],
       stackFrontend: 'Angular',
       stackBackend: 'NestJS (Node.js)',
@@ -355,10 +355,10 @@ export class PromptGeneratorService {
     });
 
     const tipoLabels: Record<string, string> = {
-      'clases':    'Diagramas de Clases',
+      'clases': 'Diagramas de Clases',
       'casos-uso': 'Diagramas de Casos de Uso',
       'secuencia': 'Diagramas de Secuencia',
-      'paquetes':  'Diagramas de Paquetes',
+      'paquetes': 'Diagramas de Paquetes',
     };
 
     const items: string[] = [];
