@@ -26,16 +26,19 @@
         <span class="mode-icon">🔗</span>
         <span *ngIf="!pendingRelation.sourceId">
             Modo <strong>{{ pendingRelation.kind }}</strong> — Haz clic en el nodo <strong>origen</strong>
+            (también puedes hacer clic en una <strong>línea existente</strong>)
         </span>
         <span *ngIf="pendingRelation.sourceId">
-            Modo <strong>{{ pendingRelation.kind }}</strong> — Ahora haz clic en el nodo <strong>destino</strong>
+            Modo <strong>{{ pendingRelation.kind }}</strong> — Ahora haz clic en el nodo o línea
+            <strong>destino</strong>
         </span>
         <button type="button" class="btn-cancel" (click)="cancelRelation()">✕ Cancelar</button>
     </div>
 
     <p class="canvas-description" *ngIf="!pendingRelation">
         Arrastra <strong>paquetes</strong> al canvas. Para conectarlos, arrastra una
-        <strong>relación</strong> y haz clic en origen → destino. Clic sobre una línea para eliminarla.
+        <strong>relación</strong> y haz clic en origen → destino. Puedes conectar también
+        <strong>línea con línea</strong>. Clic sobre una línea para eliminarla.
     </p>
 
     <div class="canvas-layout">
@@ -254,10 +257,12 @@
                     </defs>
 
                     <!-- Relaciones guardadas -->
-                    <g *ngFor="let rel of relations; trackBy: trackByRelation">
+                    <g *ngFor="let rel of relations; trackBy: trackByRelation" [attr.data-rel-id]="rel.id"
+                        style="pointer-events:all">
+
                         <ng-container *ngIf="getRelLine(rel) as pts">
 
-                            <!-- Hit-area invisible para recibir clics -->
+                            <!-- Hit-area invisible para recibir clics de eliminación -->
                             <line [attr.x1]="pts.x1" [attr.y1]="pts.y1" [attr.x2]="pts.x2" [attr.y2]="pts.y2"
                                 stroke="rgba(0,0,0,0.01)" stroke-width="16"
                                 style="pointer-events:stroke; cursor:pointer"
@@ -269,9 +274,24 @@
                                 [attr.marker-end]="relMarkerEnd(rel.kind)" stroke-width="1.8" class="rel-line"
                                 style="pointer-events:none" />
 
+                            <!-- Punto de conexión central (midpoint) -->
+                            <circle [attr.cx]="(pts.x1 + pts.x2) / 2" [attr.cy]="(pts.y1 + pts.y2) / 2"
+                                [attr.r]="pendingRelation ? 7 : 4" [attr.fill]="pendingRelation && pendingRelation.sourceId === rel.id
+                                    ? '#facc15'
+                                    : pendingRelation
+                                        ? relColor(rel.kind)
+                                        : 'rgba(148,163,184,0.25)'"
+                                [attr.stroke]="pendingRelation ? relColor(rel.kind) : 'rgba(148,163,184,0.4)'"
+                                stroke-width="1.5" [class.rel-midpoint]="true"
+                                [class.rel-midpoint--active]="!!pendingRelation"
+                                [class.rel-midpoint--source]="pendingRelation?.sourceId === rel.id"
+                                style="pointer-events:all; cursor:pointer"
+                                (click)="$event.stopPropagation(); onRelMidpointClick(rel.id, $event)" />
+
                             <!-- Etiqueta «import» / «access» -->
                             <text *ngIf="relLabel(rel.kind)" [attr.x]="(pts.x1 + pts.x2) / 2"
-                                [attr.y]="(pts.y1 + pts.y2) / 2 - 6" class="rel-label-text" text-anchor="middle">
+                                [attr.y]="(pts.y1 + pts.y2) / 2 - 10" class="rel-label-text" text-anchor="middle"
+                                style="pointer-events:none">
                                 {{ relLabel(rel.kind) }}
                             </text>
 

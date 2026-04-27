@@ -189,30 +189,37 @@ export class CanvasClasesComponent implements OnInit, OnDestroy, AfterViewChecke
     onStageClick(event: MouseEvent): void {
         if (!this.pendingRelation) return;
 
-        const target = event.target as HTMLElement;
+        /* Usamos Element (ancestro común de HTMLElement y SVGElement) para
+           evitar el error TS2352 de tipos incompatibles. */
+        const targetEl = event.target as Element;
+        const relEl = targetEl.closest('[data-rel-id]');
+        const nodeEl = targetEl.closest('[data-node-id]');
 
-        /* Buscar el nodo más cercano — funciona aunque el clic caiga en un hijo del nodo */
-        const nodeEl = target.closest('[data-node-id]') as HTMLElement | null;
+        /* Determinar el ID del elemento clicado (nodo o relación) */
+        let clickedId: string | null = null;
+        if (relEl) {
+            clickedId = relEl.getAttribute('data-rel-id');
+        } else if (nodeEl) {
+            clickedId = nodeEl.getAttribute('data-node-id');
+        }
 
-        /* Si el clic fue en espacio vacío (stage o SVG de relaciones) → cancelar */
-        if (!nodeEl) {
+        /* Si el clic fue en espacio vacío → cancelar */
+        if (!clickedId) {
             this.cancelRelation();
             return;
         }
 
-        const nodeId = nodeEl.getAttribute('data-node-id')!;
-
         if (!this.pendingRelation.sourceId) {
             /* Primer clic: fijar origen */
-            this.pendingRelation = { ...this.pendingRelation, sourceId: nodeId };
+            this.pendingRelation = { ...this.pendingRelation, sourceId: clickedId };
         } else {
             /* Segundo clic: fijar destino y crear relación */
-            if (nodeId === this.pendingRelation.sourceId) return; /* mismo nodo → ignorar */
+            if (clickedId === this.pendingRelation.sourceId) return; /* mismo elemento → ignorar */
             const rel: UmlRelation = {
                 id: this.buildId(),
                 kind: this.pendingRelation.kind,
                 sourceId: this.pendingRelation.sourceId,
-                targetId: nodeId,
+                targetId: clickedId,
             };
             this.relations = [...this.relations, rel];
             this.pendingRelation = null;
@@ -227,9 +234,11 @@ export class CanvasClasesComponent implements OnInit, OnDestroy, AfterViewChecke
         const stage = this.canvasStageRef?.nativeElement;
         if (!stage) return;
         const rect = stage.getBoundingClientRect();
-        const src = this.canvasNodes.find(n => n.id === this.pendingRelation!.sourceId);
-        if (!src) return;
-        const srcPt = this.nodeCenter(src);
+
+        /* El origen puede ser un nodo o una relación */
+        const srcPt = this.resolveCenter(this.pendingRelation.sourceId);
+        if (!srcPt) return;
+
         this.ghostLine = {
             x1: srcPt.x, y1: srcPt.y,
             x2: event.clientX - rect.left,
@@ -239,10 +248,37 @@ export class CanvasClasesComponent implements OnInit, OnDestroy, AfterViewChecke
 
     cancelRelation(): void { this.pendingRelation = null; this.ghostLine = null; }
 
+    /* ── Clic en el punto medio de una relación (para conectar línea con línea) ── */
+    onRelMidpointClick(relId: string, event: MouseEvent): void {
+        event.stopPropagation();
+        if (!this.pendingRelation) return;
+
+        if (!this.pendingRelation.sourceId) {
+            /* Primer clic: usar esta relación como origen */
+            this.pendingRelation = { ...this.pendingRelation, sourceId: relId };
+        } else {
+            /* Segundo clic: usar esta relación como destino */
+            if (relId === this.pendingRelation.sourceId) return;
+            const rel: UmlRelation = {
+                id: this.buildId(),
+                kind: this.pendingRelation.kind,
+                sourceId: this.pendingRelation.sourceId,
+                targetId: relId,
+            };
+            this.relations = [...this.relations, rel];
+            this.pendingRelation = null;
+            this.ghostLine = null;
+            this.persistAll();
+        }
+    }
+
     /* ── Remove relation ── */
     removeRelation(relId: string, event: MouseEvent): void {
         event.stopPropagation();
-        this.relations = this.relations.filter(r => r.id !== relId);
+        /* También eliminar relaciones que dependan de esta */
+        this.relations = this.relations.filter(
+            r => r.id !== relId && r.sourceId !== relId && r.targetId !== relId
+        );
         this.persistAll();
     }
 
@@ -319,14 +355,61 @@ export class CanvasClasesComponent implements OnInit, OnDestroy, AfterViewChecke
 
     /* ── SVG line for a relation ── */
     getRelLine(rel: UmlRelation): RelLine | null {
-        const src = this.canvasNodes.find(n => n.id === rel.sourceId);
-        const tgt = this.canvasNodes.find(n => n.id === rel.targetId);
-        if (!src || !tgt) return null;
-        const sc = this.nodeCenter(src);
-        const tc = this.nodeCenter(tgt);
-        const p1 = this.nodeBorderPoint(src, sc, tc);
-        const p2 = this.nodeBorderPoint(tgt, tc, sc);
-        return { x1: p1.x, y1: p1.y, x2: p2.x, y2: p2.y };
+        const srcPt = this.resolveEndpoint(rel.sourceId, rel.targetId);
+        const tgtPt = this.resolveEndpoint(rel.targetId, rel.sourceId);
+        if (!srcPt || !tgtPt) return null;
+        return { x1: srcPt.x, y1: srcPt.y, x2: tgtPt.x, y2: tgtPt.y };
+    }
+
+    /* Devuelve si un ID pertenece a una relación */
+    isRelationId(id: string): boolean {
+        return this.relations.some(r => r.id === id);
+    }
+
+    /* Punto medio de una relación ya dibujada */
+    getRelCenter(relId: string): { x: number; y: number } | null {
+        const rel = this.relations.find(r => r.id === relId);
+        if (!rel) return null;
+        /* Evitar recursión infinita: solo resolver si src/tgt son nodos */
+        const srcNode = this.canvasNodes.find(n => n.id === rel.sourceId);
+        const tgtNode = this.canvasNodes.find(n => n.id === rel.targetId);
+        if (!srcNode || !tgtNode) {
+            /* Si alguno de los extremos ya es una relación, usar su centro directo */
+            const sc = this.resolveCenter(rel.sourceId);
+            const tc = this.resolveCenter(rel.targetId);
+            if (!sc || !tc) return null;
+            return { x: (sc.x + tc.x) / 2, y: (sc.y + tc.y) / 2 };
+        }
+        const sc = this.nodeCenter(srcNode);
+        const tc = this.nodeCenter(tgtNode);
+        return { x: (sc.x + tc.x) / 2, y: (sc.y + tc.y) / 2 };
+    }
+
+    /**
+     * Resuelve el CENTRO de cualquier elemento (nodo o relación) dado su ID.
+     * Usado para la ghost line y para resolver endpoints de relaciones encadenadas.
+     */
+    resolveCenter(id: string): { x: number; y: number } | null {
+        const node = this.canvasNodes.find(n => n.id === id);
+        if (node) return this.nodeCenter(node);
+        return this.getRelCenter(id);
+    }
+
+    /**
+     * Resuelve el punto de conexión de `fromId` apuntando hacia `towardId`.
+     * - Si fromId es un nodo: calcula el punto en el borde del rectángulo.
+     * - Si fromId es una relación: devuelve el punto medio de esa línea.
+     */
+    resolveEndpoint(fromId: string, towardId: string): { x: number; y: number } | null {
+        const node = this.canvasNodes.find(n => n.id === fromId);
+        if (node) {
+            const toCenter = this.resolveCenter(towardId);
+            if (!toCenter) return null;
+            const fromCenter = this.nodeCenter(node);
+            return this.nodeBorderPoint(node, fromCenter, toCenter);
+        }
+        /* Es una relación: devolver su punto medio */
+        return this.getRelCenter(fromId);
     }
 
     /* ── Relation styling helpers ── */
@@ -348,11 +431,6 @@ export class CanvasClasesComponent implements OnInit, OnDestroy, AfterViewChecke
         return kind === 'dependencia' || kind === 'realizacion' ? '8,4' : 'none';
     }
 
-    /**
-     * Devuelve el id del marker de fin de línea.
-     * IMPORTANTE: los markers son POR COLOR para que el fill coincida
-     * con el stroke de la línea. Los ids siguen el patrón mk-{kind}-{tipo}.
-     */
     relMarkerEnd(kind: string): string {
         const map: Record<string, string> = {
             navegabilidad: `url(#mk-arrow-${kind})`,
@@ -373,27 +451,15 @@ export class CanvasClasesComponent implements OnInit, OnDestroy, AfterViewChecke
         return '';
     }
 
-    /**
-     * Lista de configuraciones de markers para el SVG.
-     * El template itera esta lista para generar un <marker> por cada variante
-     * con el color correcto hardcodeado, evitando la limitación de context-stroke
-     * en navegadores que no lo soportan.
-     */
     get relMarkerDefs(): Array<{ id: string; type: 'arrow' | 'open' | 'diamond' | 'diamondf'; color: string }> {
         return [
-            /* navegabilidad */
             { id: 'mk-arrow-navegabilidad', type: 'arrow', color: this.relColor('navegabilidad') },
-            /* herencia */
             { id: 'mk-open-herencia', type: 'open', color: this.relColor('herencia') },
-            /* realizacion */
             { id: 'mk-open-realizacion', type: 'open', color: this.relColor('realizacion') },
-            /* agregacion */
             { id: 'mk-arrow-agregacion', type: 'arrow', color: this.relColor('agregacion') },
             { id: 'mk-diamond-agregacion', type: 'diamond', color: this.relColor('agregacion') },
-            /* composicion */
             { id: 'mk-arrow-composicion', type: 'arrow', color: this.relColor('composicion') },
             { id: 'mk-diamondf-composicion', type: 'diamondf', color: this.relColor('composicion') },
-            /* dependencia */
             { id: 'mk-arrow-dependencia', type: 'arrow', color: this.relColor('dependencia') },
         ];
     }
@@ -440,9 +506,6 @@ export class CanvasClasesComponent implements OnInit, OnDestroy, AfterViewChecke
         if (this.hasPendingNodeMove) { this.persistAll(); this.hasPendingNodeMove = false; }
     };
 
-    /**
-     * Calcula el centro de un nodo usando las dimensiones reales del DOM.
-     */
     private nodeCenter(node: UmlCanvasNode): { x: number; y: number } {
         const el = this.canvasStageRef?.nativeElement
             ?.querySelector(`[data-node-id="${node.id}"]`) as HTMLElement | null;
@@ -451,11 +514,6 @@ export class CanvasClasesComponent implements OnInit, OnDestroy, AfterViewChecke
         return { x: node.x + w / 2, y: node.y + h / 2 };
     }
 
-    /**
-     * Calcula el punto de intersección de la línea (desde→hacia) con el borde
-     * rectangular del nodo, para que las flechas salgan/lleguen al borde y no
-     * al centro.
-     */
     private nodeBorderPoint(
         node: UmlCanvasNode,
         from: { x: number; y: number },
@@ -471,27 +529,18 @@ export class CanvasClasesComponent implements OnInit, OnDestroy, AfterViewChecke
         const dx = to.x - from.x;
         const dy = to.y - from.y;
 
-        /* Si origen y destino coinciden (mismo centro) devolver el centro */
         if (dx === 0 && dy === 0) return { x: cx, y: cy };
 
-        const hw = w / 2;  /* half-width  */
-        const hh = h / 2;  /* half-height */
-
-        /* Intersección con cada uno de los 4 lados del rectángulo,
-           tomando el t más pequeño positivo (el borde más cercano en
-           la dirección del destino). */
+        const hw = w / 2;
+        const hh = h / 2;
         const candidates: number[] = [];
 
         if (dx !== 0) {
-            /* Lado derecho: x = cx + hw  →  t = hw / dx  (si dx > 0) */
-            /* Lado izquierdo: x = cx - hw →  t = -hw / dx (si dx < 0) */
             const t = (dx > 0 ? hw : -hw) / dx;
             const y = cy + t * dy;
             if (y >= cy - hh && y <= cy + hh) candidates.push(t);
         }
         if (dy !== 0) {
-            /* Lado inferior: y = cy + hh  →  t = hh / dy  (si dy > 0) */
-            /* Lado superior: y = cy - hh  →  t = -hh / dy (si dy < 0) */
             const t = (dy > 0 ? hh : -hh) / dy;
             const x = cx + t * dx;
             if (x >= cx - hw && x <= cx + hw) candidates.push(t);

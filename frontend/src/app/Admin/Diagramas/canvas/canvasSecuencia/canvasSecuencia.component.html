@@ -23,17 +23,19 @@
         <span class="mode-icon">✉️</span>
         <span *ngIf="!pendingMessage.sourceId">
             Modo <strong>{{ pendingMessage.kind }}</strong> — Haz clic en el participante <strong>origen</strong>
+            (también puedes hacer clic en un <strong>mensaje existente</strong>)
         </span>
         <span *ngIf="pendingMessage.sourceId">
-            Ahora haz clic en el participante <strong>destino</strong> (o el mismo para auto-referencia)
+            Ahora haz clic en el participante o mensaje <strong>destino</strong>
+            (o el mismo participante para auto-referencia)
         </span>
         <button type="button" class="btn-cancel" (click)="cancelMessage()">✕ Cancelar</button>
     </div>
 
     <p class="canvas-description" *ngIf="!pendingMessage">
         Arrastra <strong>participantes</strong> para añadirlos. Arrastra un <strong>mensaje</strong> y haz clic en
-        origen → destino para conectarlos. Los <strong>fragmentos</strong> se sueltan libremente y son
-        redimensionables.
+        origen → destino para conectarlos. También puedes hacer clic en un <strong>mensaje existente</strong>
+        como punto de conexión. Los <strong>fragmentos</strong> se sueltan libremente y son redimensionables.
     </p>
 
     <div class="canvas-layout">
@@ -219,7 +221,6 @@
                                     fill="none" />
                             </marker>
                         </ng-container>
-                        <!-- marcador X para destrucción -->
                         <marker id="seq-x-destroy" markerWidth="14" markerHeight="14" refX="7" refY="7" orient="auto">
                             <line x1="2" y1="2" x2="12" y2="12" stroke="#f87171" stroke-width="2" />
                             <line x1="12" y1="2" x2="2" y2="12" stroke="#f87171" stroke-width="2" />
@@ -242,53 +243,70 @@
                     <ng-container *ngFor="let frag of fragments; trackBy: trackByFrag">
                         <rect [attr.x]="frag.x" [attr.y]="frag.y" [attr.width]="frag.width" [attr.height]="frag.height"
                             [attr.stroke]="fragColor(frag.kind)" stroke-width="1.5" fill="rgba(0,0,0,0.15)" rx="2" />
-                        <!-- etiqueta kind -->
                         <rect [attr.x]="frag.x" [attr.y]="frag.y" width="42" height="20"
                             [attr.fill]="fragColor(frag.kind)" opacity="0.85" />
                         <text [attr.x]="frag.x + 6" [attr.y]="frag.y + 13" font-size="9" font-weight="bold"
                             font-family="monospace" fill="#fff">{{ fragLabel(frag.kind) }}</text>
-                        <!-- condición -->
                         <text [attr.x]="frag.x + 48" [attr.y]="frag.y + 13" font-size="9" font-family="monospace"
                             fill="rgba(226,232,240,0.75)" font-style="italic">[{{ frag.condition }}]</text>
-                        <!-- línea separadora -->
                         <line [attr.x1]="frag.x" [attr.y1]="frag.y + 22" [attr.x2]="frag.x + frag.width"
                             [attr.y2]="frag.y + 22" [attr.stroke]="fragColor(frag.kind)" stroke-width="0.8"
                             stroke-dasharray="4,2" />
                     </ng-container>
 
-                    <!-- Mensajes -->
+                    <!-- ── Mensajes ── -->
                     <ng-container *ngFor="let msg of messages; trackBy: trackByMsg">
 
                         <!-- Mensaje normal (no auto-referencia) -->
                         <ng-container *ngIf="!isSelfMsg(msg)">
                             <ng-container *ngIf="getMsgLine(msg) as pts">
 
-                                <!-- Etiqueta del mensaje -->
-                                <text [attr.x]="(pts.x1 + pts.x2) / 2" [attr.y]="pts.y1 - 6" text-anchor="middle"
-                                    font-size="10" font-family="'Consolas', monospace" [attr.fill]="msgColor(msg.kind)"
-                                    class="msg-label-text" (click)="startEditMsg(msg.id, $event)">
-                                    {{ msg.label }}
-                                </text>
+                                <!-- Grupo con data-msg-id para detectar clics en modo conexión -->
+                                <g [attr.data-msg-id]="msg.id" style="pointer-events:all">
 
-                                <!-- Línea -->
-                                <line [attr.x1]="pts.x1" [attr.y1]="pts.y1" [attr.x2]="pts.x2" [attr.y2]="pts.y2"
-                                    [attr.stroke]="msgColor(msg.kind)" [attr.stroke-dasharray]="msgDash(msg.kind)"
-                                    [attr.marker-end]="msg.kind !== 'msg-destruccion' ? msgMarkerEnd(msg.kind) : ''"
-                                    stroke-width="1.8" />
+                                    <!-- Etiqueta del mensaje -->
+                                    <text [attr.x]="(pts.x1 + pts.x2) / 2" [attr.y]="pts.y1 - 6" text-anchor="middle"
+                                        font-size="10" font-family="'Consolas', monospace"
+                                        [attr.fill]="msgColor(msg.kind)" class="msg-label-text"
+                                        style="pointer-events:none" (click)="startEditMsg(msg.id, $event)">
+                                        {{ msg.label }}
+                                    </text>
 
-                                <!-- X de destrucción al final -->
-                                <g *ngIf="msg.kind === 'msg-destruccion'">
-                                    <line [attr.x1]="pts.x2 - 8" [attr.y1]="pts.y2 - 8" [attr.x2]="pts.x2 + 8"
-                                        [attr.y2]="pts.y2 + 8" stroke="#f87171" stroke-width="2.5" />
-                                    <line [attr.x1]="pts.x2 + 8" [attr.y1]="pts.y2 - 8" [attr.x2]="pts.x2 - 8"
-                                        [attr.y2]="pts.y2 + 8" stroke="#f87171" stroke-width="2.5" />
+                                    <!-- Línea visible -->
+                                    <line [attr.x1]="pts.x1" [attr.y1]="pts.y1" [attr.x2]="pts.x2" [attr.y2]="pts.y2"
+                                        [attr.stroke]="msgColor(msg.kind)" [attr.stroke-dasharray]="msgDash(msg.kind)"
+                                        [attr.marker-end]="msg.kind !== 'msg-destruccion' ? msgMarkerEnd(msg.kind) : ''"
+                                        stroke-width="1.8" style="pointer-events:none" />
+
+                                    <!-- X de destrucción al final -->
+                                    <g *ngIf="msg.kind === 'msg-destruccion'" style="pointer-events:none">
+                                        <line [attr.x1]="pts.x2 - 8" [attr.y1]="pts.y2 - 8" [attr.x2]="pts.x2 + 8"
+                                            [attr.y2]="pts.y2 + 8" stroke="#f87171" stroke-width="2.5" />
+                                        <line [attr.x1]="pts.x2 + 8" [attr.y1]="pts.y2 - 8" [attr.x2]="pts.x2 - 8"
+                                            [attr.y2]="pts.y2 + 8" stroke="#f87171" stroke-width="2.5" />
+                                    </g>
+
+                                    <!-- Hit-area invisible para eliminar -->
+                                    <line [attr.x1]="pts.x1" [attr.y1]="pts.y1" [attr.x2]="pts.x2" [attr.y2]="pts.y2"
+                                        stroke="rgba(0,0,0,0.01)" stroke-width="16"
+                                        style="cursor:pointer; pointer-events:stroke"
+                                        (click)="removeMessage(msg.id, $event)" />
+
+                                    <!-- Punto de conexión central (midpoint) -->
+                                    <circle [attr.cx]="(pts.x1 + pts.x2) / 2" [attr.cy]="pts.y1"
+                                        [attr.r]="pendingMessage ? 7 : 4" [attr.fill]="pendingMessage && pendingMessage.sourceId === msg.id
+                                            ? '#facc15'
+                                            : pendingMessage
+                                                ? msgColor(msg.kind)
+                                                : 'rgba(148,163,184,0.25)'"
+                                        [attr.stroke]="pendingMessage ? msgColor(msg.kind) : 'rgba(148,163,184,0.4)'"
+                                        stroke-width="1.5" [class.msg-midpoint]="true"
+                                        [class.msg-midpoint--active]="!!pendingMessage"
+                                        [class.msg-midpoint--source]="pendingMessage?.sourceId === msg.id"
+                                        style="pointer-events:all; cursor:pointer"
+                                        (click)="$event.stopPropagation(); onMsgMidpointClick(msg.id, $event)" />
+
                                 </g>
-
-                                <!-- Hit-area para eliminar -->
-                                <line [attr.x1]="pts.x1" [attr.y1]="pts.y1" [attr.x2]="pts.x2" [attr.y2]="pts.y2"
-                                    stroke="transparent" stroke-width="16"
-                                    style="cursor:pointer; pointer-events: stroke"
-                                    (click)="removeMessage(msg.id, $event)" />
 
                             </ng-container>
                         </ng-container>

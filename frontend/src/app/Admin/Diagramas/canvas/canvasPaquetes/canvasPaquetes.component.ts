@@ -204,28 +204,34 @@ export class CanvasPaquetesComponent implements OnInit, OnDestroy, AfterViewChec
         this.persistAll();
     }
 
-    /* ── Stage click: maneja modo conexión ── */
+    /* ── Stage click: maneja modo conexión (nodo O línea existente) ── */
     onStageClick(event: MouseEvent): void {
         if (!this.pendingRelation) return;
 
-        const target = event.target as HTMLElement;
-        const nodeEl = target.closest('[data-node-id]') as HTMLElement | null;
+        const targetEl = event.target as Element;
+        const relEl = targetEl.closest('[data-rel-id]');
+        const nodeEl = targetEl.closest('[data-node-id]');
 
-        if (!nodeEl) { this.cancelRelation(); return; }
+        let clickedId: string | null = null;
+        if (relEl) {
+            clickedId = relEl.getAttribute('data-rel-id');
+        } else if (nodeEl) {
+            clickedId = nodeEl.getAttribute('data-node-id');
+        }
 
-        const nodeId = nodeEl.getAttribute('data-node-id')!;
+        if (!clickedId) { this.cancelRelation(); return; }
 
         if (!this.pendingRelation.sourceId) {
             /* Primer clic: origen */
-            this.pendingRelation = { ...this.pendingRelation, sourceId: nodeId };
+            this.pendingRelation = { ...this.pendingRelation, sourceId: clickedId };
         } else {
             /* Segundo clic: destino */
-            if (nodeId === this.pendingRelation.sourceId) return;
+            if (clickedId === this.pendingRelation.sourceId) return;
             const rel: PkgRelation = {
                 id: this.buildId(),
                 kind: this.pendingRelation.kind,
                 sourceId: this.pendingRelation.sourceId,
-                targetId: nodeId,
+                targetId: clickedId,
             };
             this.relations = [...this.relations, rel];
             this.pendingRelation = null;
@@ -240,11 +246,10 @@ export class CanvasPaquetesComponent implements OnInit, OnDestroy, AfterViewChec
         const stage = this.canvasStageRef?.nativeElement;
         if (!stage) return;
         const rect = stage.getBoundingClientRect();
-        const src = this.canvasNodes.find(n => n.id === this.pendingRelation!.sourceId);
-        if (!src) return;
-        const sp = this.nodeCenter(src);
+        const srcPt = this.resolveCenter(this.pendingRelation.sourceId);
+        if (!srcPt) return;
         this.ghostLine = {
-            x1: sp.x, y1: sp.y,
+            x1: srcPt.x, y1: srcPt.y,
             x2: event.clientX - rect.left,
             y2: event.clientY - rect.top,
         };
@@ -252,10 +257,34 @@ export class CanvasPaquetesComponent implements OnInit, OnDestroy, AfterViewChec
 
     cancelRelation(): void { this.pendingRelation = null; this.ghostLine = null; }
 
-    /* ── Eliminar relación ── */
+    /* ── Clic en el punto medio de una relación (línea con línea) ── */
+    onRelMidpointClick(relId: string, event: MouseEvent): void {
+        event.stopPropagation();
+        if (!this.pendingRelation) return;
+
+        if (!this.pendingRelation.sourceId) {
+            this.pendingRelation = { ...this.pendingRelation, sourceId: relId };
+        } else {
+            if (relId === this.pendingRelation.sourceId) return;
+            const rel: PkgRelation = {
+                id: this.buildId(),
+                kind: this.pendingRelation.kind,
+                sourceId: this.pendingRelation.sourceId,
+                targetId: relId,
+            };
+            this.relations = [...this.relations, rel];
+            this.pendingRelation = null;
+            this.ghostLine = null;
+            this.persistAll();
+        }
+    }
+
+    /* ── Eliminar relación (cascada sobre dependientes) ── */
     removeRelation(relId: string, event: MouseEvent): void {
         event.stopPropagation();
-        this.relations = this.relations.filter(r => r.id !== relId);
+        this.relations = this.relations.filter(
+            r => r.id !== relId && r.sourceId !== relId && r.targetId !== relId
+        );
         this.persistAll();
     }
 
@@ -285,14 +314,43 @@ export class CanvasPaquetesComponent implements OnInit, OnDestroy, AfterViewChec
 
     /* ── SVG line helpers ── */
     getRelLine(rel: PkgRelation): RelLine | null {
-        const src = this.canvasNodes.find(n => n.id === rel.sourceId);
-        const tgt = this.canvasNodes.find(n => n.id === rel.targetId);
-        if (!src || !tgt) return null;
-        const sc = this.nodeCenter(src);
-        const tc = this.nodeCenter(tgt);
-        const p1 = this.nodeBorderPoint(src, sc, tc);
-        const p2 = this.nodeBorderPoint(tgt, tc, sc);
-        return { x1: p1.x, y1: p1.y, x2: p2.x, y2: p2.y };
+        const srcPt = this.resolveEndpoint(rel.sourceId, rel.targetId);
+        const tgtPt = this.resolveEndpoint(rel.targetId, rel.sourceId);
+        if (!srcPt || !tgtPt) return null;
+        return { x1: srcPt.x, y1: srcPt.y, x2: tgtPt.x, y2: tgtPt.y };
+    }
+
+    /** Devuelve el centro de cualquier elemento (nodo o relación) dado su ID */
+    resolveCenter(id: string): { x: number; y: number } | null {
+        const node = this.canvasNodes.find(n => n.id === id);
+        if (node) return this.nodeCenter(node);
+        return this.getRelCenter(id);
+    }
+
+    /** Punto medio de una relación ya dibujada */
+    getRelCenter(relId: string): { x: number; y: number } | null {
+        const rel = this.relations.find(r => r.id === relId);
+        if (!rel) return null;
+        const sc = this.resolveCenter(rel.sourceId);
+        const tc = this.resolveCenter(rel.targetId);
+        if (!sc || !tc) return null;
+        return { x: (sc.x + tc.x) / 2, y: (sc.y + tc.y) / 2 };
+    }
+
+    /**
+     * Punto de conexión de fromId apuntando hacia towardId.
+     * - Nodo: calcula intersección con el borde del rectángulo.
+     * - Relación: devuelve su punto medio.
+     */
+    resolveEndpoint(fromId: string, towardId: string): { x: number; y: number } | null {
+        const node = this.canvasNodes.find(n => n.id === fromId);
+        if (node) {
+            const toCenter = this.resolveCenter(towardId);
+            if (!toCenter) return null;
+            const fromCenter = this.nodeCenter(node);
+            return this.nodeBorderPoint(node, fromCenter, toCenter);
+        }
+        return this.getRelCenter(fromId);
     }
 
     relColor(kind: string): string {
