@@ -56,11 +56,10 @@ const FRAGMENT_KINDS = new Set(['frag-alt', 'frag-loop', 'frag-opt', 'frag-par']
 
 /* Layout constants */
 const LIFELINE_HEAD_H = 60;
-const LIFELINE_X_GAP = 200;   /* separación horizontal entre lifelines */
+const LIFELINE_X_GAP = 200;
 const LIFELINE_START_X = 80;
 const MSG_Y_START = 120;
-const MSG_Y_GAP = 60;         /* separación vertical entre mensajes */
-const ACTIVATION_W = 14;
+const MSG_Y_GAP = 60;
 const NODE_DEFAULT_W = 140;
 const NODE_DEFAULT_H = 60;
 
@@ -76,7 +75,7 @@ export class CanvasSecuenciaComponent implements OnInit, OnDestroy, AfterViewChe
     @Input() diagram!: UmlDiagram;
     @Output() diagramUpdated = new EventEmitter<UmlDiagram>();
 
-    canvasNodes: SeqNode[] = [];       /* participantes (cabeceras de lifeline) */
+    canvasNodes: SeqNode[] = [];
     messages: SeqMessage[] = [];
     fragments: SeqFragment[] = [];
 
@@ -234,8 +233,6 @@ export class CanvasSecuenciaComponent implements OnInit, OnDestroy, AfterViewChe
         const stage = event.currentTarget as HTMLElement;
         if (!(stage instanceof HTMLElement)) return;
         const rect = stage.getBoundingClientRect();
-
-        /* auto-posicionar en la siguiente columna libre */
         const nextX = this.nextLifelineX();
         const x = this.clamp(nextX, 20, rect.width - 160);
         const y = 16;
@@ -250,28 +247,55 @@ export class CanvasSecuenciaComponent implements OnInit, OnDestroy, AfterViewChe
         this.persistAll();
     }
 
-    /* ── Stage click: maneja modo conexión ── */
+    /* ── Stage click: maneja modo conexión (participante O punto medio de mensaje) ── */
     onStageClick(event: MouseEvent): void {
         if (!this.pendingMessage) return;
 
-        const target = event.target as HTMLElement;
-        const nodeEl = target.closest('[data-node-id]') as HTMLElement | null;
+        const targetEl = event.target as Element;
+        const msgEl = targetEl.closest('[data-msg-id]');
+        const nodeEl = targetEl.closest('[data-node-id]');
 
-        if (!nodeEl) { this.cancelMessage(); return; }
+        let clickedId: string | null = null;
+        if (msgEl) {
+            clickedId = msgEl.getAttribute('data-msg-id');
+        } else if (nodeEl) {
+            clickedId = nodeEl.getAttribute('data-node-id');
+        }
 
-        const nodeId = nodeEl.getAttribute('data-node-id')!;
+        if (!clickedId) { this.cancelMessage(); return; }
 
         if (!this.pendingMessage.sourceId) {
-            this.pendingMessage = { ...this.pendingMessage, sourceId: nodeId };
+            this.pendingMessage = { ...this.pendingMessage, sourceId: clickedId };
         } else {
+            if (clickedId === this.pendingMessage.sourceId) return;
+
+            /* Si origen o destino es un mensaje (no un nodo participante), creamos
+               el nuevo mensaje anclado al punto medio de ese mensaje existente.
+               En ese caso usamos el participante más cercano a ese punto medio
+               para que la lifeline sea correcta. */
+            const sourceIsMsg = this.messages.some(m => m.id === this.pendingMessage!.sourceId);
+            const targetIsMsg = this.messages.some(m => m.id === clickedId);
+
+            let sourceId = this.pendingMessage.sourceId!;
+            let targetId = clickedId;
+
+            if (sourceIsMsg) {
+                const ref = this.messages.find(m => m.id === sourceId);
+                sourceId = ref ? ref.sourceId : sourceId;
+            }
+            if (targetIsMsg) {
+                const ref = this.messages.find(m => m.id === targetId);
+                targetId = ref ? ref.targetId : targetId;
+            }
+
             const order = this.messages.length > 0
                 ? Math.max(...this.messages.map(m => m.order)) + 1
                 : 0;
             const msg: SeqMessage = {
                 id: this.buildId(),
                 kind: this.pendingMessage.kind,
-                sourceId: this.pendingMessage.sourceId,
-                targetId: nodeId,
+                sourceId,
+                targetId,
                 label: this.buildMsgLabel(this.pendingMessage.kind),
                 order,
             };
@@ -288,14 +312,57 @@ export class CanvasSecuenciaComponent implements OnInit, OnDestroy, AfterViewChe
         const stage = this.canvasStageRef?.nativeElement;
         if (!stage) return;
         const rect = stage.getBoundingClientRect();
-        const src = this.canvasNodes.find(n => n.id === this.pendingMessage!.sourceId)!;
-        if (!src) return;
-        const sx = src.x + NODE_DEFAULT_W / 2;
+        const srcPt = this.resolveCenter(this.pendingMessage.sourceId);
+        if (!srcPt) return;
         this.ghostLine = {
-            x1: sx, y1: MSG_Y_START + this.messages.length * MSG_Y_GAP,
+            x1: srcPt.x, y1: srcPt.y,
             x2: event.clientX - rect.left,
             y2: event.clientY - rect.top,
         };
+    }
+
+    /* ── Clic en el punto medio de un mensaje (mensaje con mensaje) ── */
+    onMsgMidpointClick(msgId: string, event: MouseEvent): void {
+        event.stopPropagation();
+        if (!this.pendingMessage) return;
+
+        if (!this.pendingMessage.sourceId) {
+            this.pendingMessage = { ...this.pendingMessage, sourceId: msgId };
+        } else {
+            if (msgId === this.pendingMessage.sourceId) return;
+
+            /* Resolver participantes reales desde los IDs (que pueden ser msg IDs) */
+            const sourceIsMsg = this.messages.some(m => m.id === this.pendingMessage!.sourceId);
+            const targetIsMsg = true; /* siempre: msgId es un mensaje */
+
+            let sourceId = this.pendingMessage.sourceId!;
+            let targetId = msgId;
+
+            if (sourceIsMsg) {
+                const ref = this.messages.find(m => m.id === sourceId);
+                sourceId = ref ? ref.sourceId : sourceId;
+            }
+            if (targetIsMsg) {
+                const ref = this.messages.find(m => m.id === targetId);
+                targetId = ref ? ref.targetId : targetId;
+            }
+
+            const order = this.messages.length > 0
+                ? Math.max(...this.messages.map(m => m.order)) + 1
+                : 0;
+            const newMsg: SeqMessage = {
+                id: this.buildId(),
+                kind: this.pendingMessage.kind,
+                sourceId,
+                targetId,
+                label: this.buildMsgLabel(this.pendingMessage.kind),
+                order,
+            };
+            this.messages = [...this.messages, newMsg];
+            this.pendingMessage = null;
+            this.ghostLine = null;
+            this.persistAll();
+        }
     }
 
     /* ── Edición inline nodos ── */
@@ -367,7 +434,7 @@ export class CanvasSecuenciaComponent implements OnInit, OnDestroy, AfterViewChe
         const rect = stage.getBoundingClientRect();
         this.draggingNodeId = nodeId;
         this.dragOffsetX = event.clientX - rect.left - node.x;
-        this.dragOffsetY = 0; /* lifelines se mueven sólo en X */
+        this.dragOffsetY = 0;
         this.hasPendingNodeMove = false;
         window.addEventListener('pointermove', this.onWindowPointerMove);
         window.addEventListener('pointerup', this.onWindowPointerUp);
@@ -472,7 +539,27 @@ export class CanvasSecuenciaComponent implements OnInit, OnDestroy, AfterViewChe
         return `M ${x} ${y} C ${x + offset} ${y}, ${x + offset} ${y + 30}, ${x} ${y + 30}`;
     }
 
-    /* Activation bar: por cada participante, calcular los rangos de mensajes donde es destino */
+    /** Devuelve el centro de un participante o el punto medio de un mensaje dado su ID */
+    resolveCenter(id: string): { x: number; y: number } | null {
+        const node = this.canvasNodes.find(n => n.id === id);
+        if (node) {
+            return { x: this.lifelineX(node), y: this.lifelineTop(node) + 20 };
+        }
+        return this.getMsgCenter(id);
+    }
+
+    /** Punto medio de un mensaje ya dibujado */
+    getMsgCenter(msgId: string): { x: number; y: number } | null {
+        const msg = this.messages.find(m => m.id === msgId);
+        if (!msg) return null;
+        const line = this.getMsgLine(msg);
+        if (!line) return null;
+        return {
+            x: (line.x1 + line.x2) / 2,
+            y: line.y1,
+        };
+    }
+
     getActivations(node: SeqNode): Array<{ y: number; h: number }> {
         const results: Array<{ y: number; h: number }> = [];
         let start: number | null = null;

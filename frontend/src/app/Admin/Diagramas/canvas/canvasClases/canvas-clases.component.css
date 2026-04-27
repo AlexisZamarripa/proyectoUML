@@ -301,7 +301,6 @@
     background-size: 24px 24px;
 }
 
-/* En modo conexión el cursor del stage cambia */
 .canvas-stage.connecting {
     cursor: crosshair;
 }
@@ -333,17 +332,14 @@
 .relations-svg {
     position: absolute;
     inset: 0;
-    /* NO pointer-events:none aquí — las líneas de hit-area necesitan recibir clics */
     overflow: visible;
     z-index: 0;
 }
 
-/* La línea visible no captura eventos (evita conflictos con el hit-area invisible) */
 .rel-line {
     pointer-events: none;
 }
 
-/* El hit-area invisible SÍ captura clics — se define con pointer-events:stroke en SVG */
 .rel-hit {
     pointer-events: stroke;
     cursor: pointer;
@@ -356,6 +352,30 @@
     pointer-events: none;
 }
 
+/* ── Punto de conexión central de cada relación ── */
+.rel-midpoint {
+    transition: r .15s ease, opacity .15s ease;
+    opacity: 0.4;
+}
+
+/* En modo conexión los puntos se muestran con más visibilidad */
+.rel-midpoint--active {
+    opacity: 1;
+    filter: drop-shadow(0 0 4px currentColor);
+}
+
+/* El punto origen seleccionado se vuelve dorado */
+.rel-midpoint--source {
+    opacity: 1;
+    filter: drop-shadow(0 0 6px #facc15);
+}
+
+/* Hover en modo conexión */
+.canvas-stage.connecting .rel-midpoint:hover {
+    opacity: 1;
+    filter: drop-shadow(0 0 6px #60a5fa);
+}
+
 /* ════════════════════════════════════════
    UML NODE  —  recuadro real editable
    ════════════════════════════════════════ */
@@ -364,7 +384,6 @@
     min-width: 190px;
     max-width: 260px;
     border-radius: 0;
-    /* UML clásico: esquinas rectas */
     background: #0d1b2e;
     border: 1.5px solid #3b82f6;
     box-shadow: 0 4px 20px rgba(0, 0, 0, .5);
@@ -387,7 +406,6 @@
     box-shadow: 0 6px 26px rgba(59, 130, 246, .35);
 }
 
-/* Nodo origen seleccionado en modo conexión */
 .uml-node.is-source {
     outline: 2px solid #facc15;
     outline-offset: 2px;
@@ -395,7 +413,6 @@
     z-index: 10;
 }
 
-/* Nodos destino disponibles en modo conexión */
 .uml-node.connectable {
     cursor: crosshair;
     outline: 1px dashed rgba(96, 165, 250, .6);
@@ -502,7 +519,6 @@
     border-top: none;
 }
 
-/* Name section */
 .uml-section--name {
     background: rgba(255, 255, 255, .04);
     text-align: center;
@@ -533,7 +549,6 @@
     font-style: italic;
 }
 
-/* Attrs / Methods sections */
 .uml-section--attrs,
 .uml-section--methods {
     padding: 4px 6px 6px;
@@ -612,7 +627,6 @@
     color: #fff;
 }
 
-/* Add row button */
 .add-row-btn {
     width: 100%;
     background: transparent;
@@ -634,7 +648,6 @@
     background: rgba(59, 130, 246, .08);
 }
 
-/* Enum rows (sin prefijo de visibilidad) */
 .enum-row .uml-visibility {
     display: none;
 }
