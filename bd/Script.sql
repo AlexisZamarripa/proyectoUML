@@ -764,6 +764,40 @@ LOCK TABLES `subprocesos` WRITE;
 INSERT INTO `subprocesos` VALUES (6,1,1,'kasjbd','kajsb',NULL),(7,1,1,'entrevista','asldnjn',NULL),(8,1,1,'historiaUsuario','asd',NULL),(10,1,1,'Focus group','prueba',NULL),(13,1,1,'observaciones','asdih',2);
 /*!40000 ALTER TABLE `subprocesos` ENABLE KEYS */;
 UNLOCK TABLES;
+
+--
+-- Table structure for table `diagramas`
+--
+
+DROP TABLE IF EXISTS `diagramas`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `diagramas` (
+  `id_diagrama` int NOT NULL AUTO_INCREMENT,
+  `id_proyecto` int NOT NULL,
+  `nombre` varchar(160) NOT NULL,
+  `descripcion` text,
+  `tipo` enum('clases','casos-uso','secuencia','paquetes') NOT NULL,
+  `nodes_json` longtext,
+  `relations_json` longtext,
+  `messages_json` longtext,
+  `fragments_json` longtext,
+  `creado_en` datetime DEFAULT CURRENT_TIMESTAMP,
+  `actualizado_en` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id_diagrama`),
+  KEY `id_proyecto` (`id_proyecto`),
+  CONSTRAINT `diagramas_ibfk_1` FOREIGN KEY (`id_proyecto`) REFERENCES `proyectos` (`id_proyecto`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `diagramas`
+--
+
+LOCK TABLES `diagramas` WRITE;
+/*!40000 ALTER TABLE `diagramas` DISABLE KEYS */;
+/*!40000 ALTER TABLE `diagramas` ENABLE KEYS */;
+UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;

@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { BarraComponent } from '../../components/barra/barra.component';
 import { ProyectoApiService } from '../../services/proyecto-api.service';
-import { EncuestaApiService, Encuesta, TipoPregunta } from '../../services/encuesta-api.service';
+import { EncuestaApiService, Encuesta, TipoPregunta } from '../../services/Encuesta-api.service';
 
 interface PreguntaForm {
   texto: string;

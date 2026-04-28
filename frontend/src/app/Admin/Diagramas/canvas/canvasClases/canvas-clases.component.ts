@@ -70,6 +70,7 @@ export class CanvasClasesComponent implements OnInit, OnDestroy, AfterViewChecke
     /* SVG size */
     stageSize = { w: 800, h: 520 };
     private needsSizeUpdate = false;
+    private sizeUpdateScheduled = false;
 
     collapsedGroups = new Set<string>();
 
@@ -128,7 +129,10 @@ export class CanvasClasesComponent implements OnInit, OnDestroy, AfterViewChecke
     }
 
     ngAfterViewChecked(): void {
-        if (this.needsSizeUpdate) { this.updateStageSize(); this.needsSizeUpdate = false; }
+        if (this.needsSizeUpdate) {
+            this.needsSizeUpdate = false;
+            this.scheduleStageSizeUpdate();
+        }
     }
 
     ngOnDestroy(): void { this.removeDragListeners(); }
@@ -208,24 +212,13 @@ export class CanvasClasesComponent implements OnInit, OnDestroy, AfterViewChecke
             this.cancelRelation();
             return;
         }
+        this.handleRelationClick(clickedId);
+    }
 
-        if (!this.pendingRelation.sourceId) {
-            /* Primer clic: fijar origen */
-            this.pendingRelation = { ...this.pendingRelation, sourceId: clickedId };
-        } else {
-            /* Segundo clic: fijar destino y crear relación */
-            if (clickedId === this.pendingRelation.sourceId) return; /* mismo elemento → ignorar */
-            const rel: UmlRelation = {
-                id: this.buildId(),
-                kind: this.pendingRelation.kind,
-                sourceId: this.pendingRelation.sourceId,
-                targetId: clickedId,
-            };
-            this.relations = [...this.relations, rel];
-            this.pendingRelation = null;
-            this.ghostLine = null;
-            this.persistAll();
-        }
+    onNodeConnect(nodeId: string, event: MouseEvent): void {
+        if (!this.pendingRelation) return;
+        event.stopPropagation();
+        this.handleRelationClick(nodeId);
     }
 
     /* ── Stage mousemove: ghost line ── */
@@ -247,6 +240,29 @@ export class CanvasClasesComponent implements OnInit, OnDestroy, AfterViewChecke
     }
 
     cancelRelation(): void { this.pendingRelation = null; this.ghostLine = null; }
+
+    private handleRelationClick(clickedId: string): void {
+        if (!this.pendingRelation) return;
+
+        if (!this.pendingRelation.sourceId) {
+            /* Primer clic: fijar origen */
+            this.pendingRelation = { ...this.pendingRelation, sourceId: clickedId };
+            return;
+        }
+
+        /* Segundo clic: fijar destino y crear relación */
+        if (clickedId === this.pendingRelation.sourceId) return;
+        const rel: UmlRelation = {
+            id: this.buildId(),
+            kind: this.pendingRelation.kind,
+            sourceId: this.pendingRelation.sourceId,
+            targetId: clickedId,
+        };
+        this.relations = [...this.relations, rel];
+        this.pendingRelation = null;
+        this.ghostLine = null;
+        this.persistAll();
+    }
 
     /* ── Clic en el punto medio de una relación (para conectar línea con línea) ── */
     onRelMidpointClick(relId: string, event: MouseEvent): void {
@@ -554,6 +570,15 @@ export class CanvasClasesComponent implements OnInit, OnDestroy, AfterViewChecke
         const stage = this.canvasStageRef?.nativeElement;
         if (!stage) return;
         this.stageSize = { w: stage.offsetWidth, h: stage.offsetHeight };
+    }
+
+    private scheduleStageSizeUpdate(): void {
+        if (this.sizeUpdateScheduled) return;
+        this.sizeUpdateScheduled = true;
+        setTimeout(() => {
+            this.sizeUpdateScheduled = false;
+            this.updateStageSize();
+        }, 0);
     }
 
     private buildNode(kind: string, baseLabel: string, x: number, y: number): UmlCanvasNode {

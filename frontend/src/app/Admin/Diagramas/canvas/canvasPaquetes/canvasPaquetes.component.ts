@@ -62,6 +62,7 @@ export class CanvasPaquetesComponent implements OnInit, OnDestroy, AfterViewChec
     /* SVG overlay size */
     stageSize = { w: 800, h: 520 };
     private needsSizeUpdate = false;
+    private sizeUpdateScheduled = false;
 
     /* Accordion state */
     collapsedGroups = new Set<string>();
@@ -107,7 +108,10 @@ export class CanvasPaquetesComponent implements OnInit, OnDestroy, AfterViewChec
     }
 
     ngAfterViewChecked(): void {
-        if (this.needsSizeUpdate) { this.updateStageSize(); this.needsSizeUpdate = false; }
+        if (this.needsSizeUpdate) {
+            this.needsSizeUpdate = false;
+            this.scheduleStageSizeUpdate();
+        }
     }
 
     ngOnDestroy(): void { this.removeDragListeners(); }
@@ -220,24 +224,13 @@ export class CanvasPaquetesComponent implements OnInit, OnDestroy, AfterViewChec
         }
 
         if (!clickedId) { this.cancelRelation(); return; }
+        this.handleRelationClick(clickedId);
+    }
 
-        if (!this.pendingRelation.sourceId) {
-            /* Primer clic: origen */
-            this.pendingRelation = { ...this.pendingRelation, sourceId: clickedId };
-        } else {
-            /* Segundo clic: destino */
-            if (clickedId === this.pendingRelation.sourceId) return;
-            const rel: PkgRelation = {
-                id: this.buildId(),
-                kind: this.pendingRelation.kind,
-                sourceId: this.pendingRelation.sourceId,
-                targetId: clickedId,
-            };
-            this.relations = [...this.relations, rel];
-            this.pendingRelation = null;
-            this.ghostLine = null;
-            this.persistAll();
-        }
+    onNodeConnect(nodeId: string, event: MouseEvent): void {
+        if (!this.pendingRelation) return;
+        event.stopPropagation();
+        this.handleRelationClick(nodeId);
     }
 
     /* ── Stage mousemove: línea fantasma ── */
@@ -256,6 +249,27 @@ export class CanvasPaquetesComponent implements OnInit, OnDestroy, AfterViewChec
     }
 
     cancelRelation(): void { this.pendingRelation = null; this.ghostLine = null; }
+
+    private handleRelationClick(clickedId: string): void {
+        if (!this.pendingRelation) return;
+
+        if (!this.pendingRelation.sourceId) {
+            this.pendingRelation = { ...this.pendingRelation, sourceId: clickedId };
+            return;
+        }
+
+        if (clickedId === this.pendingRelation.sourceId) return;
+        const rel: PkgRelation = {
+            id: this.buildId(),
+            kind: this.pendingRelation.kind,
+            sourceId: this.pendingRelation.sourceId,
+            targetId: clickedId,
+        };
+        this.relations = [...this.relations, rel];
+        this.pendingRelation = null;
+        this.ghostLine = null;
+        this.persistAll();
+    }
 
     /* ── Clic en el punto medio de una relación (línea con línea) ── */
     onRelMidpointClick(relId: string, event: MouseEvent): void {
@@ -459,6 +473,15 @@ export class CanvasPaquetesComponent implements OnInit, OnDestroy, AfterViewChec
         const stage = this.canvasStageRef?.nativeElement;
         if (!stage) return;
         this.stageSize = { w: stage.offsetWidth, h: stage.offsetHeight };
+    }
+
+    private scheduleStageSizeUpdate(): void {
+        if (this.sizeUpdateScheduled) return;
+        this.sizeUpdateScheduled = true;
+        setTimeout(() => {
+            this.sizeUpdateScheduled = false;
+            this.updateStageSize();
+        }, 0);
     }
 
     private buildStarterNodes(): PkgCanvasNode[] {

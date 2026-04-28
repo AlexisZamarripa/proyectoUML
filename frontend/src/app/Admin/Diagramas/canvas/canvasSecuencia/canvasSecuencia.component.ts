@@ -106,6 +106,7 @@ export class CanvasSecuenciaComponent implements OnInit, OnDestroy, AfterViewChe
     /* SVG overlay size */
     stageSize = { w: 900, h: 600 };
     private needsSizeUpdate = false;
+    private sizeUpdateScheduled = false;
 
     /* accordion */
     collapsedGroups = new Set<string>();
@@ -162,7 +163,10 @@ export class CanvasSecuenciaComponent implements OnInit, OnDestroy, AfterViewChe
     }
 
     ngAfterViewChecked(): void {
-        if (this.needsSizeUpdate) { this.updateStageSize(); this.needsSizeUpdate = false; }
+        if (this.needsSizeUpdate) {
+            this.needsSizeUpdate = false;
+            this.scheduleStageSizeUpdate();
+        }
     }
 
     ngOnDestroy(): void { this.removeDragListeners(); }
@@ -263,47 +267,59 @@ export class CanvasSecuenciaComponent implements OnInit, OnDestroy, AfterViewChe
         }
 
         if (!clickedId) { this.cancelMessage(); return; }
+        this.handleMessageClick(clickedId);
+    }
+
+    onNodeConnect(nodeId: string, event: MouseEvent): void {
+        if (!this.pendingMessage) return;
+        event.stopPropagation();
+        this.handleMessageClick(nodeId);
+    }
+
+    private handleMessageClick(clickedId: string): void {
+        if (!this.pendingMessage) return;
 
         if (!this.pendingMessage.sourceId) {
             this.pendingMessage = { ...this.pendingMessage, sourceId: clickedId };
-        } else {
-            if (clickedId === this.pendingMessage.sourceId) return;
-
-            /* Si origen o destino es un mensaje (no un nodo participante), creamos
-               el nuevo mensaje anclado al punto medio de ese mensaje existente.
-               En ese caso usamos el participante más cercano a ese punto medio
-               para que la lifeline sea correcta. */
-            const sourceIsMsg = this.messages.some(m => m.id === this.pendingMessage!.sourceId);
-            const targetIsMsg = this.messages.some(m => m.id === clickedId);
-
-            let sourceId = this.pendingMessage.sourceId!;
-            let targetId = clickedId;
-
-            if (sourceIsMsg) {
-                const ref = this.messages.find(m => m.id === sourceId);
-                sourceId = ref ? ref.sourceId : sourceId;
-            }
-            if (targetIsMsg) {
-                const ref = this.messages.find(m => m.id === targetId);
-                targetId = ref ? ref.targetId : targetId;
-            }
-
-            const order = this.messages.length > 0
-                ? Math.max(...this.messages.map(m => m.order)) + 1
-                : 0;
-            const msg: SeqMessage = {
-                id: this.buildId(),
-                kind: this.pendingMessage.kind,
-                sourceId,
-                targetId,
-                label: this.buildMsgLabel(this.pendingMessage.kind),
-                order,
-            };
-            this.messages = [...this.messages, msg];
-            this.pendingMessage = null;
-            this.ghostLine = null;
-            this.persistAll();
+            return;
         }
+
+        if (clickedId === this.pendingMessage.sourceId) return;
+
+        /* Si origen o destino es un mensaje (no un nodo participante), creamos
+           el nuevo mensaje anclado al punto medio de ese mensaje existente.
+           En ese caso usamos el participante más cercano a ese punto medio
+           para que la lifeline sea correcta. */
+        const sourceIsMsg = this.messages.some(m => m.id === this.pendingMessage!.sourceId);
+        const targetIsMsg = this.messages.some(m => m.id === clickedId);
+
+        let sourceId = this.pendingMessage.sourceId!;
+        let targetId = clickedId;
+
+        if (sourceIsMsg) {
+            const ref = this.messages.find(m => m.id === sourceId);
+            sourceId = ref ? ref.sourceId : sourceId;
+        }
+        if (targetIsMsg) {
+            const ref = this.messages.find(m => m.id === targetId);
+            targetId = ref ? ref.targetId : targetId;
+        }
+
+        const order = this.messages.length > 0
+            ? Math.max(...this.messages.map(m => m.order)) + 1
+            : 0;
+        const msg: SeqMessage = {
+            id: this.buildId(),
+            kind: this.pendingMessage.kind,
+            sourceId,
+            targetId,
+            label: this.buildMsgLabel(this.pendingMessage.kind),
+            order,
+        };
+        this.messages = [...this.messages, msg];
+        this.pendingMessage = null;
+        this.ghostLine = null;
+        this.persistAll();
     }
 
     /* ── Stage mousemove: ghost line ── */
@@ -753,6 +769,15 @@ export class CanvasSecuenciaComponent implements OnInit, OnDestroy, AfterViewChe
         const stage = this.canvasStageRef?.nativeElement;
         if (!stage) return;
         this.stageSize = { w: stage.offsetWidth, h: stage.offsetHeight };
+    }
+
+    private scheduleStageSizeUpdate(): void {
+        if (this.sizeUpdateScheduled) return;
+        this.sizeUpdateScheduled = true;
+        setTimeout(() => {
+            this.sizeUpdateScheduled = false;
+            this.updateStageSize();
+        }, 0);
     }
 
     private clamp(v: number, min: number, max: number): number {

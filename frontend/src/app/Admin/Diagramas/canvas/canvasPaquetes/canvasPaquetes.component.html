@@ -314,7 +314,9 @@
                     [class.dragging]="draggingNodeId === node.id"
                     [class.is-source]="pendingRelation?.sourceId === node.id"
                     [class.connectable]="!!pendingRelation && pendingRelation.sourceId !== node.id"
-                    [style.left.px]="node.x" [style.top.px]="node.y" (pointerdown)="startNodeDrag($event, node.id)">
+                    [style.left.px]="node.x" [style.top.px]="node.y"
+                    (pointerdown)="startNodeDrag($event, node.id)"
+                    (click)="onNodeConnect(node.id, $event)">
 
                     <!-- Botón eliminar -->
                     <button type="button" class="node-delete" title="Eliminar nodo"

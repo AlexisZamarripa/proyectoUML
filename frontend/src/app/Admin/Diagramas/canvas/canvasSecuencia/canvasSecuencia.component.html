@@ -339,7 +339,9 @@
                     [class.dragging]="draggingNodeId === node.id"
                     [class.is-source]="pendingMessage?.sourceId === node.id"
                     [class.connectable]="!!pendingMessage && pendingMessage.sourceId !== node.id"
-                    [style.left.px]="node.x" [style.top.px]="node.y" (pointerdown)="onNodePointerDown($event, node.id)">
+                    [style.left.px]="node.x" [style.top.px]="node.y"
+                    (pointerdown)="onNodePointerDown($event, node.id)"
+                    (click)="onNodeConnect(node.id, $event)">
 
                     <button type="button" class="node-delete" title="Eliminar"
                         (click)="removeNode(node.id, $event)">×</button>
