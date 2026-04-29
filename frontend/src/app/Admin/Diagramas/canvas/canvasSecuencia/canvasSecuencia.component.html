@@ -418,3 +418,10 @@
     </div><!-- /canvas-layout -->
 
 </section>
+
+<app-confirm-modal
+    [isOpen]="showConfirmModal"
+    [config]="confirmModalConfig"
+    (confirm)="onConfirmModal()"
+    (cancel)="onCancelModal()">
+</app-confirm-modal>

@@ -83,20 +83,25 @@ export class DiagramasService {
       updateData.tipo = updateDiagramaDto.tipo;
     }
 
-    if (updateDiagramaDto.nodes !== undefined) {
-      updateData.nodes_json = JSON.stringify(updateDiagramaDto.nodes);
+    const nodes = this.normalizeArray(updateDiagramaDto.nodes);
+    const relations = this.normalizeArray(updateDiagramaDto.relations);
+    const messages = this.normalizeArray(updateDiagramaDto.messages);
+    const fragments = this.normalizeArray(updateDiagramaDto.fragments);
+
+    if (nodes !== undefined) {
+      updateData.nodes_json = JSON.stringify(nodes);
     }
 
-    if (updateDiagramaDto.relations !== undefined) {
-      updateData.relations_json = JSON.stringify(updateDiagramaDto.relations);
+    if (relations !== undefined) {
+      updateData.relations_json = JSON.stringify(relations);
     }
 
-    if (updateDiagramaDto.messages !== undefined) {
-      updateData.messages_json = JSON.stringify(updateDiagramaDto.messages);
+    if (messages !== undefined) {
+      updateData.messages_json = JSON.stringify(messages);
     }
 
-    if (updateDiagramaDto.fragments !== undefined) {
-      updateData.fragments_json = JSON.stringify(updateDiagramaDto.fragments);
+    if (fragments !== undefined) {
+      updateData.fragments_json = JSON.stringify(fragments);
     }
 
     await this.diagramasRepository.update(id, updateData);
@@ -150,6 +155,24 @@ export class DiagramasService {
     } catch {
       return [];
     }
+  }
+
+  private normalizeArray(value: unknown): any[] | undefined {
+    if (value === undefined) {
+      return undefined;
+    }
+    if (Array.isArray(value)) {
+      return value;
+    }
+    if (typeof value === 'string') {
+      try {
+        const parsed = JSON.parse(value) as unknown;
+        return Array.isArray(parsed) ? parsed : undefined;
+      } catch {
+        return undefined;
+      }
+    }
+    return undefined;
   }
 
   private toIso(value: Date | string | null | undefined): string {

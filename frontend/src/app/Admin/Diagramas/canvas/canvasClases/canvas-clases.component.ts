@@ -1,9 +1,10 @@
 import {
     AfterViewChecked, Component, ElementRef, EventEmitter,
-    Input, OnDestroy, OnInit, Output, ViewChild
+    Input, OnChanges, OnDestroy, OnInit, Output, SimpleChanges, ViewChild
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { CanvasNode, DiagramaApiService, UmlDiagram } from '../../../../services/diagrama-api.service';
+import { ConfirmModalComponent, ConfirmModalConfig } from '../../../../components/confirm-modal/confirm-modal.component';
 
 /* ── interfaces ── */
 export interface UmlMember { visibility: string; text: string; }
@@ -43,11 +44,11 @@ const NODE_DEFAULT_H = 100;
 @Component({
     selector: 'app-canvas-clases',
     standalone: true,
-    imports: [CommonModule],
+    imports: [CommonModule, ConfirmModalComponent],
     templateUrl: './canvas-clases.component.html',
     styleUrls: ['./canvas-clases.component.css']
 })
-export class CanvasClasesComponent implements OnInit, OnDestroy, AfterViewChecked {
+export class CanvasClasesComponent implements OnInit, OnChanges, OnDestroy, AfterViewChecked {
 
     @Input() diagram!: UmlDiagram;
     @Output() diagramUpdated = new EventEmitter<UmlDiagram>();
@@ -73,6 +74,18 @@ export class CanvasClasesComponent implements OnInit, OnDestroy, AfterViewChecke
     private sizeUpdateScheduled = false;
 
     collapsedGroups = new Set<string>();
+
+    showConfirmModal = false;
+    confirmModalConfig: ConfirmModalConfig = {
+        title: '¿Guardar cambios?',
+        message: 'Se actualizará el diagrama actual con los cambios del canvas.',
+        confirmText: 'Guardar',
+        cancelText: 'Cancelar',
+        type: 'info',
+        icon: 'info'
+    };
+    private pendingAction: 'save' | 'clear' | null = null;
+    private loadedDiagramId: string | null = null;
 
     readonly paletteGroups: PaletteGroup[] = [
         {
@@ -117,14 +130,12 @@ export class CanvasClasesComponent implements OnInit, OnDestroy, AfterViewChecke
     constructor(private diagramaApiService: DiagramaApiService) { }
 
     ngOnInit(): void {
-        if (this.diagram) {
-            const raw = this.diagram as any;
-            this.canvasNodes = ((raw.nodes ?? []) as UmlCanvasNode[]).map(n => this.hydrateNode(n));
-            this.relations = (raw.relations ?? []) as UmlRelation[];
-            if (this.canvasNodes.length === 0) {
-                this.canvasNodes = this.buildStarterNodes();
-                this.persistAll();
-            }
+        this.loadFromDiagram();
+    }
+
+    ngOnChanges(changes: SimpleChanges): void {
+        if (changes['diagram'] && this.diagram) {
+            this.loadFromDiagram();
         }
     }
 
@@ -144,12 +155,8 @@ export class CanvasClasesComponent implements OnInit, OnDestroy, AfterViewChecke
     isGroupCollapsed(id: string): boolean { return this.collapsedGroups.has(id); }
 
     /* ── Canvas actions ── */
-    guardarLienzo(): void { this.persistAll(); }
-    clearCanvas(): void {
-        this.canvasNodes = []; this.relations = [];
-        this.pendingRelation = null; this.ghostLine = null;
-        this.persistAll();
-    }
+    guardarLienzo(): void { this.requestSave(); }
+    clearCanvas(): void { this.requestClear(); }
 
     /* ── Palette drag start ── */
     onPaletteDragStart(event: DragEvent, item: PaletteItem): void {
@@ -501,6 +508,75 @@ export class CanvasClasesComponent implements OnInit, OnDestroy, AfterViewChecke
     trackByMarkerId(_: number, m: { id: string }): string { return m.id; }
 
     /* ─────────────────────────── PRIVATE ─────────────────────────── */
+
+    private loadFromDiagram(): void {
+        if (!this.diagram) return;
+        if (this.loadedDiagramId === this.diagram.id) return;
+        this.loadedDiagramId = this.diagram.id;
+        const raw = this.diagram as any;
+        this.canvasNodes = ((raw.nodes ?? []) as UmlCanvasNode[]).map(n => this.hydrateNode(n));
+        this.relations = (raw.relations ?? []) as UmlRelation[];
+        this.pendingRelation = null;
+        this.ghostLine = null;
+        this.needsSizeUpdate = true;
+        if (this.canvasNodes.length === 0) {
+            this.canvasNodes = this.buildStarterNodes();
+            this.persistAll();
+        }
+    }
+
+    private requestSave(): void {
+        this.pendingAction = 'save';
+        this.confirmModalConfig = {
+            title: '¿Guardar cambios?',
+            message: 'Se actualizará el diagrama actual con los cambios del canvas.',
+            confirmText: 'Guardar',
+            cancelText: 'Cancelar',
+            type: 'info',
+            icon: 'info'
+        };
+        this.showConfirmModal = true;
+    }
+
+    private requestClear(): void {
+        if (this.canvasNodes.length === 0 && this.relations.length === 0) return;
+        this.pendingAction = 'clear';
+        this.confirmModalConfig = {
+            title: '¿Limpiar diagrama?',
+            message: 'Se eliminarán todos los nodos y relaciones del canvas. Esta acción no se puede deshacer.',
+            confirmText: 'Limpiar',
+            cancelText: 'Cancelar',
+            type: 'danger',
+            icon: 'trash'
+        };
+        this.showConfirmModal = true;
+    }
+
+    onConfirmModal(): void {
+        if (this.pendingAction === 'save') {
+            this.persistAll();
+        } else if (this.pendingAction === 'clear') {
+            this.clearCanvasInternal();
+        }
+        this.closeConfirm();
+    }
+
+    onCancelModal(): void {
+        this.closeConfirm();
+    }
+
+    private closeConfirm(): void {
+        this.showConfirmModal = false;
+        this.pendingAction = null;
+    }
+
+    private clearCanvasInternal(): void {
+        this.canvasNodes = [];
+        this.relations = [];
+        this.pendingRelation = null;
+        this.ghostLine = null;
+        this.persistAll();
+    }
 
     private readonly onWindowPointerMove = (event: PointerEvent): void => {
         if (!this.draggingNodeId) return;

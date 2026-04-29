@@ -38,9 +38,9 @@ export class DiagramasController {
   @Patch(':id')
   update(
     @Param('id', ParseIntPipe) id: number,
-    @Body() updateDiagramaDto: UpdateDiagramaDto,
+    @Body() updateDiagramaDto: Record<string, unknown>,
   ) {
-    return this.diagramasService.update(id, updateDiagramaDto);
+    return this.diagramasService.update(id, updateDiagramaDto as UpdateDiagramaDto);
   }
 
   @Delete(':id')

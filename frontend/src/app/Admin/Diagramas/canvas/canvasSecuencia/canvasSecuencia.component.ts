@@ -1,9 +1,10 @@
 import {
     AfterViewChecked, Component, ElementRef, EventEmitter,
-    Input, OnDestroy, OnInit, Output, ViewChild
+    Input, OnChanges, OnDestroy, OnInit, Output, SimpleChanges, ViewChild
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { CanvasNode, DiagramaApiService, UmlDiagram } from '../../../../services/diagrama-api.service';
+import { ConfirmModalComponent, ConfirmModalConfig } from '../../../../components/confirm-modal/confirm-modal.component';
 
 /* ── Interfaces ── */
 export interface SeqNode extends CanvasNode {
@@ -66,11 +67,11 @@ const NODE_DEFAULT_H = 60;
 @Component({
     selector: 'app-canvas-secuencia',
     standalone: true,
-    imports: [CommonModule],
+    imports: [CommonModule, ConfirmModalComponent],
     templateUrl: './canvasSecuencia.component.html',
     styleUrls: ['./canvasSecuencia.component.css']
 })
-export class CanvasSecuenciaComponent implements OnInit, OnDestroy, AfterViewChecked {
+export class CanvasSecuenciaComponent implements OnInit, OnChanges, OnDestroy, AfterViewChecked {
 
     @Input() diagram!: UmlDiagram;
     @Output() diagramUpdated = new EventEmitter<UmlDiagram>();
@@ -114,6 +115,18 @@ export class CanvasSecuenciaComponent implements OnInit, OnDestroy, AfterViewChe
     /* edición inline de mensajes */
     editingMsgId: string | null = null;
 
+    showConfirmModal = false;
+    confirmModalConfig: ConfirmModalConfig = {
+        title: '¿Guardar cambios?',
+        message: 'Se actualizará el diagrama actual con los cambios del canvas.',
+        confirmText: 'Guardar',
+        cancelText: 'Cancelar',
+        type: 'info',
+        icon: 'info'
+    };
+    private pendingAction: 'save' | 'clear' | null = null;
+    private loadedDiagramId: string | null = null;
+
     readonly paletteGroups: PaletteGroup[] = [
         {
             id: 'participantes', title: 'Participantes', collapsed: false,
@@ -149,16 +162,12 @@ export class CanvasSecuenciaComponent implements OnInit, OnDestroy, AfterViewChe
     constructor(private diagramaApiService: DiagramaApiService) { }
 
     ngOnInit(): void {
-        if (this.diagram) {
-            const raw = this.diagram as any;
-            this.canvasNodes = ((raw.nodes ?? []) as SeqNode[]).map(n => ({ ...n }));
-            this.messages = ((raw.messages ?? []) as SeqMessage[]).slice().sort((a, b) => a.order - b.order);
-            this.fragments = ((raw.fragments ?? []) as SeqFragment[]).map(f => ({ ...f }));
-            if (this.canvasNodes.length === 0) {
-                this.canvasNodes = this.buildStarterNodes();
-                this.messages = this.buildStarterMessages();
-                this.persistAll();
-            }
+        this.loadFromDiagram();
+    }
+
+    ngOnChanges(changes: SimpleChanges): void {
+        if (changes['diagram'] && this.diagram) {
+            this.loadFromDiagram();
         }
     }
 
@@ -178,17 +187,9 @@ export class CanvasSecuenciaComponent implements OnInit, OnDestroy, AfterViewChe
     isGroupCollapsed(id: string): boolean { return this.collapsedGroups.has(id); }
 
     /* ── Acciones canvas ── */
-    guardarLienzo(): void { this.persistAll(); }
+    guardarLienzo(): void { this.requestSave(); }
 
-    clearCanvas(): void {
-        if (this.canvasNodes.length === 0 && this.messages.length === 0 && this.fragments.length === 0) return;
-        this.canvasNodes = [];
-        this.messages = [];
-        this.fragments = [];
-        this.pendingMessage = null;
-        this.ghostLine = null;
-        this.persistAll();
-    }
+    clearCanvas(): void { this.requestClear(); }
 
     cancelMessage(): void { this.pendingMessage = null; this.ghostLine = null; }
 
@@ -650,6 +651,79 @@ export class CanvasSecuenciaComponent implements OnInit, OnDestroy, AfterViewChe
     trackByItem(_: number, i: PaletteItem): string { return i.kind; }
 
     /* ── Private ── */
+
+    private loadFromDiagram(): void {
+        if (!this.diagram) return;
+        if (this.loadedDiagramId === this.diagram.id) return;
+        this.loadedDiagramId = this.diagram.id;
+        const raw = this.diagram as any;
+        this.canvasNodes = ((raw.nodes ?? []) as SeqNode[]).map(n => ({ ...n }));
+        this.messages = ((raw.messages ?? []) as SeqMessage[]).slice().sort((a, b) => a.order - b.order);
+        this.fragments = ((raw.fragments ?? []) as SeqFragment[]).map(f => ({ ...f }));
+        this.pendingMessage = null;
+        this.ghostLine = null;
+        this.editingMsgId = null;
+        this.needsSizeUpdate = true;
+        if (this.canvasNodes.length === 0) {
+            this.canvasNodes = this.buildStarterNodes();
+            this.messages = this.buildStarterMessages();
+            this.persistAll();
+        }
+    }
+
+    private requestSave(): void {
+        this.pendingAction = 'save';
+        this.confirmModalConfig = {
+            title: '¿Guardar cambios?',
+            message: 'Se actualizará el diagrama actual con los cambios del canvas.',
+            confirmText: 'Guardar',
+            cancelText: 'Cancelar',
+            type: 'info',
+            icon: 'info'
+        };
+        this.showConfirmModal = true;
+    }
+
+    private requestClear(): void {
+        if (this.canvasNodes.length === 0 && this.messages.length === 0 && this.fragments.length === 0) return;
+        this.pendingAction = 'clear';
+        this.confirmModalConfig = {
+            title: '¿Limpiar diagrama?',
+            message: 'Se eliminarán todos los participantes, mensajes y fragmentos. Esta acción no se puede deshacer.',
+            confirmText: 'Limpiar',
+            cancelText: 'Cancelar',
+            type: 'danger',
+            icon: 'trash'
+        };
+        this.showConfirmModal = true;
+    }
+
+    onConfirmModal(): void {
+        if (this.pendingAction === 'save') {
+            this.persistAll();
+        } else if (this.pendingAction === 'clear') {
+            this.clearCanvasInternal();
+        }
+        this.closeConfirm();
+    }
+
+    onCancelModal(): void {
+        this.closeConfirm();
+    }
+
+    private closeConfirm(): void {
+        this.showConfirmModal = false;
+        this.pendingAction = null;
+    }
+
+    private clearCanvasInternal(): void {
+        this.canvasNodes = [];
+        this.messages = [];
+        this.fragments = [];
+        this.pendingMessage = null;
+        this.ghostLine = null;
+        this.persistAll();
+    }
 
     private readonly onWindowPointerMove = (event: PointerEvent): void => {
         if (!this.draggingNodeId) return;

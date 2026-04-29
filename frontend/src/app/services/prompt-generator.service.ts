@@ -384,6 +384,7 @@ export class PromptGeneratorService {
     if (config.stackBackend) stack.push(`- **Backend:** ${config.stackBackend}`);
     if (config.stackDatabase) stack.push(`- **Base de datos:** ${config.stackDatabase}`);
     if (config.stackExtra) stack.push(`- **Adicional:** ${config.stackExtra}`);
+    const arquitectura = config.arquitectura || 'Sin definir';
 
     return [
       '---\n',
@@ -393,7 +394,7 @@ export class PromptGeneratorService {
       ...stack,
       '',
       `### Arquitectura\n`,
-      `- **Tipo:** ${config.arquitectura}`,
+      `- **Tipo:** ${arquitectura}`,
       '',
       `### Alcance del Entregable\n`,
       `- ${config.alcance}`,
