@@ -1,9 +1,10 @@
 import {
     AfterViewChecked, Component, ElementRef, EventEmitter,
-    Input, OnDestroy, OnInit, Output, ViewChild
+    Input, OnChanges, OnDestroy, OnInit, Output, SimpleChanges, ViewChild
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { CanvasNode, DiagramaApiService, UmlDiagram } from '../../../../services/diagrama-api.service';
+import { ConfirmModalComponent, ConfirmModalConfig } from '../../../../components/confirm-modal/confirm-modal.component';
 
 /* ── Interfaces ── */
 export interface PkgCanvasNode extends CanvasNode {
@@ -35,11 +36,11 @@ const NODE_DEFAULT_H = 80;
 @Component({
     selector: 'app-canvas-paquetes',
     standalone: true,
-    imports: [CommonModule],
+    imports: [CommonModule, ConfirmModalComponent],
     templateUrl: './canvasPaquetes.component.html',
     styleUrls: ['./canvasPaquetes.component.css']
 })
-export class CanvasPaquetesComponent implements OnInit, OnDestroy, AfterViewChecked {
+export class CanvasPaquetesComponent implements OnInit, OnChanges, OnDestroy, AfterViewChecked {
 
     @Input() diagram!: UmlDiagram;
     @Output() diagramUpdated = new EventEmitter<UmlDiagram>();
@@ -62,9 +63,22 @@ export class CanvasPaquetesComponent implements OnInit, OnDestroy, AfterViewChec
     /* SVG overlay size */
     stageSize = { w: 800, h: 520 };
     private needsSizeUpdate = false;
+    private sizeUpdateScheduled = false;
 
     /* Accordion state */
     collapsedGroups = new Set<string>();
+
+    showConfirmModal = false;
+    confirmModalConfig: ConfirmModalConfig = {
+        title: '¿Guardar cambios?',
+        message: 'Se actualizará el diagrama actual con los cambios del canvas.',
+        confirmText: 'Guardar',
+        cancelText: 'Cancelar',
+        type: 'info',
+        icon: 'info'
+    };
+    private pendingAction: 'save' | 'clear' | null = null;
+    private loadedDiagramId: string | null = null;
 
     readonly paletteGroups: PaletteGroup[] = [
         {
@@ -95,19 +109,20 @@ export class CanvasPaquetesComponent implements OnInit, OnDestroy, AfterViewChec
     constructor(private diagramaApiService: DiagramaApiService) { }
 
     ngOnInit(): void {
-        if (this.diagram) {
-            const raw = this.diagram as any;
-            this.canvasNodes = ((raw.nodes ?? []) as PkgCanvasNode[]).map(n => ({ ...n }));
-            this.relations = (raw.relations ?? []) as PkgRelation[];
-            if (this.canvasNodes.length === 0) {
-                this.canvasNodes = this.buildStarterNodes();
-                this.persistAll();
-            }
+        this.loadFromDiagram();
+    }
+
+    ngOnChanges(changes: SimpleChanges): void {
+        if (changes['diagram'] && this.diagram) {
+            this.loadFromDiagram();
         }
     }
 
     ngAfterViewChecked(): void {
-        if (this.needsSizeUpdate) { this.updateStageSize(); this.needsSizeUpdate = false; }
+        if (this.needsSizeUpdate) {
+            this.needsSizeUpdate = false;
+            this.scheduleStageSizeUpdate();
+        }
     }
 
     ngOnDestroy(): void { this.removeDragListeners(); }
@@ -124,16 +139,9 @@ export class CanvasPaquetesComponent implements OnInit, OnDestroy, AfterViewChec
     }
 
     /* ── Canvas actions ── */
-    guardarLienzo(): void { this.persistAll(); }
+    guardarLienzo(): void { this.requestSave(); }
 
-    clearCanvas(): void {
-        if (this.canvasNodes.length === 0 && this.relations.length === 0) return;
-        this.canvasNodes = [];
-        this.relations = [];
-        this.pendingRelation = null;
-        this.ghostLine = null;
-        this.persistAll();
-    }
+    clearCanvas(): void { this.requestClear(); }
 
     /* ── Inline editing ── */
     onNameBlur(event: FocusEvent, nodeId: string): void {
@@ -204,34 +212,29 @@ export class CanvasPaquetesComponent implements OnInit, OnDestroy, AfterViewChec
         this.persistAll();
     }
 
-    /* ── Stage click: maneja modo conexión ── */
+    /* ── Stage click: maneja modo conexión (nodo O línea existente) ── */
     onStageClick(event: MouseEvent): void {
         if (!this.pendingRelation) return;
 
-        const target = event.target as HTMLElement;
-        const nodeEl = target.closest('[data-node-id]') as HTMLElement | null;
+        const targetEl = event.target as Element;
+        const relEl = targetEl.closest('[data-rel-id]');
+        const nodeEl = targetEl.closest('[data-node-id]');
 
-        if (!nodeEl) { this.cancelRelation(); return; }
-
-        const nodeId = nodeEl.getAttribute('data-node-id')!;
-
-        if (!this.pendingRelation.sourceId) {
-            /* Primer clic: origen */
-            this.pendingRelation = { ...this.pendingRelation, sourceId: nodeId };
-        } else {
-            /* Segundo clic: destino */
-            if (nodeId === this.pendingRelation.sourceId) return;
-            const rel: PkgRelation = {
-                id: this.buildId(),
-                kind: this.pendingRelation.kind,
-                sourceId: this.pendingRelation.sourceId,
-                targetId: nodeId,
-            };
-            this.relations = [...this.relations, rel];
-            this.pendingRelation = null;
-            this.ghostLine = null;
-            this.persistAll();
+        let clickedId: string | null = null;
+        if (relEl) {
+            clickedId = relEl.getAttribute('data-rel-id');
+        } else if (nodeEl) {
+            clickedId = nodeEl.getAttribute('data-node-id');
         }
+
+        if (!clickedId) { this.cancelRelation(); return; }
+        this.handleRelationClick(clickedId);
+    }
+
+    onNodeConnect(nodeId: string, event: MouseEvent): void {
+        if (!this.pendingRelation) return;
+        event.stopPropagation();
+        this.handleRelationClick(nodeId);
     }
 
     /* ── Stage mousemove: línea fantasma ── */
@@ -240,11 +243,10 @@ export class CanvasPaquetesComponent implements OnInit, OnDestroy, AfterViewChec
         const stage = this.canvasStageRef?.nativeElement;
         if (!stage) return;
         const rect = stage.getBoundingClientRect();
-        const src = this.canvasNodes.find(n => n.id === this.pendingRelation!.sourceId);
-        if (!src) return;
-        const sp = this.nodeCenter(src);
+        const srcPt = this.resolveCenter(this.pendingRelation.sourceId);
+        if (!srcPt) return;
         this.ghostLine = {
-            x1: sp.x, y1: sp.y,
+            x1: srcPt.x, y1: srcPt.y,
             x2: event.clientX - rect.left,
             y2: event.clientY - rect.top,
         };
@@ -252,10 +254,55 @@ export class CanvasPaquetesComponent implements OnInit, OnDestroy, AfterViewChec
 
     cancelRelation(): void { this.pendingRelation = null; this.ghostLine = null; }
 
-    /* ── Eliminar relación ── */
+    private handleRelationClick(clickedId: string): void {
+        if (!this.pendingRelation) return;
+
+        if (!this.pendingRelation.sourceId) {
+            this.pendingRelation = { ...this.pendingRelation, sourceId: clickedId };
+            return;
+        }
+
+        if (clickedId === this.pendingRelation.sourceId) return;
+        const rel: PkgRelation = {
+            id: this.buildId(),
+            kind: this.pendingRelation.kind,
+            sourceId: this.pendingRelation.sourceId,
+            targetId: clickedId,
+        };
+        this.relations = [...this.relations, rel];
+        this.pendingRelation = null;
+        this.ghostLine = null;
+        this.persistAll();
+    }
+
+    /* ── Clic en el punto medio de una relación (línea con línea) ── */
+    onRelMidpointClick(relId: string, event: MouseEvent): void {
+        event.stopPropagation();
+        if (!this.pendingRelation) return;
+
+        if (!this.pendingRelation.sourceId) {
+            this.pendingRelation = { ...this.pendingRelation, sourceId: relId };
+        } else {
+            if (relId === this.pendingRelation.sourceId) return;
+            const rel: PkgRelation = {
+                id: this.buildId(),
+                kind: this.pendingRelation.kind,
+                sourceId: this.pendingRelation.sourceId,
+                targetId: relId,
+            };
+            this.relations = [...this.relations, rel];
+            this.pendingRelation = null;
+            this.ghostLine = null;
+            this.persistAll();
+        }
+    }
+
+    /* ── Eliminar relación (cascada sobre dependientes) ── */
     removeRelation(relId: string, event: MouseEvent): void {
         event.stopPropagation();
-        this.relations = this.relations.filter(r => r.id !== relId);
+        this.relations = this.relations.filter(
+            r => r.id !== relId && r.sourceId !== relId && r.targetId !== relId
+        );
         this.persistAll();
     }
 
@@ -285,14 +332,43 @@ export class CanvasPaquetesComponent implements OnInit, OnDestroy, AfterViewChec
 
     /* ── SVG line helpers ── */
     getRelLine(rel: PkgRelation): RelLine | null {
-        const src = this.canvasNodes.find(n => n.id === rel.sourceId);
-        const tgt = this.canvasNodes.find(n => n.id === rel.targetId);
-        if (!src || !tgt) return null;
-        const sc = this.nodeCenter(src);
-        const tc = this.nodeCenter(tgt);
-        const p1 = this.nodeBorderPoint(src, sc, tc);
-        const p2 = this.nodeBorderPoint(tgt, tc, sc);
-        return { x1: p1.x, y1: p1.y, x2: p2.x, y2: p2.y };
+        const srcPt = this.resolveEndpoint(rel.sourceId, rel.targetId);
+        const tgtPt = this.resolveEndpoint(rel.targetId, rel.sourceId);
+        if (!srcPt || !tgtPt) return null;
+        return { x1: srcPt.x, y1: srcPt.y, x2: tgtPt.x, y2: tgtPt.y };
+    }
+
+    /** Devuelve el centro de cualquier elemento (nodo o relación) dado su ID */
+    resolveCenter(id: string): { x: number; y: number } | null {
+        const node = this.canvasNodes.find(n => n.id === id);
+        if (node) return this.nodeCenter(node);
+        return this.getRelCenter(id);
+    }
+
+    /** Punto medio de una relación ya dibujada */
+    getRelCenter(relId: string): { x: number; y: number } | null {
+        const rel = this.relations.find(r => r.id === relId);
+        if (!rel) return null;
+        const sc = this.resolveCenter(rel.sourceId);
+        const tc = this.resolveCenter(rel.targetId);
+        if (!sc || !tc) return null;
+        return { x: (sc.x + tc.x) / 2, y: (sc.y + tc.y) / 2 };
+    }
+
+    /**
+     * Punto de conexión de fromId apuntando hacia towardId.
+     * - Nodo: calcula intersección con el borde del rectángulo.
+     * - Relación: devuelve su punto medio.
+     */
+    resolveEndpoint(fromId: string, towardId: string): { x: number; y: number } | null {
+        const node = this.canvasNodes.find(n => n.id === fromId);
+        if (node) {
+            const toCenter = this.resolveCenter(towardId);
+            if (!toCenter) return null;
+            const fromCenter = this.nodeCenter(node);
+            return this.nodeBorderPoint(node, fromCenter, toCenter);
+        }
+        return this.getRelCenter(fromId);
     }
 
     relColor(kind: string): string {
@@ -333,6 +409,75 @@ export class CanvasPaquetesComponent implements OnInit, OnDestroy, AfterViewChec
     trackByMarkerId(_: number, m: { id: string }): string { return m.id; }
 
     /* ── Private ── */
+
+    private loadFromDiagram(): void {
+        if (!this.diagram) return;
+        if (this.loadedDiagramId === this.diagram.id) return;
+        this.loadedDiagramId = this.diagram.id;
+        const raw = this.diagram as any;
+        this.canvasNodes = ((raw.nodes ?? []) as PkgCanvasNode[]).map(n => ({ ...n }));
+        this.relations = (raw.relations ?? []) as PkgRelation[];
+        this.pendingRelation = null;
+        this.ghostLine = null;
+        this.needsSizeUpdate = true;
+        if (this.canvasNodes.length === 0) {
+            this.canvasNodes = this.buildStarterNodes();
+            this.persistAll();
+        }
+    }
+
+    private requestSave(): void {
+        this.pendingAction = 'save';
+        this.confirmModalConfig = {
+            title: '¿Guardar cambios?',
+            message: 'Se actualizará el diagrama actual con los cambios del canvas.',
+            confirmText: 'Guardar',
+            cancelText: 'Cancelar',
+            type: 'info',
+            icon: 'info'
+        };
+        this.showConfirmModal = true;
+    }
+
+    private requestClear(): void {
+        if (this.canvasNodes.length === 0 && this.relations.length === 0) return;
+        this.pendingAction = 'clear';
+        this.confirmModalConfig = {
+            title: '¿Limpiar diagrama?',
+            message: 'Se eliminarán todos los nodos y relaciones del canvas. Esta acción no se puede deshacer.',
+            confirmText: 'Limpiar',
+            cancelText: 'Cancelar',
+            type: 'danger',
+            icon: 'trash'
+        };
+        this.showConfirmModal = true;
+    }
+
+    onConfirmModal(): void {
+        if (this.pendingAction === 'save') {
+            this.persistAll();
+        } else if (this.pendingAction === 'clear') {
+            this.clearCanvasInternal();
+        }
+        this.closeConfirm();
+    }
+
+    onCancelModal(): void {
+        this.closeConfirm();
+    }
+
+    private closeConfirm(): void {
+        this.showConfirmModal = false;
+        this.pendingAction = null;
+    }
+
+    private clearCanvasInternal(): void {
+        this.canvasNodes = [];
+        this.relations = [];
+        this.pendingRelation = null;
+        this.ghostLine = null;
+        this.persistAll();
+    }
 
     private readonly onWindowPointerMove = (event: PointerEvent): void => {
         if (!this.draggingNodeId) return;
@@ -401,6 +546,15 @@ export class CanvasPaquetesComponent implements OnInit, OnDestroy, AfterViewChec
         const stage = this.canvasStageRef?.nativeElement;
         if (!stage) return;
         this.stageSize = { w: stage.offsetWidth, h: stage.offsetHeight };
+    }
+
+    private scheduleStageSizeUpdate(): void {
+        if (this.sizeUpdateScheduled) return;
+        this.sizeUpdateScheduled = true;
+        setTimeout(() => {
+            this.sizeUpdateScheduled = false;
+            this.updateStageSize();
+        }, 0);
     }
 
     private buildStarterNodes(): PkgCanvasNode[] {

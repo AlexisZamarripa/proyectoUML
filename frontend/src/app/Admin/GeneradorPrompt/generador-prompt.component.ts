@@ -12,6 +12,7 @@ import {
 } from '../../services/prompt-generator.service';
 
 type ViewMode = 'config' | 'preview';
+type StackKind = 'frontend' | 'backend' | 'database' | 'arquitectura';
 
 @Component({
   selector: 'app-generador-prompt',
@@ -46,18 +47,37 @@ export class GeneradorPromptComponent implements OnInit {
   ];
 
   readonly STACKS_FRONTEND = [
-    'Angular', 'React', 'Vue.js', 'Next.js', 'Svelte', 'HTML/CSS/JS vanilla',
+    'Angular', 'React', 'Vue.js', 'Next.js', 'Nuxt.js', 'Svelte', 'SvelteKit',
+    'Astro', 'SolidJS', 'Qwik', 'Ionic', 'HTML/CSS/JS vanilla',
   ];
   readonly STACKS_BACKEND = [
-    'NestJS (Node.js)', 'Express (Node.js)', 'Spring Boot (Java)', 'Django (Python)',
-    'Flask (Python)', 'FastAPI (Python)', 'Laravel (PHP)', 'ASP.NET Core (C#)', 'Ruby on Rails',
+    'NestJS (Node.js)', 'Express (Node.js)', 'Fastify (Node.js)', 'Koa (Node.js)',
+    'Hapi (Node.js)', 'Spring Boot (Java)', 'Quarkus (Java)', 'Micronaut (Java)',
+    'Django (Python)', 'Flask (Python)', 'FastAPI (Python)', 'Laravel (PHP)',
+    'Symfony (PHP)', 'ASP.NET Core (C#)', 'Ruby on Rails', 'Gin (Go)', 'Fiber (Go)',
+    'Phoenix (Elixir)',
   ];
   readonly STACKS_DATABASE = [
-    'MySQL', 'PostgreSQL', 'MongoDB', 'SQLite', 'SQL Server', 'Firebase',
+    'MySQL', 'PostgreSQL', 'MariaDB', 'MongoDB', 'SQLite', 'SQL Server', 'Oracle',
+    'Redis', 'Cassandra', 'CouchDB', 'Neo4j', 'DynamoDB', 'Firestore', 'Supabase',
+    'CockroachDB', 'TimescaleDB', 'Firebase',
   ];
   readonly ARQUITECTURAS = [
-    'Monolito modular', 'Microservicios', 'Serverless', 'MVC tradicional', 'Hexagonal / Ports & Adapters',
+    'Monolito modular', 'Microservicios', 'Serverless', 'MVC tradicional',
+    'Hexagonal / Ports & Adapters', 'Clean Architecture', 'DDD (Domain-Driven Design)',
+    'Layered (N-tier)', 'Event-driven', 'CQRS + Event Sourcing', 'BFF', 'SOA',
+    'Microfrontend',
   ];
+
+  readonly CUSTOM_OPTION = '__custom__';
+  stackFrontendSelection = '';
+  stackBackendSelection = '';
+  stackDatabaseSelection = '';
+  arquitecturaSelection = '';
+  stackFrontendCustom = '';
+  stackBackendCustom = '';
+  stackDatabaseCustom = '';
+  arquitecturaCustom = '';
 
   constructor(
     private router: Router,
@@ -68,6 +88,7 @@ export class GeneradorPromptComponent implements OnInit {
 
   ngOnInit(): void {
     this.config = this.promptService.getDefaultConfig();
+    this.initStackSelections();
 
     const id = this.route.snapshot.paramMap.get('id');
     if (!id) return;
@@ -120,6 +141,15 @@ export class GeneradorPromptComponent implements OnInit {
 
   toggleAllSections(enabled: boolean): void {
     this.config.sections.forEach(s => s.enabled = enabled);
+  }
+
+  onStackSelectionChange(kind: StackKind, value: string): void {
+    if (value === this.CUSTOM_OPTION) {
+      this.seedCustomValue(kind);
+      this.applyStackValue(kind, this.getCustomValue(kind));
+      return;
+    }
+    this.applyStackValue(kind, value);
   }
 
   get enabledCount(): number {
@@ -188,5 +218,50 @@ export class GeneradorPromptComponent implements OnInit {
       seguimientos: this.projectData.seguimientos.length,
       diagramas: this.projectData.diagramas.length,
     };
+  }
+
+  private initStackSelections(): void {
+    this.stackFrontendSelection = this.resolveSelection(this.STACKS_FRONTEND, this.config.stackFrontend);
+    this.stackBackendSelection = this.resolveSelection(this.STACKS_BACKEND, this.config.stackBackend);
+    this.stackDatabaseSelection = this.resolveSelection(this.STACKS_DATABASE, this.config.stackDatabase);
+    this.arquitecturaSelection = this.resolveSelection(this.ARQUITECTURAS, this.config.arquitectura);
+
+    if (this.stackFrontendSelection === this.CUSTOM_OPTION) {
+      this.stackFrontendCustom = this.config.stackFrontend;
+    }
+    if (this.stackBackendSelection === this.CUSTOM_OPTION) {
+      this.stackBackendCustom = this.config.stackBackend;
+    }
+    if (this.stackDatabaseSelection === this.CUSTOM_OPTION) {
+      this.stackDatabaseCustom = this.config.stackDatabase;
+    }
+    if (this.arquitecturaSelection === this.CUSTOM_OPTION) {
+      this.arquitecturaCustom = this.config.arquitectura;
+    }
+  }
+
+  private resolveSelection(options: string[], value: string): string {
+    return options.includes(value) ? value : this.CUSTOM_OPTION;
+  }
+
+  private applyStackValue(kind: StackKind, value: string): void {
+    if (kind === 'frontend') this.config.stackFrontend = value;
+    if (kind === 'backend') this.config.stackBackend = value;
+    if (kind === 'database') this.config.stackDatabase = value;
+    if (kind === 'arquitectura') this.config.arquitectura = value;
+  }
+
+  private getCustomValue(kind: StackKind): string {
+    if (kind === 'frontend') return this.stackFrontendCustom;
+    if (kind === 'backend') return this.stackBackendCustom;
+    if (kind === 'database') return this.stackDatabaseCustom;
+    return this.arquitecturaCustom;
+  }
+
+  private seedCustomValue(kind: StackKind): void {
+    if (kind === 'frontend' && !this.stackFrontendCustom) this.stackFrontendCustom = this.config.stackFrontend;
+    if (kind === 'backend' && !this.stackBackendCustom) this.stackBackendCustom = this.config.stackBackend;
+    if (kind === 'database' && !this.stackDatabaseCustom) this.stackDatabaseCustom = this.config.stackDatabase;
+    if (kind === 'arquitectura' && !this.arquitecturaCustom) this.arquitecturaCustom = this.config.arquitectura;
   }
 }

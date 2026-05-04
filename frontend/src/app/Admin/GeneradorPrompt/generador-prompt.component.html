@@ -112,65 +112,93 @@
             <div class="form-group">
               <label class="form-label">Frontend</label>
               <div class="input-with-options">
-                <input
-                  type="text"
-                  class="form-input"
-                  [(ngModel)]="config.stackFrontend"
-                  placeholder="Ej: Angular, React..."
-                  list="frontend-options"
-                />
-                <datalist id="frontend-options">
-                  <option *ngFor="let opt of STACKS_FRONTEND" [value]="opt"></option>
-                </datalist>
+                <select
+                  class="form-input form-select"
+                  [(ngModel)]="stackFrontendSelection"
+                  (ngModelChange)="onStackSelectionChange('frontend', $event)"
+                >
+                  <option value="" disabled>Selecciona una opcion</option>
+                  <option *ngFor="let opt of STACKS_FRONTEND" [value]="opt">{{ opt }}</option>
+                  <option [value]="CUSTOM_OPTION">Otro...</option>
+                </select>
               </div>
+              <input
+                *ngIf="stackFrontendSelection === CUSTOM_OPTION"
+                type="text"
+                class="form-input form-input-compact"
+                [(ngModel)]="stackFrontendCustom"
+                (ngModelChange)="config.stackFrontend = $event"
+                placeholder="Escribe tu stack..."
+              />
             </div>
 
             <div class="form-group">
               <label class="form-label">Backend</label>
               <div class="input-with-options">
-                <input
-                  type="text"
-                  class="form-input"
-                  [(ngModel)]="config.stackBackend"
-                  placeholder="Ej: NestJS, Express..."
-                  list="backend-options"
-                />
-                <datalist id="backend-options">
-                  <option *ngFor="let opt of STACKS_BACKEND" [value]="opt"></option>
-                </datalist>
+                <select
+                  class="form-input form-select"
+                  [(ngModel)]="stackBackendSelection"
+                  (ngModelChange)="onStackSelectionChange('backend', $event)"
+                >
+                  <option value="" disabled>Selecciona una opcion</option>
+                  <option *ngFor="let opt of STACKS_BACKEND" [value]="opt">{{ opt }}</option>
+                  <option [value]="CUSTOM_OPTION">Otro...</option>
+                </select>
               </div>
+              <input
+                *ngIf="stackBackendSelection === CUSTOM_OPTION"
+                type="text"
+                class="form-input form-input-compact"
+                [(ngModel)]="stackBackendCustom"
+                (ngModelChange)="config.stackBackend = $event"
+                placeholder="Escribe tu stack..."
+              />
             </div>
 
             <div class="form-group">
               <label class="form-label">Base de Datos</label>
               <div class="input-with-options">
-                <input
-                  type="text"
-                  class="form-input"
-                  [(ngModel)]="config.stackDatabase"
-                  placeholder="Ej: MySQL, PostgreSQL..."
-                  list="db-options"
-                />
-                <datalist id="db-options">
-                  <option *ngFor="let opt of STACKS_DATABASE" [value]="opt"></option>
-                </datalist>
+                <select
+                  class="form-input form-select"
+                  [(ngModel)]="stackDatabaseSelection"
+                  (ngModelChange)="onStackSelectionChange('database', $event)"
+                >
+                  <option value="" disabled>Selecciona una opcion</option>
+                  <option *ngFor="let opt of STACKS_DATABASE" [value]="opt">{{ opt }}</option>
+                  <option [value]="CUSTOM_OPTION">Otro...</option>
+                </select>
               </div>
+              <input
+                *ngIf="stackDatabaseSelection === CUSTOM_OPTION"
+                type="text"
+                class="form-input form-input-compact"
+                [(ngModel)]="stackDatabaseCustom"
+                (ngModelChange)="config.stackDatabase = $event"
+                placeholder="Escribe tu base de datos..."
+              />
             </div>
 
             <div class="form-group">
               <label class="form-label">Arquitectura</label>
               <div class="input-with-options">
-                <input
-                  type="text"
-                  class="form-input"
-                  [(ngModel)]="config.arquitectura"
-                  placeholder="Ej: Monolito, Microservicios..."
-                  list="arch-options"
-                />
-                <datalist id="arch-options">
-                  <option *ngFor="let opt of ARQUITECTURAS" [value]="opt"></option>
-                </datalist>
+                <select
+                  class="form-input form-select"
+                  [(ngModel)]="arquitecturaSelection"
+                  (ngModelChange)="onStackSelectionChange('arquitectura', $event)"
+                >
+                  <option value="" disabled>Selecciona una opcion</option>
+                  <option *ngFor="let opt of ARQUITECTURAS" [value]="opt">{{ opt }}</option>
+                  <option [value]="CUSTOM_OPTION">Otro...</option>
+                </select>
               </div>
+              <input
+                *ngIf="arquitecturaSelection === CUSTOM_OPTION"
+                type="text"
+                class="form-input form-input-compact"
+                [(ngModel)]="arquitecturaCustom"
+                (ngModelChange)="config.arquitectura = $event"
+                placeholder="Escribe tu arquitectura..."
+              />
             </div>
 
             <div class="form-group form-group-full">

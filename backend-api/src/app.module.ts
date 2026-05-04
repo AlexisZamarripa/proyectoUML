@@ -15,6 +15,7 @@ import { FocusGroupModule } from './FocusGroup/focusGroup.module';
 import { ProcesosModule } from './procesos/procesos.module';
 import { DocumentosModule } from './documentos/documentos.module';
 import { SeguimientoModule } from './seguimiento/seguimiento.module';
+import { DiagramasModule } from './diagramas/diagramas.module';
 
 
 @Module({
@@ -45,6 +46,7 @@ import { SeguimientoModule } from './seguimiento/seguimiento.module';
     ProcesosModule,
     DocumentosModule,
     SeguimientoModule,
+    DiagramasModule,
   ],
   controllers: [AppController],
   providers: [AppService],

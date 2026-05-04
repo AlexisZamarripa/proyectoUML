@@ -22,16 +22,19 @@
         <span class="mode-icon">🔗</span>
         <span *ngIf="!pendingRelation.sourceId">
             Modo <strong>{{ pendingRelation.kind }}</strong> — Haz clic en el nodo <strong>origen</strong>
+            (también puedes hacer clic en una <strong>línea existente</strong>)
         </span>
         <span *ngIf="pendingRelation.sourceId">
-            Modo <strong>{{ pendingRelation.kind }}</strong> — Ahora haz clic en el nodo <strong>destino</strong>
+            Modo <strong>{{ pendingRelation.kind }}</strong> — Ahora haz clic en el nodo o línea
+            <strong>destino</strong>
         </span>
         <button type="button" class="btn-cancel" (click)="cancelRelation()">✕ Cancelar</button>
     </div>
 
     <p class="canvas-description" *ngIf="!pendingRelation">
         Arrastra <strong>clases</strong> al canvas. Para conectarlas, arrastra una
-        <strong>relación</strong> y haz clic en origen → destino. Clic sobre una línea para eliminarla.
+        <strong>relación</strong> y haz clic en origen → destino. Puedes conectar también
+        <strong>línea con línea</strong>. Clic sobre una línea para eliminarla.
     </p>
 
     <div class="canvas-layout">
@@ -268,68 +271,76 @@
 
                 <!-- ═══════════════════════════════════════════════════
                      SVG OVERLAY — relaciones
-                     Markers generados dinámicamente por color para que
-                     cada tipo de relación tenga la punta correcta.
                 ════════════════════════════════════════════════════ -->
                 <svg class="relations-svg" #relationsSvg [attr.width]="stageSize.w" [attr.height]="stageSize.h"
                     style="pointer-events:none">
                     <defs>
-                        <!-- Un <marker> por cada variante de color/tipo -->
                         <ng-container *ngFor="let mk of relMarkerDefs; trackBy: trackByMarkerId">
-
-                            <!-- Flecha sólida (arrow) -->
                             <marker *ngIf="mk.type === 'arrow'" [attr.id]="mk.id" markerWidth="10" markerHeight="7"
                                 refX="9" refY="3.5" orient="auto">
                                 <polygon points="0 0,10 3.5,0 7" [attr.fill]="mk.color" />
                             </marker>
-
-                            <!-- Triángulo abierto (herencia / realización) -->
                             <marker *ngIf="mk.type === 'open'" [attr.id]="mk.id" markerWidth="12" markerHeight="9"
                                 refX="11" refY="4.5" orient="auto">
                                 <polygon points="0 0,11 4.5,0 9" fill="#0d1b2e" [attr.stroke]="mk.color"
                                     stroke-width="1.2" />
                             </marker>
-
-                            <!-- Diamante vacío (agregación) -->
                             <marker *ngIf="mk.type === 'diamond'" [attr.id]="mk.id" markerWidth="16" markerHeight="10"
                                 refX="1" refY="5" orient="auto">
                                 <polygon points="8 0,16 5,8 10,0 5" fill="#0d1b2e" [attr.stroke]="mk.color"
                                     stroke-width="1.2" />
                             </marker>
-
-                            <!-- Diamante relleno (composición) -->
                             <marker *ngIf="mk.type === 'diamondf'" [attr.id]="mk.id" markerWidth="16" markerHeight="10"
                                 refX="1" refY="5" orient="auto">
                                 <polygon points="8 0,16 5,8 10,0 5" [attr.fill]="mk.color" />
                             </marker>
-
                         </ng-container>
                     </defs>
 
                     <!-- Relaciones guardadas -->
-                    <g *ngFor="let rel of relations; trackBy: trackByRelation">
+                    <g *ngFor="let rel of relations; trackBy: trackByRelation" [attr.data-rel-id]="rel.id"
+                        style="pointer-events:all">
+
                         <ng-container *ngIf="getRelLine(rel) as pts">
-                            <!-- Hit-area invisible: pointer-events:stroke para recibir clics
-                                 incluso cuando el SVG padre tiene pointer-events:none -->
+
+                            <!-- Hit-area invisible sobre la línea completa -->
                             <line [attr.x1]="pts.x1" [attr.y1]="pts.y1" [attr.x2]="pts.x2" [attr.y2]="pts.y2"
                                 stroke="rgba(0,0,0,0.01)" stroke-width="16"
                                 style="pointer-events:stroke; cursor:pointer"
                                 (click)="removeRelation(rel.id, $event)" />
+
                             <!-- Línea visible -->
                             <line [attr.x1]="pts.x1" [attr.y1]="pts.y1" [attr.x2]="pts.x2" [attr.y2]="pts.y2"
                                 [attr.stroke]="relColor(rel.kind)" [attr.stroke-dasharray]="relDash(rel.kind)"
                                 [attr.marker-end]="relMarkerEnd(rel.kind)"
                                 [attr.marker-start]="relMarkerStart(rel.kind)" stroke-width="1.8" class="rel-line"
-                                style="cursor:pointer; pointer-events:none" />
+                                style="pointer-events:none" />
+
+                            <!-- Punto de conexión central (siempre visible en modo conexión;
+                                 como dot pequeño en modo normal) -->
+                            <circle [attr.cx]="(pts.x1 + pts.x2) / 2" [attr.cy]="(pts.y1 + pts.y2) / 2"
+                                [attr.r]="pendingRelation ? 7 : 4" [attr.fill]="pendingRelation && pendingRelation.sourceId === rel.id
+                                    ? '#facc15'
+                                    : pendingRelation
+                                        ? relColor(rel.kind)
+                                        : 'rgba(148,163,184,0.25)'"
+                                [attr.stroke]="pendingRelation ? relColor(rel.kind) : 'rgba(148,163,184,0.4)'"
+                                stroke-width="1.5" [class.rel-midpoint]="true"
+                                [class.rel-midpoint--active]="!!pendingRelation"
+                                [class.rel-midpoint--source]="pendingRelation?.sourceId === rel.id"
+                                style="pointer-events:all; cursor:pointer"
+                                (click)="$event.stopPropagation(); onRelMidpointClick(rel.id, $event)" />
+
                             <!-- Etiqueta opcional -->
                             <text *ngIf="rel.label" [attr.x]="(pts.x1 + pts.x2) / 2"
-                                [attr.y]="(pts.y1 + pts.y2) / 2 - 6" class="rel-label-text" text-anchor="middle">
+                                [attr.y]="(pts.y1 + pts.y2) / 2 - 10" class="rel-label-text" text-anchor="middle"
+                                style="pointer-events:none">
                                 {{ rel.label }}
                             </text>
                         </ng-container>
                     </g>
 
-                    <!-- Línea fantasma (mientras se elige el destino) -->
+                    <!-- Línea fantasma -->
                     <line *ngIf="ghostLine" [attr.x1]="ghostLine.x1" [attr.y1]="ghostLine.y1" [attr.x2]="ghostLine.x2"
                         [attr.y2]="ghostLine.y2"
                         [attr.stroke]="pendingRelation ? relColor(pendingRelation.kind) : '#60a5fa'" stroke-width="1.6"
@@ -342,7 +353,9 @@
                     [class.dragging]="draggingNodeId === node.id"
                     [class.is-source]="pendingRelation?.sourceId === node.id"
                     [class.connectable]="!!pendingRelation && pendingRelation.sourceId !== node.id"
-                    [style.left.px]="node.x" [style.top.px]="node.y" (pointerdown)="onNodePointerDown($event, node.id)">
+                    [style.left.px]="node.x" [style.top.px]="node.y"
+                    (pointerdown)="onNodePointerDown($event, node.id)"
+                    (click)="onNodeConnect(node.id, $event)">
 
                     <button type="button" class="node-delete" title="Eliminar nodo"
                         (click)="removeNode(node.id, $event)">×</button>
@@ -453,3 +466,10 @@
 
     </div><!-- /canvas-layout -->
 </section>
+
+<app-confirm-modal
+    [isOpen]="showConfirmModal"
+    [config]="confirmModalConfig"
+    (confirm)="onConfirmModal()"
+    (cancel)="onCancelModal()">
+</app-confirm-modal>
