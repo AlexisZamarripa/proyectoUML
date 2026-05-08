@@ -140,7 +140,7 @@
     display: flex;
     flex-direction: column;
     overflow-y: auto;
-    max-height: 580px;
+    max-height: 620px;
 }
 
 .palette-header {
@@ -279,23 +279,116 @@
 }
 
 /* ════════════════════════════════════════
-   CANVAS STAGE
+   CANVAS STAGE — área de trabajo con zoom y pan libre
    ════════════════════════════════════════ */
-.stage-wrapper {
+
+.stage-outer {
+    position: relative;
     min-width: 0;
 }
 
-.canvas-stage {
-    min-height: 520px;
+.zoom-controls {
+    position: absolute;
+    bottom: 12px;
+    right: 12px;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(13, 27, 46, 0.92);
+    border: 1px solid rgba(16, 185, 129, .35);
+    border-radius: 8px;
+    padding: 4px 6px;
+    backdrop-filter: blur(6px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, .5);
+}
+
+.zoom-btn {
+    width: 26px;
+    height: 26px;
+    border: 1px solid rgba(16, 185, 129, .3);
+    border-radius: 5px;
+    background: rgba(6, 78, 59, .4);
+    color: #6ee7b7;
+    font-size: .9rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background .14s, border-color .14s;
+    line-height: 1;
+    padding: 0;
+}
+
+.zoom-btn:hover {
+    background: rgba(16, 185, 129, .25);
+    border-color: #10b981;
+    color: #e2e8f0;
+}
+
+.zoom-btn:active {
+    background: rgba(16, 185, 129, .4);
+}
+
+.zoom-level {
+    font-size: .7rem;
+    font-weight: 700;
+    color: #34d399;
+    font-family: 'Consolas', monospace;
+    min-width: 38px;
+    text-align: center;
+    letter-spacing: .04em;
+    cursor: pointer;
+    padding: 2px 3px;
+    border-radius: 4px;
+    transition: background .14s;
+}
+
+.zoom-level:hover {
+    background: rgba(16, 185, 129, .15);
+    color: #6ee7b7;
+}
+
+.zoom-hint {
+    font-size: .6rem;
+    color: rgba(148, 163, 184, .45);
+    padding-left: 2px;
+    white-space: nowrap;
+}
+
+.stage-wrapper {
+    min-width: 0;
+    height: 620px;
+    overflow: hidden;
     border: 1px dashed rgba(148, 163, 184, .3);
     border-radius: .75rem;
-    position: relative;
-    overflow: hidden;
     background-color: rgba(8, 15, 30, .8);
     background-image:
         linear-gradient(rgba(148, 163, 184, .05) 1px, transparent 1px),
         linear-gradient(90deg, rgba(148, 163, 184, .05) 1px, transparent 1px);
     background-size: 24px 24px;
+    cursor: default;
+    position: relative;
+    touch-action: none;
+}
+
+.stage-wrapper.panning {
+    cursor: grabbing !important;
+}
+
+.canvas-stage {
+    width: 3000px;
+    height: 3000px;
+    position: absolute;
+    top: 0;
+    left: 0;
+    overflow: visible;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    transform-origin: 0 0;
+    will-change: transform;
 }
 
 .canvas-stage.connecting {
@@ -304,7 +397,10 @@
 
 .canvas-stage-hint {
     position: absolute;
-    inset: 0;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 620px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -328,13 +424,40 @@
 /* ── SVG overlay ── */
 .relations-svg {
     position: absolute;
-    inset: 0;
+    top: 0;
+    left: 0;
+    width: 3000px;
+    height: 3000px;
     overflow: visible;
     z-index: 0;
+    pointer-events: none;
 }
 
+/* ════════════════════════════════════════
+   RELATION GROUP — contenedor SVG con hover compartido
+   ════════════════════════════════════════ */
+.rel-group {
+    cursor: default;
+}
+
+.rel-group:hover .rel-line {
+    stroke-width: 2.4;
+    filter: drop-shadow(0 0 4px rgba(148, 163, 184, .5));
+}
+
+/* ── Línea visible ── */
 .rel-line {
     pointer-events: none;
+    transition: stroke-width .15s, opacity .15s;
+}
+
+/* Área invisible amplia para facilitar el hover */
+.rel-hit {
+    pointer-events: stroke;
+    cursor: pointer;
+    fill: none;
+    stroke: transparent;
+    stroke-width: 20;
 }
 
 .rel-label-text {
@@ -343,6 +466,95 @@
     font-family: 'Consolas', monospace;
     font-style: italic;
     pointer-events: none;
+}
+
+/* ════════════════════════════════════════
+   REL MIDPOINT — punto central + botón ✕
+   ════════════════════════════════════════ */
+
+.rel-midpoint {
+    transition: r .15s ease, opacity .15s ease;
+    opacity: 0;
+    cursor: pointer;
+    pointer-events: all;
+}
+
+.rel-group:hover .rel-midpoint {
+    opacity: 1;
+}
+
+.rel-midpoint--active {
+    opacity: 0.85 !important;
+}
+
+.rel-midpoint--source {
+    opacity: 1 !important;
+    filter: drop-shadow(0 0 6px #facc15) !important;
+}
+
+/* ── Botón ✕ para eliminar relación ── */
+.rel-delete-btn {
+    pointer-events: all;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity .15s ease;
+}
+
+.rel-group:hover .rel-delete-btn {
+    opacity: 1;
+}
+
+.canvas-stage.connecting .rel-delete-btn {
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+.canvas-stage.connecting .rel-midpoint {
+    opacity: 0.85;
+}
+
+.canvas-stage.connecting .rel-group:hover .rel-midpoint {
+    opacity: 1;
+    filter: drop-shadow(0 0 6px #34d399);
+}
+
+.rel-delete-circle {
+    fill: #1e1e2a;
+    stroke: rgba(239, 68, 68, .65);
+    stroke-width: 1.5;
+    transition: fill .15s;
+}
+
+.rel-delete-btn:hover .rel-delete-circle {
+    fill: rgba(239, 68, 68, .85);
+}
+
+.rel-delete-x {
+    fill: #f87171;
+    font-size: 9px;
+    font-weight: 700;
+    font-family: monospace;
+    text-anchor: middle;
+    dominant-baseline: central;
+    user-select: none;
+    transition: fill .15s;
+}
+
+.rel-delete-btn:hover .rel-delete-x {
+    fill: #fff;
+}
+
+/* ── Ghost line animada ── */
+.ghost-line {
+    pointer-events: none;
+    stroke-dasharray: 7 4;
+    animation: ghost-dash 0.6s linear infinite;
+}
+
+@keyframes ghost-dash {
+    to {
+        stroke-dashoffset: -22;
+    }
 }
 
 /* ════════════════════════════════════════
@@ -378,21 +590,35 @@
 /* Nodo origen seleccionado en modo conexión */
 .uml-node.is-source {
     outline: 2px solid #facc15;
-    outline-offset: 2px;
-    box-shadow: 0 0 16px rgba(250, 204, 21, .45);
+    outline-offset: 3px;
+    box-shadow: 0 0 20px rgba(250, 204, 21, .5);
     z-index: 10;
 }
 
-/* Nodos destino disponibles */
+/* Nodo destino disponible en modo conexión */
 .uml-node.connectable {
     cursor: crosshair;
-    outline: 1px dashed rgba(52, 211, 153, .6);
-    outline-offset: 2px;
+    outline: 1.5px dashed rgba(52, 211, 153, .7);
+    outline-offset: 3px;
+    animation: connectable-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes connectable-pulse {
+
+    0%,
+    100% {
+        box-shadow: 0 0 0 0 rgba(52, 211, 153, 0);
+    }
+
+    50% {
+        box-shadow: 0 0 0 4px rgba(52, 211, 153, .18);
+    }
 }
 
 .uml-node.connectable:hover {
     outline: 2px solid #34d399;
-    box-shadow: 0 0 14px rgba(16, 185, 129, .4);
+    box-shadow: 0 0 18px rgba(16, 185, 129, .45);
+    animation: none;
 }
 
 /* ── Delete button ── */
@@ -574,7 +800,6 @@
     box-shadow: none;
 }
 
-/* El SVG de la elipse es el borde visible del nodo caso */
 .uml-node[data-kind='caso'] svg ellipse {
     stroke: #3b82f6;
 }
@@ -668,6 +893,10 @@
         border-bottom: none;
         border-right: 1px solid rgba(148, 163, 184, .1);
     }
+
+    .stage-wrapper {
+        height: 520px;
+    }
 }
 
 @media (max-width: 700px) {
@@ -683,8 +912,8 @@
         flex: 1;
     }
 
-    .canvas-stage {
-        min-height: 360px;
+    .stage-wrapper {
+        height: 420px;
     }
 
     .uml-node {
@@ -695,5 +924,9 @@
     .palette-group {
         flex: 1 1 100%;
         border-right: none;
+    }
+
+    .zoom-hint {
+        display: none;
     }
 }

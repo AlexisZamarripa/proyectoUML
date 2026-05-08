@@ -22,10 +22,11 @@
         <span class="mode-icon">🔗</span>
         <span *ngIf="!pendingRelation.sourceId">
             Modo <strong>{{ pendingRelation.kind }}</strong> — Haz clic en el nodo <strong>origen</strong>
-            (también puedes hacer clic en una <strong>línea existente</strong>)
+            (también puedes hacer clic en el <strong>punto central</strong> de una línea existente)
         </span>
         <span *ngIf="pendingRelation.sourceId">
-            Modo <strong>{{ pendingRelation.kind }}</strong> — Ahora haz clic en el nodo o línea
+            Modo <strong>{{ pendingRelation.kind }}</strong> — Ahora haz clic en el nodo o <strong>punto
+                central</strong>
             <strong>destino</strong>
         </span>
         <button type="button" class="btn-cancel" (click)="cancelRelation()">✕ Cancelar</button>
@@ -33,8 +34,10 @@
 
     <p class="canvas-description" *ngIf="!pendingRelation">
         Arrastra <strong>clases</strong> al canvas. Para conectarlas, arrastra una
-        <strong>relación</strong> y haz clic en origen → destino. Puedes conectar también
-        <strong>línea con línea</strong>. Clic sobre una línea para eliminarla.
+        <strong>relación</strong> y haz clic en origen → destino.
+        Pasa el cursor sobre una <strong>línea</strong> y presiona la <strong>✕</strong> que aparece para eliminarla.
+        Usa <strong>Rueda del ratón</strong> para desplazar y <strong>Ctrl + Rueda</strong> para zoom.
+        Mantén <strong>clic medio</strong> o <strong>Espacio + arrastrar</strong> para desplazar libremente.
     </p>
 
     <div class="canvas-layout">
@@ -258,218 +261,250 @@
 
         </aside>
 
-        <!-- CANVAS STAGE -->
-        <div class="stage-wrapper">
-            <div class="canvas-stage" #canvasStage [class.connecting]="!!pendingRelation"
-                (dragover)="onCanvasDragOver($event)" (drop)="onCanvasDrop($event)"
-                (mousemove)="onStageMouseMove($event)" (mouseleave)="ghostLine = null" (click)="onStageClick($event)">
+        <!-- ═══════════════════════════════════════════
+             CANVAS STAGE + controles de zoom
+        ════════════════════════════════════════════ -->
+        <div class="stage-outer">
 
-                <div class="canvas-stage-hint" *ngIf="canvasNodes.length === 0 && relations.length === 0">
-                    <span class="hint-icon">📐</span>
-                    <span>Suelta aquí elementos UML para iniciar el diagrama.</span>
-                </div>
+            <!-- Botones de zoom -->
+            <div class="zoom-controls">
+                <button type="button" class="zoom-btn" title="Reducir zoom (Ctrl + −)" (click)="zoomOut()">−</button>
+                <span class="zoom-level" title="Haz clic para restablecer al 100%" (click)="zoomReset()">
+                    {{ zoomPercent }}%
+                </span>
+                <button type="button" class="zoom-btn" title="Aumentar zoom (Ctrl + +)" (click)="zoomIn()">+</button>
+                <span class="zoom-hint">Ctrl+⊞ zoom · ⊞ pan</span>
+            </div>
 
-                <!-- ═══════════════════════════════════════════════════
-                     SVG OVERLAY — relaciones
-                ════════════════════════════════════════════════════ -->
-                <svg class="relations-svg" #relationsSvg [attr.width]="stageSize.w" [attr.height]="stageSize.h"
-                    style="pointer-events:none">
-                    <defs>
-                        <ng-container *ngFor="let mk of relMarkerDefs; trackBy: trackByMarkerId">
-                            <marker *ngIf="mk.type === 'arrow'" [attr.id]="mk.id" markerWidth="10" markerHeight="7"
-                                refX="9" refY="3.5" orient="auto">
-                                <polygon points="0 0,10 3.5,0 7" [attr.fill]="mk.color" />
-                            </marker>
-                            <marker *ngIf="mk.type === 'open'" [attr.id]="mk.id" markerWidth="12" markerHeight="9"
-                                refX="11" refY="4.5" orient="auto">
-                                <polygon points="0 0,11 4.5,0 9" fill="#0d1b2e" [attr.stroke]="mk.color"
-                                    stroke-width="1.2" />
-                            </marker>
-                            <marker *ngIf="mk.type === 'diamond'" [attr.id]="mk.id" markerWidth="16" markerHeight="10"
-                                refX="1" refY="5" orient="auto">
-                                <polygon points="8 0,16 5,8 10,0 5" fill="#0d1b2e" [attr.stroke]="mk.color"
-                                    stroke-width="1.2" />
-                            </marker>
-                            <marker *ngIf="mk.type === 'diamondf'" [attr.id]="mk.id" markerWidth="16" markerHeight="10"
-                                refX="1" refY="5" orient="auto">
-                                <polygon points="8 0,16 5,8 10,0 5" [attr.fill]="mk.color" />
-                            </marker>
+            <div class="stage-wrapper" #stageWrapper (wheel)="onStageWheel($event)"
+                (mousedown)="onWrapperMouseDown($event)" (dragover)="onCanvasDragOver($event)"
+                (drop)="onCanvasDrop($event)">
+
+                <div class="canvas-stage" #canvasStage [class.connecting]="!!pendingRelation"
+                    [style.transform]="stageTransform" (mousemove)="onStageMouseMove($event)"
+                    (mouseleave)="ghostLine = null" (click)="onStageClick($event)">
+
+                    <div class="canvas-stage-hint" *ngIf="canvasNodes.length === 0 && relations.length === 0">
+                        <span class="hint-icon">📐</span>
+                        <span>Suelta aquí elementos UML para iniciar el diagrama.</span>
+                    </div>
+
+                    <!-- ═══════════════════════════════════════════════════
+                         SVG OVERLAY — relaciones
+                    ════════════════════════════════════════════════════ -->
+                    <svg class="relations-svg" #relationsSvg style="pointer-events:none">
+                        <defs>
+                            <!-- Filtro de glow para líneas en hover -->
+                            <filter id="rel-glow" x="-20%" y="-20%" width="140%" height="140%">
+                                <feGaussianBlur stdDeviation="2" result="blur" />
+                                <feMerge>
+                                    <feMergeNode in="blur" />
+                                    <feMergeNode in="SourceGraphic" />
+                                </feMerge>
+                            </filter>
+
+                            <ng-container *ngFor="let mk of relMarkerDefs; trackBy: trackByMarkerId">
+                                <marker *ngIf="mk.type === 'arrow'" [attr.id]="mk.id" markerWidth="10" markerHeight="7"
+                                    refX="9" refY="3.5" orient="auto">
+                                    <polygon points="0 0,10 3.5,0 7" [attr.fill]="mk.color" />
+                                </marker>
+                                <marker *ngIf="mk.type === 'open'" [attr.id]="mk.id" markerWidth="13" markerHeight="10"
+                                    refX="12" refY="5" orient="auto">
+                                    <polygon points="0 0,12 5,0 10" fill="#0d1b2e" [attr.stroke]="mk.color"
+                                        stroke-width="1.4" />
+                                </marker>
+                                <marker *ngIf="mk.type === 'diamond'" [attr.id]="mk.id" markerWidth="18"
+                                    markerHeight="11" refX="1" refY="5.5" orient="auto">
+                                    <polygon points="9 0,18 5.5,9 11,0 5.5" fill="#0d1b2e" [attr.stroke]="mk.color"
+                                        stroke-width="1.3" />
+                                </marker>
+                                <marker *ngIf="mk.type === 'diamondf'" [attr.id]="mk.id" markerWidth="18"
+                                    markerHeight="11" refX="1" refY="5.5" orient="auto">
+                                    <polygon points="9 0,18 5.5,9 11,0 5.5" [attr.fill]="mk.color" />
+                                </marker>
+                            </ng-container>
+                        </defs>
+
+                        <!-- Relaciones guardadas: cada una en su propio <g> con hover compartido -->
+                        <g *ngFor="let rel of relations; trackBy: trackByRelation" [attr.data-rel-id]="rel.id"
+                            class="rel-group" style="pointer-events:all">
+
+                            <ng-container *ngIf="getRelLine(rel) as pts">
+
+                                <!-- ── Área de hit amplia (invisible, solo para hover/interacción) ── -->
+                                <line [attr.x1]="pts.x1" [attr.y1]="pts.y1" [attr.x2]="pts.x2" [attr.y2]="pts.y2"
+                                    class="rel-hit" />
+
+                                <!-- ── Línea visible ── -->
+                                <line [attr.x1]="pts.x1" [attr.y1]="pts.y1" [attr.x2]="pts.x2" [attr.y2]="pts.y2"
+                                    [attr.stroke]="relColor(rel.kind)" [attr.stroke-dasharray]="relDash(rel.kind)"
+                                    [attr.marker-end]="relMarkerEnd(rel.kind)"
+                                    [attr.marker-start]="relMarkerStart(rel.kind)" stroke-width="2" class="rel-line"
+                                    style="pointer-events:none" />
+
+                                <!-- ── Punto de conexión central (solo visible en modo conexión) ── -->
+                                <circle [attr.cx]="(pts.x1 + pts.x2) / 2" [attr.cy]="(pts.y1 + pts.y2) / 2"
+                                    [attr.r]="pendingRelation ? 8 : 5" [attr.fill]="pendingRelation && pendingRelation.sourceId === rel.id
+                                        ? '#facc15'
+                                        : pendingRelation
+                                            ? relColor(rel.kind)
+                                            : 'rgba(148,163,184,0.15)'"
+                                    [attr.stroke]="pendingRelation ? relColor(rel.kind) : 'rgba(148,163,184,0.3)'"
+                                    stroke-width="1.5" class="rel-midpoint"
+                                    [class.rel-midpoint--active]="!!pendingRelation"
+                                    [class.rel-midpoint--source]="pendingRelation?.sourceId === rel.id"
+                                    style="pointer-events:all; cursor:pointer"
+                                    (click)="$event.stopPropagation(); onRelMidpointClick(rel.id, $event)" />
+
+                                <!-- ── Botón ✕ para eliminar (visible en hover, oculto en modo conexión) ── -->
+                                <g class="rel-delete-btn"
+                                    (click)="$event.stopPropagation(); removeRelation(rel.id, $event)"
+                                    style="pointer-events:all">
+                                    <circle [attr.cx]="(pts.x1 + pts.x2) / 2" [attr.cy]="(pts.y1 + pts.y2) / 2" r="9"
+                                        class="rel-delete-circle" />
+                                    <text [attr.x]="(pts.x1 + pts.x2) / 2" [attr.y]="(pts.y1 + pts.y2) / 2"
+                                        class="rel-delete-x">✕</text>
+                                </g>
+
+                                <!-- ── Etiqueta opcional ── -->
+                                <text *ngIf="rel.label" [attr.x]="(pts.x1 + pts.x2) / 2"
+                                    [attr.y]="(pts.y1 + pts.y2) / 2 - 14" class="rel-label-text" text-anchor="middle"
+                                    style="pointer-events:none">
+                                    {{ rel.label }}
+                                </text>
+
+                            </ng-container>
+                        </g>
+
+                        <!-- ── Línea fantasma animada (mientras se conecta) ── -->
+                        <line *ngIf="ghostLine" [attr.x1]="ghostLine.x1" [attr.y1]="ghostLine.y1"
+                            [attr.x2]="ghostLine.x2" [attr.y2]="ghostLine.y2"
+                            [attr.stroke]="pendingRelation ? relColor(pendingRelation.kind) : '#60a5fa'"
+                            stroke-width="2" class="ghost-line" opacity="0.8" style="pointer-events:none" />
+
+                    </svg>
+
+                    <!-- UML NODES -->
+                    <div class="uml-node" *ngFor="let node of canvasNodes; trackBy: trackByNode"
+                        [attr.data-node-id]="node.id" [attr.data-kind]="node.kind"
+                        [class.dragging]="draggingNodeId === node.id"
+                        [class.is-source]="pendingRelation?.sourceId === node.id"
+                        [class.connectable]="!!pendingRelation && pendingRelation.sourceId !== node.id"
+                        [style.left.px]="node.x" [style.top.px]="node.y"
+                        (pointerdown)="onNodePointerDown($event, node.id)" (click)="onNodeConnect(node.id, $event)">
+
+                        <button type="button" class="node-delete" title="Eliminar nodo"
+                            (click)="removeNode(node.id, $event)">×</button>
+
+                        <!-- CLASE / CLASE-ABSTRACTA -->
+                        <ng-container *ngIf="isClassLike(node.kind)">
+                            <div class="uml-stereotype" *ngIf="node.stereotype">
+                                <span>{{ node.stereotype }}</span>
+                            </div>
+                            <div class="uml-section uml-section--name"
+                                [class.abstract-name]="node.kind === 'clase-abstracta'">
+                                <span class="uml-class-name" contenteditable="true" spellcheck="false"
+                                    (blur)="onNameBlur($event, node.id)" (keydown.enter)="blurTarget($event)"
+                                    (pointerdown)="$event.stopPropagation()">{{ node.label }}</span>
+                            </div>
+                            <div class="uml-section uml-section--attrs" (pointerdown)="$event.stopPropagation()">
+                                <div class="uml-row"
+                                    *ngFor="let attr of node.attributes; let i = index; trackBy: trackByIndex">
+                                    <span class="uml-visibility">{{ attr.visibility }}</span>
+                                    <span class="uml-field" contenteditable="true" spellcheck="false"
+                                        (blur)="onAttrBlur($event, node.id, i)" (keydown.enter)="blurTarget($event)">{{
+                                        attr.text }}</span>
+                                    <button type="button" class="row-remove"
+                                        (click)="removeAttr(node.id, i, $event)">×</button>
+                                </div>
+                                <button type="button" class="add-row-btn" (click)="addAttr(node.id, $event)">+
+                                    atributo</button>
+                            </div>
+                            <div class="uml-section uml-section--methods" (pointerdown)="$event.stopPropagation()">
+                                <div class="uml-row"
+                                    *ngFor="let method of node.methods; let i = index; trackBy: trackByIndex">
+                                    <span class="uml-visibility">{{ method.visibility }}</span>
+                                    <span class="uml-field" contenteditable="true" spellcheck="false"
+                                        (blur)="onMethodBlur($event, node.id, i)"
+                                        (keydown.enter)="blurTarget($event)">{{ method.text }}</span>
+                                    <button type="button" class="row-remove"
+                                        (click)="removeMethod(node.id, i, $event)">×</button>
+                                </div>
+                                <button type="button" class="add-row-btn" (click)="addMethod(node.id, $event)">+
+                                    método</button>
+                            </div>
                         </ng-container>
-                    </defs>
 
-                    <!-- Relaciones guardadas -->
-                    <g *ngFor="let rel of relations; trackBy: trackByRelation" [attr.data-rel-id]="rel.id"
-                        style="pointer-events:all">
-
-                        <ng-container *ngIf="getRelLine(rel) as pts">
-
-                            <!-- Hit-area invisible sobre la línea completa -->
-                            <line [attr.x1]="pts.x1" [attr.y1]="pts.y1" [attr.x2]="pts.x2" [attr.y2]="pts.y2"
-                                stroke="rgba(0,0,0,0.01)" stroke-width="16"
-                                style="pointer-events:stroke; cursor:pointer"
-                                (click)="removeRelation(rel.id, $event)" />
-
-                            <!-- Línea visible -->
-                            <line [attr.x1]="pts.x1" [attr.y1]="pts.y1" [attr.x2]="pts.x2" [attr.y2]="pts.y2"
-                                [attr.stroke]="relColor(rel.kind)" [attr.stroke-dasharray]="relDash(rel.kind)"
-                                [attr.marker-end]="relMarkerEnd(rel.kind)"
-                                [attr.marker-start]="relMarkerStart(rel.kind)" stroke-width="1.8" class="rel-line"
-                                style="pointer-events:none" />
-
-                            <!-- Punto de conexión central (siempre visible en modo conexión;
-                                 como dot pequeño en modo normal) -->
-                            <circle [attr.cx]="(pts.x1 + pts.x2) / 2" [attr.cy]="(pts.y1 + pts.y2) / 2"
-                                [attr.r]="pendingRelation ? 7 : 4" [attr.fill]="pendingRelation && pendingRelation.sourceId === rel.id
-                                    ? '#facc15'
-                                    : pendingRelation
-                                        ? relColor(rel.kind)
-                                        : 'rgba(148,163,184,0.25)'"
-                                [attr.stroke]="pendingRelation ? relColor(rel.kind) : 'rgba(148,163,184,0.4)'"
-                                stroke-width="1.5" [class.rel-midpoint]="true"
-                                [class.rel-midpoint--active]="!!pendingRelation"
-                                [class.rel-midpoint--source]="pendingRelation?.sourceId === rel.id"
-                                style="pointer-events:all; cursor:pointer"
-                                (click)="$event.stopPropagation(); onRelMidpointClick(rel.id, $event)" />
-
-                            <!-- Etiqueta opcional -->
-                            <text *ngIf="rel.label" [attr.x]="(pts.x1 + pts.x2) / 2"
-                                [attr.y]="(pts.y1 + pts.y2) / 2 - 10" class="rel-label-text" text-anchor="middle"
-                                style="pointer-events:none">
-                                {{ rel.label }}
-                            </text>
+                        <!-- INTERFAZ -->
+                        <ng-container *ngIf="node.kind === 'interfaz'">
+                            <div class="uml-stereotype"><span>«interface»</span></div>
+                            <div class="uml-section uml-section--name">
+                                <span class="uml-class-name" contenteditable="true" spellcheck="false"
+                                    (blur)="onNameBlur($event, node.id)" (keydown.enter)="blurTarget($event)"
+                                    (pointerdown)="$event.stopPropagation()">{{ node.label }}</span>
+                            </div>
+                            <div class="uml-section uml-section--methods" (pointerdown)="$event.stopPropagation()">
+                                <div class="uml-row"
+                                    *ngFor="let method of node.methods; let i = index; trackBy: trackByIndex">
+                                    <span class="uml-visibility">{{ method.visibility }}</span>
+                                    <span class="uml-field" contenteditable="true" spellcheck="false"
+                                        (blur)="onMethodBlur($event, node.id, i)"
+                                        (keydown.enter)="blurTarget($event)">{{ method.text }}</span>
+                                    <button type="button" class="row-remove"
+                                        (click)="removeMethod(node.id, i, $event)">×</button>
+                                </div>
+                                <button type="button" class="add-row-btn" (click)="addMethod(node.id, $event)">+
+                                    método</button>
+                            </div>
                         </ng-container>
-                    </g>
 
-                    <!-- Línea fantasma -->
-                    <line *ngIf="ghostLine" [attr.x1]="ghostLine.x1" [attr.y1]="ghostLine.y1" [attr.x2]="ghostLine.x2"
-                        [attr.y2]="ghostLine.y2"
-                        [attr.stroke]="pendingRelation ? relColor(pendingRelation.kind) : '#60a5fa'" stroke-width="1.6"
-                        stroke-dasharray="6,3" opacity="0.75" style="pointer-events:none" />
-                </svg>
-
-                <!-- UML NODES -->
-                <div class="uml-node" *ngFor="let node of canvasNodes; trackBy: trackByNode"
-                    [attr.data-node-id]="node.id" [attr.data-kind]="node.kind"
-                    [class.dragging]="draggingNodeId === node.id"
-                    [class.is-source]="pendingRelation?.sourceId === node.id"
-                    [class.connectable]="!!pendingRelation && pendingRelation.sourceId !== node.id"
-                    [style.left.px]="node.x" [style.top.px]="node.y"
-                    (pointerdown)="onNodePointerDown($event, node.id)"
-                    (click)="onNodeConnect(node.id, $event)">
-
-                    <button type="button" class="node-delete" title="Eliminar nodo"
-                        (click)="removeNode(node.id, $event)">×</button>
-
-                    <!-- CLASE / CLASE-ABSTRACTA -->
-                    <ng-container *ngIf="isClassLike(node.kind)">
-                        <div class="uml-stereotype" *ngIf="node.stereotype">
-                            <span>{{ node.stereotype }}</span>
-                        </div>
-                        <div class="uml-section uml-section--name"
-                            [class.abstract-name]="node.kind === 'clase-abstracta'">
-                            <span class="uml-class-name" contenteditable="true" spellcheck="false"
-                                (blur)="onNameBlur($event, node.id)" (keydown.enter)="blurTarget($event)"
-                                (pointerdown)="$event.stopPropagation()">{{ node.label }}</span>
-                        </div>
-                        <div class="uml-section uml-section--attrs" (pointerdown)="$event.stopPropagation()">
-                            <div class="uml-row"
-                                *ngFor="let attr of node.attributes; let i = index; trackBy: trackByIndex">
-                                <span class="uml-visibility">{{ attr.visibility }}</span>
-                                <span class="uml-field" contenteditable="true" spellcheck="false"
-                                    (blur)="onAttrBlur($event, node.id, i)" (keydown.enter)="blurTarget($event)">{{
-                                    attr.text }}</span>
-                                <button type="button" class="row-remove"
-                                    (click)="removeAttr(node.id, i, $event)">×</button>
+                        <!-- ENUMERACIÓN -->
+                        <ng-container *ngIf="node.kind === 'enumeracion'">
+                            <div class="uml-stereotype"><span>«enum»</span></div>
+                            <div class="uml-section uml-section--name">
+                                <span class="uml-class-name" contenteditable="true" spellcheck="false"
+                                    (blur)="onNameBlur($event, node.id)" (keydown.enter)="blurTarget($event)"
+                                    (pointerdown)="$event.stopPropagation()">{{ node.label }}</span>
                             </div>
-                            <button type="button" class="add-row-btn" (click)="addAttr(node.id, $event)">+
-                                atributo</button>
-                        </div>
-                        <div class="uml-section uml-section--methods" (pointerdown)="$event.stopPropagation()">
-                            <div class="uml-row"
-                                *ngFor="let method of node.methods; let i = index; trackBy: trackByIndex">
-                                <span class="uml-visibility">{{ method.visibility }}</span>
-                                <span class="uml-field" contenteditable="true" spellcheck="false"
-                                    (blur)="onMethodBlur($event, node.id, i)" (keydown.enter)="blurTarget($event)">{{
-                                    method.text }}</span>
-                                <button type="button" class="row-remove"
-                                    (click)="removeMethod(node.id, i, $event)">×</button>
+                            <div class="uml-section uml-section--attrs" (pointerdown)="$event.stopPropagation()">
+                                <div class="uml-row enum-row"
+                                    *ngFor="let attr of node.attributes; let i = index; trackBy: trackByIndex">
+                                    <span class="uml-field" contenteditable="true" spellcheck="false"
+                                        (blur)="onAttrBlur($event, node.id, i)" (keydown.enter)="blurTarget($event)">{{
+                                        attr.text }}</span>
+                                    <button type="button" class="row-remove"
+                                        (click)="removeAttr(node.id, i, $event)">×</button>
+                                </div>
+                                <button type="button" class="add-row-btn" (click)="addAttr(node.id, $event)">+
+                                    valor</button>
                             </div>
-                            <button type="button" class="add-row-btn" (click)="addMethod(node.id, $event)">+
-                                método</button>
-                        </div>
-                    </ng-container>
+                        </ng-container>
 
-                    <!-- INTERFAZ -->
-                    <ng-container *ngIf="node.kind === 'interfaz'">
-                        <div class="uml-stereotype"><span>«interface»</span></div>
-                        <div class="uml-section uml-section--name">
-                            <span class="uml-class-name" contenteditable="true" spellcheck="false"
-                                (blur)="onNameBlur($event, node.id)" (keydown.enter)="blurTarget($event)"
-                                (pointerdown)="$event.stopPropagation()">{{ node.label }}</span>
-                        </div>
-                        <div class="uml-section uml-section--methods" (pointerdown)="$event.stopPropagation()">
-                            <div class="uml-row"
-                                *ngFor="let method of node.methods; let i = index; trackBy: trackByIndex">
-                                <span class="uml-visibility">{{ method.visibility }}</span>
-                                <span class="uml-field" contenteditable="true" spellcheck="false"
-                                    (blur)="onMethodBlur($event, node.id, i)" (keydown.enter)="blurTarget($event)">{{
-                                    method.text }}</span>
-                                <button type="button" class="row-remove"
-                                    (click)="removeMethod(node.id, i, $event)">×</button>
+                        <!-- NOTA -->
+                        <ng-container *ngIf="node.kind === 'nota' || node.kind === 'nota-extra'">
+                            <div class="uml-section uml-section--name uml-rel-name">
+                                <span class="node-rel-icon">📝</span>
+                                <span class="uml-class-name uml-rel-label" contenteditable="true" spellcheck="false"
+                                    (blur)="onNameBlur($event, node.id)" (keydown.enter)="blurTarget($event)"
+                                    (pointerdown)="$event.stopPropagation()">{{ node.label }}</span>
                             </div>
-                            <button type="button" class="add-row-btn" (click)="addMethod(node.id, $event)">+
-                                método</button>
-                        </div>
-                    </ng-container>
-
-                    <!-- ENUMERACIÓN -->
-                    <ng-container *ngIf="node.kind === 'enumeracion'">
-                        <div class="uml-stereotype"><span>«enum»</span></div>
-                        <div class="uml-section uml-section--name">
-                            <span class="uml-class-name" contenteditable="true" spellcheck="false"
-                                (blur)="onNameBlur($event, node.id)" (keydown.enter)="blurTarget($event)"
-                                (pointerdown)="$event.stopPropagation()">{{ node.label }}</span>
-                        </div>
-                        <div class="uml-section uml-section--attrs" (pointerdown)="$event.stopPropagation()">
-                            <div class="uml-row enum-row"
-                                *ngFor="let attr of node.attributes; let i = index; trackBy: trackByIndex">
-                                <span class="uml-field" contenteditable="true" spellcheck="false"
-                                    (blur)="onAttrBlur($event, node.id, i)" (keydown.enter)="blurTarget($event)">{{
-                                    attr.text }}</span>
-                                <button type="button" class="row-remove"
-                                    (click)="removeAttr(node.id, i, $event)">×</button>
+                            <div class="uml-section uml-section--note" (pointerdown)="$event.stopPropagation()">
+                                <span class="uml-note-body" contenteditable="true" spellcheck="false"
+                                    (blur)="onNoteBlur($event, node.id)" (keydown.enter)="$event.stopPropagation()">{{
+                                    node.noteText }}</span>
                             </div>
-                            <button type="button" class="add-row-btn" (click)="addAttr(node.id, $event)">+
-                                valor</button>
-                        </div>
-                    </ng-container>
+                        </ng-container>
 
-                    <!-- NOTA -->
-                    <ng-container *ngIf="node.kind === 'nota' || node.kind === 'nota-extra'">
-                        <div class="uml-section uml-section--name uml-rel-name">
-                            <span class="node-rel-icon">📝</span>
-                            <span class="uml-class-name uml-rel-label" contenteditable="true" spellcheck="false"
-                                (blur)="onNameBlur($event, node.id)" (keydown.enter)="blurTarget($event)"
-                                (pointerdown)="$event.stopPropagation()">{{ node.label }}</span>
-                        </div>
-                        <div class="uml-section uml-section--note" (pointerdown)="$event.stopPropagation()">
-                            <span class="uml-note-body" contenteditable="true" spellcheck="false"
-                                (blur)="onNoteBlur($event, node.id)" (keydown.enter)="$event.stopPropagation()">{{
-                                node.noteText }}</span>
-                        </div>
-                    </ng-container>
+                    </div><!-- /uml-node -->
 
-                </div><!-- /uml-node -->
+                </div><!-- /canvas-stage -->
+            </div><!-- /stage-wrapper -->
 
-            </div><!-- /canvas-stage -->
-        </div>
+        </div><!-- /stage-outer -->
 
     </div><!-- /canvas-layout -->
 </section>
 
-<app-confirm-modal
-    [isOpen]="showConfirmModal"
-    [config]="confirmModalConfig"
-    (confirm)="onConfirmModal()"
+<app-confirm-modal [isOpen]="showConfirmModal" [config]="confirmModalConfig" (confirm)="onConfirmModal()"
     (cancel)="onCancelModal()">
 </app-confirm-modal>

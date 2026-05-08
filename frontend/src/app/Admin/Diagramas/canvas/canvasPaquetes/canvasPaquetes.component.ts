@@ -1,5 +1,5 @@
 import {
-    AfterViewChecked, Component, ElementRef, EventEmitter,
+    AfterViewChecked, Component, ElementRef, EventEmitter, HostListener,
     Input, OnChanges, OnDestroy, OnInit, Output, SimpleChanges, ViewChild
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -33,6 +33,15 @@ const RELATION_KINDS = new Set(['dependencia', 'importacion', 'acceso']);
 const NODE_DEFAULT_W = 180;
 const NODE_DEFAULT_H = 80;
 
+/* Límites de zoom */
+const ZOOM_MIN = 0.2;
+const ZOOM_MAX = 3;
+const ZOOM_STEP = 0.04;
+const ZOOM_WHEEL_FACTOR = 0.06;
+
+/* Velocidad de scroll con rueda (pan sin Ctrl) */
+const PAN_WHEEL_SPEED = 1.2;
+
 @Component({
     selector: 'app-canvas-paquetes',
     standalone: true,
@@ -49,6 +58,7 @@ export class CanvasPaquetesComponent implements OnInit, OnChanges, OnDestroy, Af
     relations: PkgRelation[] = [];
 
     @ViewChild('canvasStage') canvasStageRef?: ElementRef<HTMLDivElement>;
+    @ViewChild('stageWrapper') stageWrapperRef?: ElementRef<HTMLDivElement>;
 
     /* drag-move state */
     draggingNodeId: string | null = null;
@@ -79,6 +89,37 @@ export class CanvasPaquetesComponent implements OnInit, OnChanges, OnDestroy, Af
     };
     private pendingAction: 'save' | 'clear' | null = null;
     private loadedDiagramId: string | null = null;
+
+    // ══════════════════════════════════════════
+    //  ZOOM & PAN — estado
+    // ══════════════════════════════════════════
+
+    /** Escala actual del canvas (1 = 100%). */
+    zoom = 1;
+
+    /** Traslación acumulada en píxeles del viewport. */
+    panX = 0;
+    panY = 0;
+
+    /** Estado interno del pan con ratón/teclado. */
+    private _isPanning = false;
+    private _panStartX = 0;
+    private _panStartY = 0;
+    private _panOriginX = 0;
+    private _panOriginY = 0;
+    private _spaceDown = false;
+
+    /** String CSS aplicado al canvas-stage via [style.transform]. */
+    get stageTransform(): string {
+        return `translate(${this.panX}px, ${this.panY}px) scale(${this.zoom})`;
+    }
+
+    /** Porcentaje redondeado para mostrar en el badge. */
+    get zoomPercent(): number {
+        return Math.round(this.zoom * 100);
+    }
+
+    // ══════════════════════════════════════════
 
     readonly paletteGroups: PaletteGroup[] = [
         {
@@ -125,7 +166,11 @@ export class CanvasPaquetesComponent implements OnInit, OnChanges, OnDestroy, Af
         }
     }
 
-    ngOnDestroy(): void { this.removeDragListeners(); }
+    ngOnDestroy(): void {
+        this.removeDragListeners();
+        window.removeEventListener('mousemove', this._onPanMouseMove);
+        window.removeEventListener('mouseup', this._onPanMouseUp);
+    }
 
     /* ── Accordion ── */
     toggleGroup(id: string): void {
@@ -140,7 +185,6 @@ export class CanvasPaquetesComponent implements OnInit, OnChanges, OnDestroy, Af
 
     /* ── Canvas actions ── */
     guardarLienzo(): void { this.requestSave(); }
-
     clearCanvas(): void { this.requestClear(); }
 
     /* ── Inline editing ── */
@@ -190,11 +234,13 @@ export class CanvasPaquetesComponent implements OnInit, OnChanges, OnDestroy, Af
             return;
         }
 
-        const stage = event.currentTarget;
-        if (!(stage instanceof HTMLElement)) return;
-        const rect = stage.getBoundingClientRect();
-        const x = this.clamp(event.clientX - rect.left - 80, 12, rect.width - 200);
-        const y = this.clamp(event.clientY - rect.top - 30, 12, rect.height - 100);
+        const wrapper = this.stageWrapperRef?.nativeElement;
+        if (!wrapper) return;
+
+        /* Convertir coordenadas del viewport al espacio del canvas (zoom + pan) */
+        const pos = this.viewportToCanvas(event.clientX, event.clientY);
+        const x = Math.max(12, pos.x - 80);
+        const y = Math.max(12, pos.y - 30);
 
         const node: PkgCanvasNode = {
             id: this.buildId(),
@@ -243,12 +289,14 @@ export class CanvasPaquetesComponent implements OnInit, OnChanges, OnDestroy, Af
         const stage = this.canvasStageRef?.nativeElement;
         if (!stage) return;
         const rect = stage.getBoundingClientRect();
+
         const srcPt = this.resolveCenter(this.pendingRelation.sourceId);
         if (!srcPt) return;
+
         this.ghostLine = {
             x1: srcPt.x, y1: srcPt.y,
-            x2: event.clientX - rect.left,
-            y2: event.clientY - rect.top,
+            x2: (event.clientX - rect.left) / this.zoom,
+            y2: (event.clientY - rect.top) / this.zoom,
         };
     }
 
@@ -297,7 +345,7 @@ export class CanvasPaquetesComponent implements OnInit, OnChanges, OnDestroy, Af
         }
     }
 
-    /* ── Eliminar relación (cascada sobre dependientes) ── */
+    /* ── Eliminar relación ── */
     removeRelation(relId: string, event: MouseEvent): void {
         event.stopPropagation();
         this.relations = this.relations.filter(
@@ -307,16 +355,17 @@ export class CanvasPaquetesComponent implements OnInit, OnChanges, OnDestroy, Af
     }
 
     /* ── Drag de nodos ── */
-    startNodeDrag(event: PointerEvent, nodeId: string): void {
+    onNodePointerDown(event: PointerEvent, nodeId: string): void {
         if (this.pendingRelation) return;
         if (event.button !== 0) return;
         const stage = this.canvasStageRef?.nativeElement;
         const node = this.canvasNodes.find(n => n.id === nodeId);
         if (!stage || !node) return;
         const rect = stage.getBoundingClientRect();
+
         this.draggingNodeId = nodeId;
-        this.dragOffsetX = event.clientX - rect.left - node.x;
-        this.dragOffsetY = event.clientY - rect.top - node.y;
+        this.dragOffsetX = (event.clientX - rect.left) / this.zoom - node.x;
+        this.dragOffsetY = (event.clientY - rect.top) / this.zoom - node.y;
         this.hasPendingNodeMove = false;
         window.addEventListener('pointermove', this.onWindowPointerMove);
         window.addEventListener('pointerup', this.onWindowPointerUp);
@@ -338,14 +387,12 @@ export class CanvasPaquetesComponent implements OnInit, OnChanges, OnDestroy, Af
         return { x1: srcPt.x, y1: srcPt.y, x2: tgtPt.x, y2: tgtPt.y };
     }
 
-    /** Devuelve el centro de cualquier elemento (nodo o relación) dado su ID */
     resolveCenter(id: string): { x: number; y: number } | null {
         const node = this.canvasNodes.find(n => n.id === id);
         if (node) return this.nodeCenter(node);
         return this.getRelCenter(id);
     }
 
-    /** Punto medio de una relación ya dibujada */
     getRelCenter(relId: string): { x: number; y: number } | null {
         const rel = this.relations.find(r => r.id === relId);
         if (!rel) return null;
@@ -355,11 +402,6 @@ export class CanvasPaquetesComponent implements OnInit, OnChanges, OnDestroy, Af
         return { x: (sc.x + tc.x) / 2, y: (sc.y + tc.y) / 2 };
     }
 
-    /**
-     * Punto de conexión de fromId apuntando hacia towardId.
-     * - Nodo: calcula intersección con el borde del rectángulo.
-     * - Relación: devuelve su punto medio.
-     */
     resolveEndpoint(fromId: string, towardId: string): { x: number; y: number } | null {
         const node = this.canvasNodes.find(n => n.id === fromId);
         if (node) {
@@ -408,7 +450,124 @@ export class CanvasPaquetesComponent implements OnInit, OnChanges, OnDestroy, Af
     trackByRelation(_: number, r: PkgRelation): string { return r.id; }
     trackByMarkerId(_: number, m: { id: string }): string { return m.id; }
 
-    /* ── Private ── */
+    // ══════════════════════════════════════════
+    //  WHEEL — zoom con Ctrl, pan libre sin Ctrl
+    // ══════════════════════════════════════════
+
+    onStageWheel(event: WheelEvent): void {
+        event.preventDefault();
+
+        const wrapper = this.stageWrapperRef?.nativeElement;
+        if (!wrapper) return;
+        const rect = wrapper.getBoundingClientRect();
+
+        if (event.ctrlKey || event.metaKey) {
+            const mouseX = event.clientX - rect.left;
+            const mouseY = event.clientY - rect.top;
+            const delta = event.deltaY < 0 ? 1 : -1;
+            this._applyZoom(1 + delta * ZOOM_WHEEL_FACTOR, mouseX, mouseY);
+        } else {
+            const factor = event.deltaMode === 1 ? 20 : event.deltaMode === 2 ? 100 : 1;
+            this.panX -= event.deltaX * factor * PAN_WHEEL_SPEED;
+            this.panY -= event.deltaY * factor * PAN_WHEEL_SPEED;
+        }
+    }
+
+    /* ── Botones + / − / reset ── */
+    zoomIn(): void {
+        const w = this.stageWrapperRef?.nativeElement;
+        if (!w) return;
+        this._applyZoom(1 + ZOOM_STEP, w.clientWidth / 2, w.clientHeight / 2);
+    }
+
+    zoomOut(): void {
+        const w = this.stageWrapperRef?.nativeElement;
+        if (!w) return;
+        this._applyZoom(1 - ZOOM_STEP, w.clientWidth / 2, w.clientHeight / 2);
+    }
+
+    zoomReset(): void {
+        this.zoom = 1;
+        this.panX = 0;
+        this.panY = 0;
+    }
+
+    private _applyZoom(factor: number, focalX: number, focalY: number): void {
+        const newZoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, this.zoom * factor));
+        if (newZoom === this.zoom) return;
+        this.panX = focalX - (focalX - this.panX) * (newZoom / this.zoom);
+        this.panY = focalY - (focalY - this.panY) * (newZoom / this.zoom);
+        this.zoom = newZoom;
+    }
+
+    // ══════════════════════════════════════════
+    //  PAN — botón medio / Espacio + drag
+    // ══════════════════════════════════════════
+
+    onWrapperMouseDown(event: MouseEvent): void {
+        const isMiddle = event.button === 1;
+        const isSpacePan = this._spaceDown && event.button === 0;
+        if (!isMiddle && !isSpacePan) return;
+
+        event.preventDefault();
+        this._isPanning = true;
+        this._panStartX = event.clientX;
+        this._panStartY = event.clientY;
+        this._panOriginX = this.panX;
+        this._panOriginY = this.panY;
+        this.stageWrapperRef?.nativeElement.classList.add('panning');
+
+        window.addEventListener('mousemove', this._onPanMouseMove);
+        window.addEventListener('mouseup', this._onPanMouseUp);
+    }
+
+    private readonly _onPanMouseMove = (event: MouseEvent): void => {
+        if (!this._isPanning) return;
+        this.panX = this._panOriginX + (event.clientX - this._panStartX);
+        this.panY = this._panOriginY + (event.clientY - this._panStartY);
+    };
+
+    private readonly _onPanMouseUp = (): void => {
+        if (!this._isPanning) return;
+        this._isPanning = false;
+        this.stageWrapperRef?.nativeElement.classList.remove('panning');
+        window.removeEventListener('mousemove', this._onPanMouseMove);
+        window.removeEventListener('mouseup', this._onPanMouseUp);
+    };
+
+    @HostListener('window:keydown', ['$event'])
+    onKeyDown(event: KeyboardEvent): void {
+        if (event.code !== 'Space' || this._spaceDown) return;
+        const active = document.activeElement;
+        const tag = active?.tagName.toLowerCase();
+        if (tag === 'input' || tag === 'textarea' || (active as HTMLElement)?.isContentEditable) return;
+        event.preventDefault();
+        this._spaceDown = true;
+        if (this.stageWrapperRef) this.stageWrapperRef.nativeElement.style.cursor = 'grab';
+    }
+
+    @HostListener('window:keyup', ['$event'])
+    onKeyUp(event: KeyboardEvent): void {
+        if (event.code !== 'Space') return;
+        this._spaceDown = false;
+        if (this.stageWrapperRef) this.stageWrapperRef.nativeElement.style.cursor = '';
+    }
+
+    // ══════════════════════════════════════════
+    //  COORDENADAS — viewport → canvas
+    // ══════════════════════════════════════════
+
+    private viewportToCanvas(clientX: number, clientY: number): { x: number; y: number } {
+        const wrapper = this.stageWrapperRef?.nativeElement;
+        if (!wrapper) return { x: clientX, y: clientY };
+        const rect = wrapper.getBoundingClientRect();
+        return {
+            x: (clientX - rect.left - this.panX) / this.zoom,
+            y: (clientY - rect.top - this.panY) / this.zoom,
+        };
+    }
+
+    /* ─────────────────────────── PRIVATE ─────────────────────────── */
 
     private loadFromDiagram(): void {
         if (!this.diagram) return;
@@ -484,8 +643,8 @@ export class CanvasPaquetesComponent implements OnInit, OnChanges, OnDestroy, Af
         const stage = this.canvasStageRef?.nativeElement;
         if (!stage) return;
         const rect = stage.getBoundingClientRect();
-        const x = this.clamp(event.clientX - rect.left - this.dragOffsetX, 12, rect.width - 200);
-        const y = this.clamp(event.clientY - rect.top - this.dragOffsetY, 12, rect.height - 60);
+        const x = Math.max(12, (event.clientX - rect.left) / this.zoom - this.dragOffsetX);
+        const y = Math.max(12, (event.clientY - rect.top) / this.zoom - this.dragOffsetY);
         this.canvasNodes = this.canvasNodes.map(n =>
             n.id !== this.draggingNodeId ? n : { ...n, x, y }
         );

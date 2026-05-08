@@ -94,7 +94,7 @@ export interface UpdateUmlDiagramDto {
 export class DiagramaApiService {
   private readonly baseUrl = 'http://localhost:3000/diagramas';
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
 
   getByProyecto(idProyecto: number): Observable<UmlDiagram[]> {
     return this.http.get<UmlDiagram[]>(this.baseUrl, {
@@ -112,5 +112,15 @@ export class DiagramaApiService {
 
   delete(id: string): Observable<void> {
     return this.http.delete<void>(`${this.baseUrl}/${id}`);
+  }
+
+  // Vacía el contenido del diagrama sin eliminarlo
+  clear(id: string): Observable<UmlDiagram> {
+    return this.http.patch<UmlDiagram>(`${this.baseUrl}/${id}`, {
+      nodes: [],
+      relations: [],
+      messages: [],
+      fragments: [],
+    });
   }
 }

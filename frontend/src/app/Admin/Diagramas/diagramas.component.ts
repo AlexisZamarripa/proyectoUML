@@ -48,6 +48,10 @@ export class DiagramasComponent implements OnInit {
   filterTipo: DiagramFilter = 'todos';
   selectedDiagramId: string | null = null;
 
+  // Estado del modal de eliminación
+  diagramToDelete: UmlDiagram | null = null;
+  isDeleting = false;
+
   newDiagram = {
     nombre: '',
     descripcion: '',
@@ -176,7 +180,7 @@ export class DiagramasComponent implements OnInit {
       nombre,
       descripcion: this.newDiagram.descripcion,
       tipo: this.newDiagram.tipo,
-      nodes: [], // Los nodos iniciales los maneja cada canvas específico
+      nodes: [],
     };
 
     this.diagramaApiService.create(dto).subscribe({
@@ -200,10 +204,52 @@ export class DiagramasComponent implements OnInit {
     this.selectedDiagramId = diagram.id;
   }
 
-  /**
-   * Callback que reciben los componentes canvas cuando actualizan un diagrama
-   * Esto mantiene sincronizada la lista de diagramas en el componente padre
-   */
+  // ─── Eliminación ───────────────────────────────────────────────────────────
+
+  /** Abre el modal de confirmación con el diagrama a eliminar */
+  confirmDelete(diagram: UmlDiagram): void {
+    this.diagramToDelete = diagram;
+  }
+
+  /** Cierra el modal sin eliminar */
+  cancelDelete(): void {
+    if (this.isDeleting) {
+      return; // no cerrar mientras la petición está en curso
+    }
+    this.diagramToDelete = null;
+  }
+
+  /** Ejecuta la eliminación contra el backend */
+  deleteDiagram(): void {
+    if (!this.diagramToDelete || this.isDeleting) {
+      return;
+    }
+
+    const id = this.diagramToDelete.id;
+    this.isDeleting = true;
+
+    this.diagramaApiService.delete(id).subscribe({
+      next: () => {
+        // Si el diagrama eliminado era el seleccionado, deseleccionar
+        if (this.selectedDiagramId === id) {
+          this.selectedDiagramId = null;
+        }
+
+        // Quitar de la lista local
+        this.diagramas = this.diagramas.filter((d) => d.id !== id);
+
+        this.isDeleting = false;
+        this.diagramToDelete = null;
+      },
+      error: (error: unknown) => {
+        console.error('Error al eliminar diagrama:', error);
+        this.isDeleting = false;
+      },
+    });
+  }
+
+  // ─── Callbacks canvas ──────────────────────────────────────────────────────
+
   onDiagramUpdated(updatedDiagram: UmlDiagram): void {
     this.diagramas = this.diagramas.map((diagram) => {
       if (diagram.id !== updatedDiagram.id) {
@@ -230,7 +276,6 @@ export class DiagramasComponent implements OnInit {
       next: (items) => {
         this.diagramas = items;
 
-        // Si hay diagramas y no hay uno seleccionado, selecciona el primero
         if (items.length > 0 && !this.selectedDiagramId) {
           this.selectDiagram(items[0].id);
         }

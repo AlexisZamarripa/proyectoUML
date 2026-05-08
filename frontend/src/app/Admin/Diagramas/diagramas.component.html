@@ -103,21 +103,32 @@
         </div>
 
         <div class="diagram-list" *ngIf="diagramasFiltrados.length > 0; else emptyDiagrams">
-          <button type="button" class="diagram-item" *ngFor="let diagram of diagramasFiltrados; trackBy: trackByDiagram"
-            [class.active]="diagram.id === selectedDiagramId" (click)="selectDiagram(diagram.id)">
-            <div class="diagram-item-top">
-              <span class="diagram-type">{{ getTypeName(diagram.tipo) }}</span>
-              <span class="diagram-date">{{ diagram.actualizadoEn | date:'dd/MM/yyyy HH:mm' }}</span>
-            </div>
+          <div class="diagram-item-wrapper" *ngFor="let diagram of diagramasFiltrados; trackBy: trackByDiagram">
+            <button type="button" class="diagram-item" [class.active]="diagram.id === selectedDiagramId"
+              (click)="selectDiagram(diagram.id)">
+              <div class="diagram-item-top">
+                <span class="diagram-type">{{ getTypeName(diagram.tipo) }}</span>
+                <span class="diagram-date">{{ diagram.actualizadoEn | date:'dd/MM/yyyy HH:mm' }}</span>
+              </div>
 
-            <h3 class="diagram-name">{{ diagram.nombre }}</h3>
-            <p class="diagram-desc">{{ diagram.descripcion || 'Sin descripción' }}</p>
+              <h3 class="diagram-name">{{ diagram.nombre }}</h3>
+              <p class="diagram-desc">{{ diagram.descripcion || 'Sin descripción' }}</p>
 
-            <div class="diagram-meta">
-              <span>{{ diagram.nodes.length }} nodos</span>
-              <span>{{ diagram.id | slice:0:8 }}</span>
-            </div>
-          </button>
+              <div class="diagram-meta">
+                <span>{{ diagram.nodes.length }} nodos</span>
+                <span>{{ diagram.id | slice:0:8 }}</span>
+              </div>
+            </button>
+
+            <!-- Botón eliminar -->
+            <button type="button" class="btn-delete-diagram" title="Eliminar diagrama" (click)="confirmDelete(diagram)">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
         </div>
 
         <ng-template #emptyDiagrams>
@@ -158,6 +169,43 @@
         <p class="canvas-empty-desc">Cuando crees o selecciones un diagrama, aquí aparecerá el editor específico.</p>
       </section>
 
+    </div>
+  </div>
+</div>
+
+<!-- Modal de confirmación de eliminación -->
+<div class="modal-backdrop" *ngIf="diagramToDelete" (click)="cancelDelete()">
+  <div class="modal-confirm" (click)="$event.stopPropagation()">
+    <div class="modal-icon">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+        stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="3 6 5 6 21 6"></polyline>
+        <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+        <path d="M10 11v6"></path>
+        <path d="M14 11v6"></path>
+        <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path>
+      </svg>
+    </div>
+
+    <h3 class="modal-title">Eliminar diagrama</h3>
+    <p class="modal-desc">
+      ¿Estás seguro de que deseas eliminar
+      <strong class="modal-diagram-name">{{ diagramToDelete.nombre }}</strong>?
+      Esta acción no se puede deshacer.
+    </p>
+
+    <div class="modal-actions">
+      <button type="button" class="btn-modal-cancel" (click)="cancelDelete()">
+        Cancelar
+      </button>
+      <button type="button" class="btn-modal-delete" [disabled]="isDeleting" (click)="deleteDiagram()">
+        <svg *ngIf="isDeleting" class="spinner-icon" width="14" height="14" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2.5">
+          <path
+            d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+        </svg>
+        {{ isDeleting ? 'Eliminando…' : 'Sí, eliminar' }}
+      </button>
     </div>
   </div>
 </div>

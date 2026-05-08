@@ -16,7 +16,7 @@
 .content-wrapper {
     display: flex;
     flex: 1;
-    margin-top: 70px;
+    margin-top: 0px;
     /* Altura del header */
     margin-left: 70px;
     /* Ancho de la barra colapsada */

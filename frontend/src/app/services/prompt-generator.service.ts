@@ -111,68 +111,26 @@ export class PromptGeneratorService {
     parts.push('# Solicitud de Desarrollo de Software\n');
     parts.push('A continuación se presenta toda la información recopilada durante el análisis de requerimientos de un proyecto de software. Utiliza esta información para generar el código fuente completo del sistema.\n');
 
-    // 1. Proyecto
-    if (enabled('proyecto')) {
-      parts.push(this.buildProyectoSection(data.proyecto));
-    }
+    if (enabled('proyecto')) parts.push(this.buildProyectoSection(data.proyecto));
+    if (enabled('stakeholders') && data.stakeholders.length > 0) parts.push(this.buildStakeholdersSection(data.stakeholders));
+    if (enabled('procesos') && data.procesos.length > 0) parts.push(this.buildProcesosSection(data.procesos));
+    if (enabled('entrevistas') && data.entrevistas.length > 0) parts.push(this.buildEntrevistasSection(data.entrevistas));
+    if (enabled('encuestas') && data.encuestas.length > 0) parts.push(this.buildEncuestasSection(data.encuestas));
+    if (enabled('observaciones') && data.observaciones.length > 0) parts.push(this.buildObservacionesSection(data.observaciones));
+    if (enabled('focusGroups') && data.focusGroups.length > 0) parts.push(this.buildFocusGroupsSection(data.focusGroups));
+    if (enabled('historias') && data.historias.length > 0) parts.push(this.buildHistoriasSection(data.historias));
+    if (enabled('documentos') && data.documentos.length > 0) parts.push(this.buildDocumentosSection(data.documentos));
+    if (enabled('seguimientos') && data.seguimientos.length > 0) parts.push(this.buildSeguimientoSection(data.seguimientos));
+    if (enabled('diagramas') && data.diagramas.length > 0) parts.push(this.buildDiagramasSection(data.diagramas));
 
-    // 2. Stakeholders
-    if (enabled('stakeholders') && data.stakeholders.length > 0) {
-      parts.push(this.buildStakeholdersSection(data.stakeholders));
-    }
-
-    // 3. Procesos
-    if (enabled('procesos') && data.procesos.length > 0) {
-      parts.push(this.buildProcesosSection(data.procesos));
-    }
-
-    // 4. Entrevistas
-    if (enabled('entrevistas') && data.entrevistas.length > 0) {
-      parts.push(this.buildEntrevistasSection(data.entrevistas));
-    }
-
-    // 5. Encuestas
-    if (enabled('encuestas') && data.encuestas.length > 0) {
-      parts.push(this.buildEncuestasSection(data.encuestas));
-    }
-
-    // 6. Observaciones
-    if (enabled('observaciones') && data.observaciones.length > 0) {
-      parts.push(this.buildObservacionesSection(data.observaciones));
-    }
-
-    // 7. Focus Groups
-    if (enabled('focusGroups') && data.focusGroups.length > 0) {
-      parts.push(this.buildFocusGroupsSection(data.focusGroups));
-    }
-
-    // 8. Historias de Usuario
-    if (enabled('historias') && data.historias.length > 0) {
-      parts.push(this.buildHistoriasSection(data.historias));
-    }
-
-    // 9. Documentos
-    if (enabled('documentos') && data.documentos.length > 0) {
-      parts.push(this.buildDocumentosSection(data.documentos));
-    }
-
-    // 10. Seguimiento
-    if (enabled('seguimientos') && data.seguimientos.length > 0) {
-      parts.push(this.buildSeguimientoSection(data.seguimientos));
-    }
-
-    // 11. Diagramas UML
-    if (enabled('diagramas') && data.diagramas.length > 0) {
-      parts.push(this.buildDiagramasSection(data.diagramas));
-    }
-
-    // 12. Instrucciones de generación
     parts.push(this.buildInstruccionesSection(config));
 
     return parts.join('\n');
   }
 
-  // ─────── Builders de secciones ───────
+  // ─────────────────────────────────────────────
+  //  Builders de secciones
+  // ─────────────────────────────────────────────
 
   private buildProyectoSection(p: Proyecto): string {
     return [
@@ -230,9 +188,7 @@ export class PromptGeneratorService {
       items.push(`### Entrevista ${i + 1}: ${e.titulo_entrevista || 'Sin título'}\n`);
       items.push(`- **Entrevistador:** ${e.entrevistador || '—'}`);
       items.push(`- **Entrevistado:** ${e.entrevistado || '—'}`);
-      if (e.notas_contexto) {
-        items.push(`- **Contexto:** ${e.notas_contexto}`);
-      }
+      if (e.notas_contexto) items.push(`- **Contexto:** ${e.notas_contexto}`);
       if (e.preguntas?.length) {
         items.push('\n**Preguntas y Respuestas:**\n');
         e.preguntas.forEach(q => {
@@ -362,19 +318,71 @@ export class PromptGeneratorService {
     };
 
     const items: string[] = [];
+
     for (const tipo of Object.keys(grouped)) {
       items.push(`### ${tipoLabels[tipo] || tipo}\n`);
+
       grouped[tipo].forEach(d => {
-        items.push(`**${d.nombre}** — ${d.descripcion || 'Sin descripción'}`);
-        if (d.nodes.length > 0) {
-          items.push(`\nElementos del diagrama:\n`);
+        items.push(`#### ${d.nombre}${d.descripcion ? ` — ${d.descripcion}` : ''}\n`);
+
+        // ── Nodos / Clases / Actores ──────────────────────────────────────
+        if (d.nodes?.length) {
+          items.push('**Elementos:**\n');
           d.nodes.forEach(n => {
-            items.push(`- [${n.kind}] ${n.label}`);
+            let line = `- **[${n.kind}]** ${n.label}`;
+            if (n.stereotype) line += ` «${n.stereotype}»`;
+            items.push(line);
+
+            if (n.attributes?.length) {
+              items.push(`  - *Atributos:* ${n.attributes.map(a => `${a.visibility} ${a.text}`).join(', ')}`);
+            }
+            if (n.methods?.length) {
+              items.push(`  - *Métodos:* ${n.methods.map(m => `${m.visibility} ${m.text}`).join(', ')}`);
+            }
+            if (n.noteText) {
+              items.push(`  - *Nota:* ${n.noteText}`);
+            }
           });
+          items.push('');
         }
-        items.push('');
+
+        // ── Relaciones ────────────────────────────────────────────────────
+        if (d.relations?.length) {
+          items.push('**Relaciones:**\n');
+          d.relations.forEach(r => {
+            const src = d.nodes?.find(n => n.id === r.sourceId)?.label ?? r.sourceId;
+            const tgt = d.nodes?.find(n => n.id === r.targetId)?.label ?? r.targetId;
+            const lbl = r.label ? ` (${r.label})` : '';
+            items.push(`- ${src} --[${r.kind}]--> ${tgt}${lbl}`);
+          });
+          items.push('');
+        }
+
+        // ── Mensajes de secuencia ─────────────────────────────────────────
+        if (d.messages?.length) {
+          items.push('**Mensajes de secuencia:**\n');
+          [...d.messages]
+            .sort((a, b) => a.order - b.order)
+            .forEach(m => {
+              const src = d.nodes?.find(n => n.id === m.sourceId)?.label ?? m.sourceId;
+              const tgt = d.nodes?.find(n => n.id === m.targetId)?.label ?? m.targetId;
+              items.push(`- ${m.order}. \`${m.kind}\` ${src} → ${tgt}: **${m.label}**`);
+            });
+          items.push('');
+        }
+
+        // ── Fragmentos ────────────────────────────────────────────────────
+        if (d.fragments?.length) {
+          items.push('**Fragmentos combinados:**\n');
+          d.fragments.forEach(f => {
+            const cond = f.condition ? ` [condición: ${f.condition}]` : '';
+            items.push(`- \`${f.kind}\` **${f.label}**${cond}`);
+          });
+          items.push('');
+        }
       });
     }
+
     return ['## 11. Arquitectura — Diagramas UML\n', ...items].join('\n');
   }
 
@@ -384,7 +392,6 @@ export class PromptGeneratorService {
     if (config.stackBackend) stack.push(`- **Backend:** ${config.stackBackend}`);
     if (config.stackDatabase) stack.push(`- **Base de datos:** ${config.stackDatabase}`);
     if (config.stackExtra) stack.push(`- **Adicional:** ${config.stackExtra}`);
-    const arquitectura = config.arquitectura || 'Sin definir';
 
     return [
       '---\n',
@@ -394,7 +401,7 @@ export class PromptGeneratorService {
       ...stack,
       '',
       `### Arquitectura\n`,
-      `- **Tipo:** ${arquitectura}`,
+      `- **Tipo:** ${config.arquitectura || 'Sin definir'}`,
       '',
       `### Alcance del Entregable\n`,
       `- ${config.alcance}`,

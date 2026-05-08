@@ -1,5 +1,5 @@
 import {
-    AfterViewChecked, Component, ElementRef, EventEmitter,
+    AfterViewChecked, Component, ElementRef, EventEmitter, HostListener,
     Input, OnChanges, OnDestroy, OnInit, Output, SimpleChanges, ViewChild
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -41,6 +41,15 @@ const RELATION_KINDS = new Set([
 const NODE_DEFAULT_W = 200;
 const NODE_DEFAULT_H = 100;
 
+/* Límites de zoom */
+const ZOOM_MIN = 0.2;
+const ZOOM_MAX = 3;
+const ZOOM_STEP = 0.04;          // paso de los botones +/− (4 % por clic)
+const ZOOM_WHEEL_FACTOR = 0.06;  // sensibilidad de la rueda (6 % por tick)
+
+/* Velocidad de scroll con rueda (pan sin Ctrl) */
+const PAN_WHEEL_SPEED = 1.2;
+
 @Component({
     selector: 'app-canvas-clases',
     standalone: true,
@@ -57,6 +66,7 @@ export class CanvasClasesComponent implements OnInit, OnChanges, OnDestroy, Afte
     relations: UmlRelation[] = [];
 
     @ViewChild('canvasStage') canvasStageRef?: ElementRef<HTMLDivElement>;
+    @ViewChild('stageWrapper') stageWrapperRef?: ElementRef<HTMLDivElement>;
 
     /* drag-move state */
     draggingNodeId: string | null = null;
@@ -86,6 +96,37 @@ export class CanvasClasesComponent implements OnInit, OnChanges, OnDestroy, Afte
     };
     private pendingAction: 'save' | 'clear' | null = null;
     private loadedDiagramId: string | null = null;
+
+    // ══════════════════════════════════════════
+    //  ZOOM & PAN — estado
+    // ══════════════════════════════════════════
+
+    /** Escala actual del canvas (1 = 100%). */
+    zoom = 1;
+
+    /** Traslación acumulada en píxeles del viewport. */
+    panX = 0;
+    panY = 0;
+
+    /** Estado interno del pan con ratón/teclado. */
+    private _isPanning = false;
+    private _panStartX = 0;
+    private _panStartY = 0;
+    private _panOriginX = 0;
+    private _panOriginY = 0;
+    private _spaceDown = false;
+
+    /** String CSS aplicado al canvas-stage via [style.transform]. */
+    get stageTransform(): string {
+        return `translate(${this.panX}px, ${this.panY}px) scale(${this.zoom})`;
+    }
+
+    /** Porcentaje redondeado para mostrar en el badge. */
+    get zoomPercent(): number {
+        return Math.round(this.zoom * 100);
+    }
+
+    // ══════════════════════════════════════════
 
     readonly paletteGroups: PaletteGroup[] = [
         {
@@ -146,7 +187,11 @@ export class CanvasClasesComponent implements OnInit, OnChanges, OnDestroy, Afte
         }
     }
 
-    ngOnDestroy(): void { this.removeDragListeners(); }
+    ngOnDestroy(): void {
+        this.removeDragListeners();
+        window.removeEventListener('mousemove', this._onPanMouseMove);
+        window.removeEventListener('mouseup', this._onPanMouseUp);
+    }
 
     /* ── Group collapse ── */
     toggleGroup(id: string): void {
@@ -185,11 +230,13 @@ export class CanvasClasesComponent implements OnInit, OnChanges, OnDestroy, Afte
             return;
         }
 
-        const stage = event.currentTarget;
-        if (!(stage instanceof HTMLElement)) return;
-        const rect = stage.getBoundingClientRect();
-        const x = this.clamp(event.clientX - rect.left - 80, 12, rect.width - 210);
-        const y = this.clamp(event.clientY - rect.top - 30, 12, rect.height - 130);
+        const wrapper = this.stageWrapperRef?.nativeElement;
+        if (!wrapper) return;
+
+        /* Convertir coordenadas del viewport al espacio del canvas (zoom + pan) */
+        const pos = this.viewportToCanvas(event.clientX, event.clientY);
+        const x = Math.max(12, pos.x - 80);
+        const y = Math.max(12, pos.y - 30);
 
         this.canvasNodes = [...this.canvasNodes, this.buildNode(kind, label, x, y)];
         this.needsSizeUpdate = true;
@@ -200,13 +247,10 @@ export class CanvasClasesComponent implements OnInit, OnChanges, OnDestroy, Afte
     onStageClick(event: MouseEvent): void {
         if (!this.pendingRelation) return;
 
-        /* Usamos Element (ancestro común de HTMLElement y SVGElement) para
-           evitar el error TS2352 de tipos incompatibles. */
         const targetEl = event.target as Element;
         const relEl = targetEl.closest('[data-rel-id]');
         const nodeEl = targetEl.closest('[data-node-id]');
 
-        /* Determinar el ID del elemento clicado (nodo o relación) */
         let clickedId: string | null = null;
         if (relEl) {
             clickedId = relEl.getAttribute('data-rel-id');
@@ -214,7 +258,6 @@ export class CanvasClasesComponent implements OnInit, OnChanges, OnDestroy, Afte
             clickedId = nodeEl.getAttribute('data-node-id');
         }
 
-        /* Si el clic fue en espacio vacío → cancelar */
         if (!clickedId) {
             this.cancelRelation();
             return;
@@ -235,14 +278,13 @@ export class CanvasClasesComponent implements OnInit, OnChanges, OnDestroy, Afte
         if (!stage) return;
         const rect = stage.getBoundingClientRect();
 
-        /* El origen puede ser un nodo o una relación */
         const srcPt = this.resolveCenter(this.pendingRelation.sourceId);
         if (!srcPt) return;
 
         this.ghostLine = {
             x1: srcPt.x, y1: srcPt.y,
-            x2: event.clientX - rect.left,
-            y2: event.clientY - rect.top,
+            x2: (event.clientX - rect.left) / this.zoom,
+            y2: (event.clientY - rect.top) / this.zoom,
         };
     }
 
@@ -252,12 +294,10 @@ export class CanvasClasesComponent implements OnInit, OnChanges, OnDestroy, Afte
         if (!this.pendingRelation) return;
 
         if (!this.pendingRelation.sourceId) {
-            /* Primer clic: fijar origen */
             this.pendingRelation = { ...this.pendingRelation, sourceId: clickedId };
             return;
         }
 
-        /* Segundo clic: fijar destino y crear relación */
         if (clickedId === this.pendingRelation.sourceId) return;
         const rel: UmlRelation = {
             id: this.buildId(),
@@ -271,16 +311,14 @@ export class CanvasClasesComponent implements OnInit, OnChanges, OnDestroy, Afte
         this.persistAll();
     }
 
-    /* ── Clic en el punto medio de una relación (para conectar línea con línea) ── */
+    /* ── Clic en el punto medio de una relación ── */
     onRelMidpointClick(relId: string, event: MouseEvent): void {
         event.stopPropagation();
         if (!this.pendingRelation) return;
 
         if (!this.pendingRelation.sourceId) {
-            /* Primer clic: usar esta relación como origen */
             this.pendingRelation = { ...this.pendingRelation, sourceId: relId };
         } else {
-            /* Segundo clic: usar esta relación como destino */
             if (relId === this.pendingRelation.sourceId) return;
             const rel: UmlRelation = {
                 id: this.buildId(),
@@ -298,25 +336,24 @@ export class CanvasClasesComponent implements OnInit, OnChanges, OnDestroy, Afte
     /* ── Remove relation ── */
     removeRelation(relId: string, event: MouseEvent): void {
         event.stopPropagation();
-        /* También eliminar relaciones que dependan de esta */
         this.relations = this.relations.filter(
             r => r.id !== relId && r.sourceId !== relId && r.targetId !== relId
         );
         this.persistAll();
     }
 
-    /* ── Node pointer: drag-move or connect ── */
+    /* ── Node pointer: drag-move ── */
     onNodePointerDown(event: PointerEvent, nodeId: string): void {
-        /* En modo conexión dejamos que el click handler lo gestione */
         if (this.pendingRelation) return;
         if (event.button !== 0) return;
         const stage = this.canvasStageRef?.nativeElement;
         const node = this.canvasNodes.find(n => n.id === nodeId);
         if (!stage || !node) return;
         const rect = stage.getBoundingClientRect();
+
         this.draggingNodeId = nodeId;
-        this.dragOffsetX = event.clientX - rect.left - node.x;
-        this.dragOffsetY = event.clientY - rect.top - node.y;
+        this.dragOffsetX = (event.clientX - rect.left) / this.zoom - node.x;
+        this.dragOffsetY = (event.clientY - rect.top) / this.zoom - node.y;
         this.hasPendingNodeMove = false;
         window.addEventListener('pointermove', this.onWindowPointerMove);
         window.addEventListener('pointerup', this.onWindowPointerUp);
@@ -384,20 +421,16 @@ export class CanvasClasesComponent implements OnInit, OnChanges, OnDestroy, Afte
         return { x1: srcPt.x, y1: srcPt.y, x2: tgtPt.x, y2: tgtPt.y };
     }
 
-    /* Devuelve si un ID pertenece a una relación */
     isRelationId(id: string): boolean {
         return this.relations.some(r => r.id === id);
     }
 
-    /* Punto medio de una relación ya dibujada */
     getRelCenter(relId: string): { x: number; y: number } | null {
         const rel = this.relations.find(r => r.id === relId);
         if (!rel) return null;
-        /* Evitar recursión infinita: solo resolver si src/tgt son nodos */
         const srcNode = this.canvasNodes.find(n => n.id === rel.sourceId);
         const tgtNode = this.canvasNodes.find(n => n.id === rel.targetId);
         if (!srcNode || !tgtNode) {
-            /* Si alguno de los extremos ya es una relación, usar su centro directo */
             const sc = this.resolveCenter(rel.sourceId);
             const tc = this.resolveCenter(rel.targetId);
             if (!sc || !tc) return null;
@@ -408,21 +441,12 @@ export class CanvasClasesComponent implements OnInit, OnChanges, OnDestroy, Afte
         return { x: (sc.x + tc.x) / 2, y: (sc.y + tc.y) / 2 };
     }
 
-    /**
-     * Resuelve el CENTRO de cualquier elemento (nodo o relación) dado su ID.
-     * Usado para la ghost line y para resolver endpoints de relaciones encadenadas.
-     */
     resolveCenter(id: string): { x: number; y: number } | null {
         const node = this.canvasNodes.find(n => n.id === id);
         if (node) return this.nodeCenter(node);
         return this.getRelCenter(id);
     }
 
-    /**
-     * Resuelve el punto de conexión de `fromId` apuntando hacia `towardId`.
-     * - Si fromId es un nodo: calcula el punto en el borde del rectángulo.
-     * - Si fromId es una relación: devuelve el punto medio de esa línea.
-     */
     resolveEndpoint(fromId: string, towardId: string): { x: number; y: number } | null {
         const node = this.canvasNodes.find(n => n.id === fromId);
         if (node) {
@@ -431,21 +455,16 @@ export class CanvasClasesComponent implements OnInit, OnChanges, OnDestroy, Afte
             const fromCenter = this.nodeCenter(node);
             return this.nodeBorderPoint(node, fromCenter, toCenter);
         }
-        /* Es una relación: devolver su punto medio */
         return this.getRelCenter(fromId);
     }
 
     /* ── Relation styling helpers ── */
     relColor(kind: string): string {
         const map: Record<string, string> = {
-            asociacion: '#94a3b8',
-            navegabilidad: '#94a3b8',
-            herencia: '#60a5fa',
-            realizacion: '#60a5fa',
-            agregacion: '#f87171',
-            composicion: '#f87171',
-            dependencia: '#fbbf24',
-            multiplicidad: '#a78bfa',
+            asociacion: '#94a3b8', navegabilidad: '#94a3b8',
+            herencia: '#60a5fa', realizacion: '#60a5fa',
+            agregacion: '#f87171', composicion: '#f87171',
+            dependencia: '#fbbf24', multiplicidad: '#a78bfa',
         };
         return map[kind] ?? '#94a3b8';
     }
@@ -462,8 +481,7 @@ export class CanvasClasesComponent implements OnInit, OnChanges, OnDestroy, Afte
             agregacion: `url(#mk-arrow-${kind})`,
             composicion: `url(#mk-arrow-${kind})`,
             dependencia: `url(#mk-arrow-${kind})`,
-            multiplicidad: '',
-            asociacion: '',
+            multiplicidad: '', asociacion: '',
         };
         return map[kind] ?? '';
     }
@@ -506,6 +524,126 @@ export class CanvasClasesComponent implements OnInit, OnChanges, OnDestroy, Afte
     trackByItem(_: number, i: PaletteItem): string { return i.kind; }
     trackByIndex(index: number): number { return index; }
     trackByMarkerId(_: number, m: { id: string }): string { return m.id; }
+
+    // ══════════════════════════════════════════
+    //  WHEEL — zoom con Ctrl, pan libre sin Ctrl
+    // ══════════════════════════════════════════
+
+    onStageWheel(event: WheelEvent): void {
+        event.preventDefault(); // Siempre prevenir scroll nativo del contenedor
+
+        const wrapper = this.stageWrapperRef?.nativeElement;
+        if (!wrapper) return;
+        const rect = wrapper.getBoundingClientRect();
+
+        if (event.ctrlKey || event.metaKey) {
+            // ── ZOOM centrado en el cursor ──
+            const mouseX = event.clientX - rect.left;
+            const mouseY = event.clientY - rect.top;
+            const delta = event.deltaY < 0 ? 1 : -1;
+            this._applyZoom(1 + delta * ZOOM_WHEEL_FACTOR, mouseX, mouseY);
+        } else {
+            // ── PAN libre: rueda vertical y horizontal ──
+            // deltaMode 0 = píxeles, 1 = líneas, 2 = páginas
+            const factor = event.deltaMode === 1 ? 20 : event.deltaMode === 2 ? 100 : 1;
+            this.panX -= event.deltaX * factor * PAN_WHEEL_SPEED;
+            this.panY -= event.deltaY * factor * PAN_WHEEL_SPEED;
+        }
+    }
+
+    /* ── Botones +  /  −  /  reset ── */
+    zoomIn(): void {
+        const w = this.stageWrapperRef?.nativeElement;
+        if (!w) return;
+        this._applyZoom(1 + ZOOM_STEP, w.clientWidth / 2, w.clientHeight / 2);
+    }
+
+    zoomOut(): void {
+        const w = this.stageWrapperRef?.nativeElement;
+        if (!w) return;
+        this._applyZoom(1 - ZOOM_STEP, w.clientWidth / 2, w.clientHeight / 2);
+    }
+
+    zoomReset(): void {
+        this.zoom = 1;
+        this.panX = 0;
+        this.panY = 0;
+    }
+
+    private _applyZoom(factor: number, focalX: number, focalY: number): void {
+        const newZoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, this.zoom * factor));
+        if (newZoom === this.zoom) return;
+        this.panX = focalX - (focalX - this.panX) * (newZoom / this.zoom);
+        this.panY = focalY - (focalY - this.panY) * (newZoom / this.zoom);
+        this.zoom = newZoom;
+    }
+
+    // ══════════════════════════════════════════
+    //  PAN — botón medio / Espacio + drag
+    // ══════════════════════════════════════════
+
+    onWrapperMouseDown(event: MouseEvent): void {
+        const isMiddle = event.button === 1;
+        const isSpacePan = this._spaceDown && event.button === 0;
+        if (!isMiddle && !isSpacePan) return;
+
+        event.preventDefault();
+        this._isPanning = true;
+        this._panStartX = event.clientX;
+        this._panStartY = event.clientY;
+        this._panOriginX = this.panX;
+        this._panOriginY = this.panY;
+        this.stageWrapperRef?.nativeElement.classList.add('panning');
+
+        window.addEventListener('mousemove', this._onPanMouseMove);
+        window.addEventListener('mouseup', this._onPanMouseUp);
+    }
+
+    private readonly _onPanMouseMove = (event: MouseEvent): void => {
+        if (!this._isPanning) return;
+        this.panX = this._panOriginX + (event.clientX - this._panStartX);
+        this.panY = this._panOriginY + (event.clientY - this._panStartY);
+    };
+
+    private readonly _onPanMouseUp = (): void => {
+        if (!this._isPanning) return;
+        this._isPanning = false;
+        this.stageWrapperRef?.nativeElement.classList.remove('panning');
+        window.removeEventListener('mousemove', this._onPanMouseMove);
+        window.removeEventListener('mouseup', this._onPanMouseUp);
+    };
+
+    @HostListener('window:keydown', ['$event'])
+    onKeyDown(event: KeyboardEvent): void {
+        if (event.code !== 'Space' || this._spaceDown) return;
+        const active = document.activeElement;
+        const tag = active?.tagName.toLowerCase();
+        if (tag === 'input' || tag === 'textarea' || (active as HTMLElement)?.isContentEditable) return;
+        event.preventDefault();
+        this._spaceDown = true;
+        if (this.stageWrapperRef) this.stageWrapperRef.nativeElement.style.cursor = 'grab';
+    }
+
+    @HostListener('window:keyup', ['$event'])
+    onKeyUp(event: KeyboardEvent): void {
+        if (event.code !== 'Space') return;
+        this._spaceDown = false;
+        if (this.stageWrapperRef) this.stageWrapperRef.nativeElement.style.cursor = '';
+    }
+
+    // ══════════════════════════════════════════
+    //  COORDENADAS — viewport → canvas
+    // ══════════════════════════════════════════
+
+    private viewportToCanvas(clientX: number, clientY: number): { x: number; y: number } {
+        const wrapper = this.stageWrapperRef?.nativeElement;
+        if (!wrapper) return { x: clientX, y: clientY };
+        const rect = wrapper.getBoundingClientRect();
+        return {
+            x: (clientX - rect.left - this.panX) / this.zoom,
+            y: (clientY - rect.top - this.panY) / this.zoom,
+        };
+    }
 
     /* ─────────────────────────── PRIVATE ─────────────────────────── */
 
@@ -583,8 +721,8 @@ export class CanvasClasesComponent implements OnInit, OnChanges, OnDestroy, Afte
         const stage = this.canvasStageRef?.nativeElement;
         if (!stage) return;
         const rect = stage.getBoundingClientRect();
-        const x = this.clamp(event.clientX - rect.left - this.dragOffsetX, 12, rect.width - 210);
-        const y = this.clamp(event.clientY - rect.top - this.dragOffsetY, 12, rect.height - 60);
+        const x = Math.max(12, (event.clientX - rect.left) / this.zoom - this.dragOffsetX);
+        const y = Math.max(12, (event.clientY - rect.top) / this.zoom - this.dragOffsetY);
         this.canvasNodes = this.canvasNodes.map(n =>
             n.id !== this.draggingNodeId ? n : { ...n, x, y }
         );

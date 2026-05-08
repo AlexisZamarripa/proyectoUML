@@ -1,5 +1,5 @@
 import {
-    AfterViewChecked, Component, ElementRef, EventEmitter,
+    AfterViewChecked, Component, ElementRef, EventEmitter, HostListener,
     Input, OnChanges, OnDestroy, OnInit, Output, SimpleChanges, ViewChild
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -17,7 +17,7 @@ export interface SeqMessage {
     sourceId: string;
     targetId: string;
     label: string;
-    order: number;       /* posición vertical relativa (orden) */
+    order: number;
 }
 
 export interface SeqFragment {
@@ -62,7 +62,13 @@ const LIFELINE_START_X = 80;
 const MSG_Y_START = 120;
 const MSG_Y_GAP = 60;
 const NODE_DEFAULT_W = 140;
-const NODE_DEFAULT_H = 60;
+
+/* Límites de zoom */
+const ZOOM_MIN = 0.2;
+const ZOOM_MAX = 3;
+const ZOOM_STEP = 0.04;
+const ZOOM_WHEEL_FACTOR = 0.06;
+const PAN_WHEEL_SPEED = 1.2;
 
 @Component({
     selector: 'app-canvas-secuencia',
@@ -81,11 +87,11 @@ export class CanvasSecuenciaComponent implements OnInit, OnChanges, OnDestroy, A
     fragments: SeqFragment[] = [];
 
     @ViewChild('canvasStage') canvasStageRef?: ElementRef<HTMLDivElement>;
+    @ViewChild('stageWrapper') stageWrapperRef?: ElementRef<HTMLDivElement>;
 
     /* drag participantes */
     draggingNodeId: string | null = null;
     private dragOffsetX = 0;
-    private dragOffsetY = 0;
     private hasPendingNodeMove = false;
 
     /* drag fragmentos */
@@ -105,7 +111,7 @@ export class CanvasSecuenciaComponent implements OnInit, OnChanges, OnDestroy, A
     ghostLine: GhostLine | null = null;
 
     /* SVG overlay size */
-    stageSize = { w: 900, h: 600 };
+    stageSize = { w: 3000, h: 3000 };
     private needsSizeUpdate = false;
     private sizeUpdateScheduled = false;
 
@@ -126,6 +132,31 @@ export class CanvasSecuenciaComponent implements OnInit, OnChanges, OnDestroy, A
     };
     private pendingAction: 'save' | 'clear' | null = null;
     private loadedDiagramId: string | null = null;
+
+    // ══════════════════════════════════════════
+    //  ZOOM & PAN — estado
+    // ══════════════════════════════════════════
+
+    zoom = 1;
+    panX = 0;
+    panY = 0;
+
+    private _isPanning = false;
+    private _panStartX = 0;
+    private _panStartY = 0;
+    private _panOriginX = 0;
+    private _panOriginY = 0;
+    private _spaceDown = false;
+
+    get stageTransform(): string {
+        return `translate(${this.panX}px, ${this.panY}px) scale(${this.zoom})`;
+    }
+
+    get zoomPercent(): number {
+        return Math.round(this.zoom * 100);
+    }
+
+    // ══════════════════════════════════════════
 
     readonly paletteGroups: PaletteGroup[] = [
         {
@@ -161,14 +192,10 @@ export class CanvasSecuenciaComponent implements OnInit, OnChanges, OnDestroy, A
 
     constructor(private diagramaApiService: DiagramaApiService) { }
 
-    ngOnInit(): void {
-        this.loadFromDiagram();
-    }
+    ngOnInit(): void { this.loadFromDiagram(); }
 
     ngOnChanges(changes: SimpleChanges): void {
-        if (changes['diagram'] && this.diagram) {
-            this.loadFromDiagram();
-        }
+        if (changes['diagram'] && this.diagram) { this.loadFromDiagram(); }
     }
 
     ngAfterViewChecked(): void {
@@ -178,7 +205,13 @@ export class CanvasSecuenciaComponent implements OnInit, OnChanges, OnDestroy, A
         }
     }
 
-    ngOnDestroy(): void { this.removeDragListeners(); }
+    ngOnDestroy(): void {
+        this.removeDragListeners();
+        this.removeFragListeners();
+        this.removeResizeListeners();
+        window.removeEventListener('mousemove', this._onPanMouseMove);
+        window.removeEventListener('mouseup', this._onPanMouseUp);
+    }
 
     /* ── Accordion ── */
     toggleGroup(id: string): void {
@@ -188,9 +221,7 @@ export class CanvasSecuenciaComponent implements OnInit, OnChanges, OnDestroy, A
 
     /* ── Acciones canvas ── */
     guardarLienzo(): void { this.requestSave(); }
-
     clearCanvas(): void { this.requestClear(); }
-
     cancelMessage(): void { this.pendingMessage = null; this.ghostLine = null; }
 
     /* ── Palette drag ── */
@@ -218,12 +249,11 @@ export class CanvasSecuenciaComponent implements OnInit, OnChanges, OnDestroy, A
             return;
         }
 
-        /* fragmentos → soltar en posición */
+        /* fragmentos → soltar en posición del canvas (con zoom/pan) */
         if (FRAGMENT_KINDS.has(kind)) {
-            const stage = event.currentTarget as HTMLElement;
-            const rect = stage.getBoundingClientRect();
-            const x = this.clamp(event.clientX - rect.left - 80, 12, rect.width - 260);
-            const y = this.clamp(event.clientY - rect.top - 40, 12, rect.height - 120);
+            const pos = this.viewportToCanvas(event.clientX, event.clientY);
+            const x = Math.max(8, pos.x - 80);
+            const y = Math.max(8, pos.y - 40);
             const frag: SeqFragment = {
                 id: this.buildId(), kind, label: this.fragLabel(kind),
                 condition: 'condición', x, y, width: 220, height: 100,
@@ -235,11 +265,9 @@ export class CanvasSecuenciaComponent implements OnInit, OnChanges, OnDestroy, A
         }
 
         /* participantes */
-        const stage = event.currentTarget as HTMLElement;
-        if (!(stage instanceof HTMLElement)) return;
-        const rect = stage.getBoundingClientRect();
+        const pos = this.viewportToCanvas(event.clientX, event.clientY);
         const nextX = this.nextLifelineX();
-        const x = this.clamp(nextX, 20, rect.width - 160);
+        const x = Math.max(20, nextX);
         const y = 16;
 
         const node: SeqNode = {
@@ -252,7 +280,7 @@ export class CanvasSecuenciaComponent implements OnInit, OnChanges, OnDestroy, A
         this.persistAll();
     }
 
-    /* ── Stage click: maneja modo conexión (participante O punto medio de mensaje) ── */
+    /* ── Stage click: modo conexión ── */
     onStageClick(event: MouseEvent): void {
         if (!this.pendingMessage) return;
 
@@ -261,11 +289,8 @@ export class CanvasSecuenciaComponent implements OnInit, OnChanges, OnDestroy, A
         const nodeEl = targetEl.closest('[data-node-id]');
 
         let clickedId: string | null = null;
-        if (msgEl) {
-            clickedId = msgEl.getAttribute('data-msg-id');
-        } else if (nodeEl) {
-            clickedId = nodeEl.getAttribute('data-node-id');
-        }
+        if (msgEl) clickedId = msgEl.getAttribute('data-msg-id');
+        else if (nodeEl) clickedId = nodeEl.getAttribute('data-node-id');
 
         if (!clickedId) { this.cancelMessage(); return; }
         this.handleMessageClick(clickedId);
@@ -287,10 +312,6 @@ export class CanvasSecuenciaComponent implements OnInit, OnChanges, OnDestroy, A
 
         if (clickedId === this.pendingMessage.sourceId) return;
 
-        /* Si origen o destino es un mensaje (no un nodo participante), creamos
-           el nuevo mensaje anclado al punto medio de ese mensaje existente.
-           En ese caso usamos el participante más cercano a ese punto medio
-           para que la lifeline sea correcta. */
         const sourceIsMsg = this.messages.some(m => m.id === this.pendingMessage!.sourceId);
         const targetIsMsg = this.messages.some(m => m.id === clickedId);
 
@@ -312,8 +333,7 @@ export class CanvasSecuenciaComponent implements OnInit, OnChanges, OnDestroy, A
         const msg: SeqMessage = {
             id: this.buildId(),
             kind: this.pendingMessage.kind,
-            sourceId,
-            targetId,
+            sourceId, targetId,
             label: this.buildMsgLabel(this.pendingMessage.kind),
             order,
         };
@@ -333,12 +353,12 @@ export class CanvasSecuenciaComponent implements OnInit, OnChanges, OnDestroy, A
         if (!srcPt) return;
         this.ghostLine = {
             x1: srcPt.x, y1: srcPt.y,
-            x2: event.clientX - rect.left,
-            y2: event.clientY - rect.top,
+            x2: (event.clientX - rect.left) / this.zoom,
+            y2: (event.clientY - rect.top) / this.zoom,
         };
     }
 
-    /* ── Clic en el punto medio de un mensaje (mensaje con mensaje) ── */
+    /* ── Clic en el punto medio de un mensaje ── */
     onMsgMidpointClick(msgId: string, event: MouseEvent): void {
         event.stopPropagation();
         if (!this.pendingMessage) return;
@@ -348,10 +368,7 @@ export class CanvasSecuenciaComponent implements OnInit, OnChanges, OnDestroy, A
         } else {
             if (msgId === this.pendingMessage.sourceId) return;
 
-            /* Resolver participantes reales desde los IDs (que pueden ser msg IDs) */
             const sourceIsMsg = this.messages.some(m => m.id === this.pendingMessage!.sourceId);
-            const targetIsMsg = true; /* siempre: msgId es un mensaje */
-
             let sourceId = this.pendingMessage.sourceId!;
             let targetId = msgId;
 
@@ -359,10 +376,8 @@ export class CanvasSecuenciaComponent implements OnInit, OnChanges, OnDestroy, A
                 const ref = this.messages.find(m => m.id === sourceId);
                 sourceId = ref ? ref.sourceId : sourceId;
             }
-            if (targetIsMsg) {
-                const ref = this.messages.find(m => m.id === targetId);
-                targetId = ref ? ref.targetId : targetId;
-            }
+            const refTarget = this.messages.find(m => m.id === targetId);
+            targetId = refTarget ? refTarget.targetId : targetId;
 
             const order = this.messages.length > 0
                 ? Math.max(...this.messages.map(m => m.order)) + 1
@@ -370,8 +385,7 @@ export class CanvasSecuenciaComponent implements OnInit, OnChanges, OnDestroy, A
             const newMsg: SeqMessage = {
                 id: this.buildId(),
                 kind: this.pendingMessage.kind,
-                sourceId,
-                targetId,
+                sourceId, targetId,
                 label: this.buildMsgLabel(this.pendingMessage.kind),
                 order,
             };
@@ -450,8 +464,7 @@ export class CanvasSecuenciaComponent implements OnInit, OnChanges, OnDestroy, A
         if (!stage || !node) return;
         const rect = stage.getBoundingClientRect();
         this.draggingNodeId = nodeId;
-        this.dragOffsetX = event.clientX - rect.left - node.x;
-        this.dragOffsetY = 0;
+        this.dragOffsetX = (event.clientX - rect.left) / this.zoom - node.x;
         this.hasPendingNodeMove = false;
         window.addEventListener('pointermove', this.onWindowPointerMove);
         window.addEventListener('pointerup', this.onWindowPointerUp);
@@ -473,8 +486,8 @@ export class CanvasSecuenciaComponent implements OnInit, OnChanges, OnDestroy, A
         if (!stage || !frag) return;
         const rect = stage.getBoundingClientRect();
         this.draggingFragId = fragId;
-        this.fragDragOffX = event.clientX - rect.left - frag.x;
-        this.fragDragOffY = event.clientY - rect.top - frag.y;
+        this.fragDragOffX = (event.clientX - rect.left) / this.zoom - frag.x;
+        this.fragDragOffY = (event.clientY - rect.top) / this.zoom - frag.y;
         window.addEventListener('pointermove', this.onFragPointerMove);
         window.addEventListener('pointerup', this.onFragPointerUp);
         event.preventDefault();
@@ -488,8 +501,8 @@ export class CanvasSecuenciaComponent implements OnInit, OnChanges, OnDestroy, A
         if (!stage || !frag) return;
         const rect = stage.getBoundingClientRect();
         this.resizingFragId = fragId;
-        this.resizeStartX = event.clientX - rect.left;
-        this.resizeStartY = event.clientY - rect.top;
+        this.resizeStartX = (event.clientX - rect.left) / this.zoom;
+        this.resizeStartY = (event.clientY - rect.top) / this.zoom;
         this.resizeStartW = frag.width;
         this.resizeStartH = frag.height;
         window.addEventListener('pointermove', this.onFragResizeMove);
@@ -535,12 +548,7 @@ export class CanvasSecuenciaComponent implements OnInit, OnChanges, OnDestroy, A
         const tgt = this.canvasNodes.find(n => n.id === msg.targetId);
         if (!src || !tgt) return null;
         const y = this.msgY(msg);
-        return {
-            x1: this.lifelineX(src),
-            y1: y,
-            x2: this.lifelineX(tgt),
-            y2: y,
-        };
+        return { x1: this.lifelineX(src), y1: y, x2: this.lifelineX(tgt), y2: y };
     }
 
     isSelfMsg(msg: SeqMessage): boolean {
@@ -556,25 +564,18 @@ export class CanvasSecuenciaComponent implements OnInit, OnChanges, OnDestroy, A
         return `M ${x} ${y} C ${x + offset} ${y}, ${x + offset} ${y + 30}, ${x} ${y + 30}`;
     }
 
-    /** Devuelve el centro de un participante o el punto medio de un mensaje dado su ID */
     resolveCenter(id: string): { x: number; y: number } | null {
         const node = this.canvasNodes.find(n => n.id === id);
-        if (node) {
-            return { x: this.lifelineX(node), y: this.lifelineTop(node) + 20 };
-        }
+        if (node) return { x: this.lifelineX(node), y: this.lifelineTop(node) + 20 };
         return this.getMsgCenter(id);
     }
 
-    /** Punto medio de un mensaje ya dibujado */
     getMsgCenter(msgId: string): { x: number; y: number } | null {
         const msg = this.messages.find(m => m.id === msgId);
         if (!msg) return null;
         const line = this.getMsgLine(msg);
         if (!line) return null;
-        return {
-            x: (line.x1 + line.x2) / 2,
-            y: line.y1,
-        };
+        return { x: (line.x1 + line.x2) / 2, y: line.y1 };
     }
 
     getActivations(node: SeqNode): Array<{ y: number; h: number }> {
@@ -650,7 +651,122 @@ export class CanvasSecuenciaComponent implements OnInit, OnChanges, OnDestroy, A
     trackByGroup(_: number, g: PaletteGroup): string { return g.id; }
     trackByItem(_: number, i: PaletteItem): string { return i.kind; }
 
-    /* ── Private ── */
+    // ══════════════════════════════════════════
+    //  WHEEL — zoom con Ctrl, pan libre sin Ctrl
+    // ══════════════════════════════════════════
+
+    onStageWheel(event: WheelEvent): void {
+        event.preventDefault();
+        const wrapper = this.stageWrapperRef?.nativeElement;
+        if (!wrapper) return;
+        const rect = wrapper.getBoundingClientRect();
+
+        if (event.ctrlKey || event.metaKey) {
+            const mouseX = event.clientX - rect.left;
+            const mouseY = event.clientY - rect.top;
+            const delta = event.deltaY < 0 ? 1 : -1;
+            this._applyZoom(1 + delta * ZOOM_WHEEL_FACTOR, mouseX, mouseY);
+        } else {
+            const factor = event.deltaMode === 1 ? 20 : event.deltaMode === 2 ? 100 : 1;
+            this.panX -= event.deltaX * factor * PAN_WHEEL_SPEED;
+            this.panY -= event.deltaY * factor * PAN_WHEEL_SPEED;
+        }
+    }
+
+    zoomIn(): void {
+        const w = this.stageWrapperRef?.nativeElement;
+        if (!w) return;
+        this._applyZoom(1 + ZOOM_STEP, w.clientWidth / 2, w.clientHeight / 2);
+    }
+
+    zoomOut(): void {
+        const w = this.stageWrapperRef?.nativeElement;
+        if (!w) return;
+        this._applyZoom(1 - ZOOM_STEP, w.clientWidth / 2, w.clientHeight / 2);
+    }
+
+    zoomReset(): void {
+        this.zoom = 1;
+        this.panX = 0;
+        this.panY = 0;
+    }
+
+    private _applyZoom(factor: number, focalX: number, focalY: number): void {
+        const newZoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, this.zoom * factor));
+        if (newZoom === this.zoom) return;
+        this.panX = focalX - (focalX - this.panX) * (newZoom / this.zoom);
+        this.panY = focalY - (focalY - this.panY) * (newZoom / this.zoom);
+        this.zoom = newZoom;
+    }
+
+    // ══════════════════════════════════════════
+    //  PAN — botón medio / Espacio + drag
+    // ══════════════════════════════════════════
+
+    onWrapperMouseDown(event: MouseEvent): void {
+        const isMiddle = event.button === 1;
+        const isSpacePan = this._spaceDown && event.button === 0;
+        if (!isMiddle && !isSpacePan) return;
+
+        event.preventDefault();
+        this._isPanning = true;
+        this._panStartX = event.clientX;
+        this._panStartY = event.clientY;
+        this._panOriginX = this.panX;
+        this._panOriginY = this.panY;
+        this.stageWrapperRef?.nativeElement.classList.add('panning');
+
+        window.addEventListener('mousemove', this._onPanMouseMove);
+        window.addEventListener('mouseup', this._onPanMouseUp);
+    }
+
+    private readonly _onPanMouseMove = (event: MouseEvent): void => {
+        if (!this._isPanning) return;
+        this.panX = this._panOriginX + (event.clientX - this._panStartX);
+        this.panY = this._panOriginY + (event.clientY - this._panStartY);
+    };
+
+    private readonly _onPanMouseUp = (): void => {
+        if (!this._isPanning) return;
+        this._isPanning = false;
+        this.stageWrapperRef?.nativeElement.classList.remove('panning');
+        window.removeEventListener('mousemove', this._onPanMouseMove);
+        window.removeEventListener('mouseup', this._onPanMouseUp);
+    };
+
+    @HostListener('window:keydown', ['$event'])
+    onKeyDown(event: KeyboardEvent): void {
+        if (event.code !== 'Space' || this._spaceDown) return;
+        const active = document.activeElement;
+        const tag = active?.tagName.toLowerCase();
+        if (tag === 'input' || tag === 'textarea' || (active as HTMLElement)?.isContentEditable) return;
+        event.preventDefault();
+        this._spaceDown = true;
+        if (this.stageWrapperRef) this.stageWrapperRef.nativeElement.style.cursor = 'grab';
+    }
+
+    @HostListener('window:keyup', ['$event'])
+    onKeyUp(event: KeyboardEvent): void {
+        if (event.code !== 'Space') return;
+        this._spaceDown = false;
+        if (this.stageWrapperRef) this.stageWrapperRef.nativeElement.style.cursor = '';
+    }
+
+    // ══════════════════════════════════════════
+    //  COORDENADAS — viewport → canvas
+    // ══════════════════════════════════════════
+
+    private viewportToCanvas(clientX: number, clientY: number): { x: number; y: number } {
+        const wrapper = this.stageWrapperRef?.nativeElement;
+        if (!wrapper) return { x: clientX, y: clientY };
+        const rect = wrapper.getBoundingClientRect();
+        return {
+            x: (clientX - rect.left - this.panX) / this.zoom,
+            y: (clientY - rect.top - this.panY) / this.zoom,
+        };
+    }
+
+    /* ─────────────────────────── PRIVATE ─────────────────────────── */
 
     private loadFromDiagram(): void {
         if (!this.diagram) return;
@@ -676,10 +792,7 @@ export class CanvasSecuenciaComponent implements OnInit, OnChanges, OnDestroy, A
         this.confirmModalConfig = {
             title: '¿Guardar cambios?',
             message: 'Se actualizará el diagrama actual con los cambios del canvas.',
-            confirmText: 'Guardar',
-            cancelText: 'Cancelar',
-            type: 'info',
-            icon: 'info'
+            confirmText: 'Guardar', cancelText: 'Cancelar', type: 'info', icon: 'info'
         };
         this.showConfirmModal = true;
     }
@@ -690,26 +803,18 @@ export class CanvasSecuenciaComponent implements OnInit, OnChanges, OnDestroy, A
         this.confirmModalConfig = {
             title: '¿Limpiar diagrama?',
             message: 'Se eliminarán todos los participantes, mensajes y fragmentos. Esta acción no se puede deshacer.',
-            confirmText: 'Limpiar',
-            cancelText: 'Cancelar',
-            type: 'danger',
-            icon: 'trash'
+            confirmText: 'Limpiar', cancelText: 'Cancelar', type: 'danger', icon: 'trash'
         };
         this.showConfirmModal = true;
     }
 
     onConfirmModal(): void {
-        if (this.pendingAction === 'save') {
-            this.persistAll();
-        } else if (this.pendingAction === 'clear') {
-            this.clearCanvasInternal();
-        }
+        if (this.pendingAction === 'save') this.persistAll();
+        else if (this.pendingAction === 'clear') this.clearCanvasInternal();
         this.closeConfirm();
     }
 
-    onCancelModal(): void {
-        this.closeConfirm();
-    }
+    onCancelModal(): void { this.closeConfirm(); }
 
     private closeConfirm(): void {
         this.showConfirmModal = false;
@@ -730,7 +835,7 @@ export class CanvasSecuenciaComponent implements OnInit, OnChanges, OnDestroy, A
         const stage = this.canvasStageRef?.nativeElement;
         if (!stage) return;
         const rect = stage.getBoundingClientRect();
-        const x = this.clamp(event.clientX - rect.left - this.dragOffsetX, 12, rect.width - 160);
+        const x = Math.max(12, (event.clientX - rect.left) / this.zoom - this.dragOffsetX);
         this.canvasNodes = this.canvasNodes.map(n =>
             n.id !== this.draggingNodeId ? n : { ...n, x }
         );
@@ -749,8 +854,8 @@ export class CanvasSecuenciaComponent implements OnInit, OnChanges, OnDestroy, A
         const stage = this.canvasStageRef?.nativeElement;
         if (!stage) return;
         const rect = stage.getBoundingClientRect();
-        const x = this.clamp(event.clientX - rect.left - this.fragDragOffX, 8, rect.width - 200);
-        const y = this.clamp(event.clientY - rect.top - this.fragDragOffY, 8, rect.height - 80);
+        const x = Math.max(8, (event.clientX - rect.left) / this.zoom - this.fragDragOffX);
+        const y = Math.max(8, (event.clientY - rect.top) / this.zoom - this.fragDragOffY);
         this.fragments = this.fragments.map(f =>
             f.id !== this.draggingFragId ? f : { ...f, x, y }
         );
@@ -768,8 +873,8 @@ export class CanvasSecuenciaComponent implements OnInit, OnChanges, OnDestroy, A
         const stage = this.canvasStageRef?.nativeElement;
         if (!stage) return;
         const rect = stage.getBoundingClientRect();
-        const dx = (event.clientX - rect.left) - this.resizeStartX;
-        const dy = (event.clientY - rect.top) - this.resizeStartY;
+        const dx = (event.clientX - rect.left) / this.zoom - this.resizeStartX;
+        const dy = (event.clientY - rect.top) / this.zoom - this.resizeStartY;
         const newW = Math.max(120, this.resizeStartW + dx);
         const newH = Math.max(60, this.resizeStartH + dy);
         this.fragments = this.fragments.map(f =>
@@ -822,8 +927,7 @@ export class CanvasSecuenciaComponent implements OnInit, OnChanges, OnDestroy, A
 
     private nextLifelineX(): number {
         if (this.canvasNodes.length === 0) return LIFELINE_START_X;
-        const maxX = Math.max(...this.canvasNodes.map(n => n.x));
-        return maxX + LIFELINE_X_GAP;
+        return Math.max(...this.canvasNodes.map(n => n.x)) + LIFELINE_X_GAP;
     }
 
     private persistAll(): void {

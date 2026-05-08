@@ -139,8 +139,8 @@
     background: #0a1628;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
-    max-height: 700px;
+    overflow-y: auto;
+    max-height: 620px;
 }
 
 .palette-header {
@@ -157,23 +157,6 @@
     flex-shrink: 0;
 }
 
-.palette-scroll {
-    overflow-y: auto;
-    flex: 1;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(100, 116, 139, .4) transparent;
-}
-
-.palette-scroll::-webkit-scrollbar {
-    width: 4px;
-}
-
-.palette-scroll::-webkit-scrollbar-thumb {
-    background: rgba(100, 116, 139, .4);
-    border-radius: 2px;
-}
-
-/* Groups */
 .palette-group {
     border-bottom: 1px solid rgba(148, 163, 184, .08);
 }
@@ -186,7 +169,7 @@
     width: 100%;
     background: rgba(59, 130, 246, .06);
     border: none;
-    padding: .44rem .75rem;
+    padding: .45rem .75rem;
     display: flex;
     align-items: center;
     gap: .4rem;
@@ -202,7 +185,7 @@
 
 .group-label {
     flex: 1;
-    font-size: .67rem;
+    font-size: .68rem;
     font-weight: 700;
     letter-spacing: .1em;
     color: #60a5fa;
@@ -224,9 +207,9 @@
 .palette-list {
     display: flex;
     flex-direction: column;
-    max-height: 600px;
+    max-height: 800px;
     opacity: 1;
-    transition: max-height .22s ease, opacity .18s ease;
+    transition: max-height .25s ease, opacity .2s ease;
     overflow: hidden;
 }
 
@@ -441,23 +424,118 @@
 }
 
 /* ════════════════════════════════════════
-   STAGE
+   STAGE OUTER + ZOOM CONTROLS
    ════════════════════════════════════════ */
-.stage-wrapper {
+.stage-outer {
+    position: relative;
     min-width: 0;
 }
 
-.canvas-stage {
-    min-height: 560px;
+.zoom-controls {
+    position: absolute;
+    bottom: 12px;
+    right: 12px;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(10, 22, 40, 0.92);
+    border: 1px solid rgba(16, 185, 129, .35);
+    border-radius: 8px;
+    padding: 4px 6px;
+    backdrop-filter: blur(6px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, .5);
+}
+
+.zoom-btn {
+    width: 26px;
+    height: 26px;
+    border: 1px solid rgba(16, 185, 129, .3);
+    border-radius: 5px;
+    background: rgba(6, 78, 59, .4);
+    color: #6ee7b7;
+    font-size: .9rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background .14s, border-color .14s;
+    line-height: 1;
+    padding: 0;
+}
+
+.zoom-btn:hover {
+    background: rgba(16, 185, 129, .25);
+    border-color: #10b981;
+    color: #d1fae5;
+}
+
+.zoom-btn:active {
+    background: rgba(16, 185, 129, .4);
+}
+
+.zoom-level {
+    font-size: .7rem;
+    font-weight: 700;
+    color: #34d399;
+    font-family: 'Consolas', monospace;
+    min-width: 38px;
+    text-align: center;
+    letter-spacing: .04em;
+    cursor: pointer;
+    padding: 2px 3px;
+    border-radius: 4px;
+    transition: background .14s;
+}
+
+.zoom-level:hover {
+    background: rgba(16, 185, 129, .15);
+    color: #6ee7b7;
+}
+
+.zoom-hint {
+    font-size: .6rem;
+    color: rgba(148, 163, 184, .45);
+    padding-left: 2px;
+    white-space: nowrap;
+}
+
+/* ════════════════════════════════════════
+   CANVAS STAGE — área de trabajo con zoom y pan libre
+   ════════════════════════════════════════ */
+.stage-wrapper {
+    min-width: 0;
+    height: 620px;
+    overflow: hidden;
     border: 1px dashed rgba(148, 163, 184, .25);
     border-radius: .75rem;
-    position: relative;
-    overflow: auto;
     background-color: rgba(8, 15, 30, .85);
     background-image:
         linear-gradient(rgba(59, 130, 246, .04) 1px, transparent 1px),
         linear-gradient(90deg, rgba(59, 130, 246, .04) 1px, transparent 1px);
     background-size: 24px 24px;
+    cursor: default;
+    position: relative;
+    touch-action: none;
+}
+
+.stage-wrapper.panning {
+    cursor: grabbing !important;
+}
+
+.canvas-stage {
+    width: 3000px;
+    height: 3000px;
+    position: absolute;
+    top: 0;
+    left: 0;
+    overflow: visible;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    transform-origin: 0 0;
+    will-change: transform;
 }
 
 .canvas-stage.connecting {
@@ -466,19 +544,24 @@
 
 .canvas-stage-hint {
     position: absolute;
-    inset: 0;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 620px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     gap: .5rem;
+    text-align: center;
+    padding: 1rem;
     pointer-events: none;
 }
 
 .hint-icon {
     font-size: 2rem;
     opacity: .3;
-    color: #60a5fa;
+    color: #34d399;
 }
 
 .canvas-stage-hint span:last-child {
@@ -491,6 +574,8 @@
     position: absolute;
     top: 0;
     left: 0;
+    width: 3000px;
+    height: 3000px;
     overflow: visible;
     pointer-events: none;
     z-index: 1;
@@ -503,6 +588,113 @@
 
 .msg-label-text:hover {
     text-decoration: underline;
+}
+
+/* ════════════════════════════════════════
+   MSG GROUP — hover compartido
+   ════════════════════════════════════════ */
+.msg-group {
+    cursor: default;
+}
+
+.msg-hit {
+    pointer-events: stroke;
+    cursor: pointer;
+}
+
+/* Iluminar línea en hover del grupo */
+.msg-group:hover .msg-line {
+    stroke-width: 2.6;
+    filter: drop-shadow(0 0 4px rgba(148, 163, 184, .45));
+}
+
+/* ── Midpoint ── */
+.msg-midpoint {
+    opacity: 0;
+    transition: opacity .15s ease, r .15s ease;
+    pointer-events: all;
+}
+
+.msg-group:hover .msg-midpoint {
+    opacity: 1;
+}
+
+.msg-midpoint--active {
+    opacity: 0.85 !important;
+}
+
+.msg-midpoint--source {
+    opacity: 1 !important;
+    filter: drop-shadow(0 0 6px #facc15) !important;
+}
+
+/* ── Botón ✕ eliminar mensaje ── */
+.msg-delete-btn {
+    pointer-events: all;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity .15s ease;
+}
+
+.msg-group:hover .msg-delete-btn {
+    opacity: 1;
+}
+
+/* En modo conexión ocultar ✕ y mostrar midpoint */
+.canvas-stage.connecting .msg-delete-btn {
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+.canvas-stage.connecting .msg-midpoint {
+    opacity: 0.85;
+}
+
+.canvas-stage.connecting .msg-group:hover .msg-midpoint {
+    opacity: 1;
+    filter: drop-shadow(0 0 6px #34d399);
+}
+
+/* Círculo de fondo del ✕ */
+.msg-delete-circle {
+    fill: #1e1e2a;
+    stroke: rgba(239, 68, 68, .65);
+    stroke-width: 1.5;
+    transition: fill .15s;
+}
+
+.msg-delete-btn:hover .msg-delete-circle {
+    fill: rgba(239, 68, 68, .85);
+}
+
+/* Texto ✕ */
+.msg-delete-x {
+    fill: #f87171;
+    font-size: 9px;
+    font-weight: 700;
+    font-family: monospace;
+    text-anchor: middle;
+    dominant-baseline: central;
+    user-select: none;
+    transition: fill .15s;
+    pointer-events: none;
+}
+
+.msg-delete-btn:hover .msg-delete-x {
+    fill: #fff;
+}
+
+/* ── Ghost line ── */
+.ghost-line {
+    pointer-events: none;
+    stroke-dasharray: 6 3;
+    animation: ghost-dash 0.6s linear infinite;
+}
+
+@keyframes ghost-dash {
+    to {
+        stroke-dashoffset: -22;
+    }
 }
 
 /* ════════════════════════════════════════
@@ -543,11 +735,25 @@
     cursor: crosshair;
     outline: 1px dashed rgba(96, 165, 250, .6);
     outline-offset: 2px;
+    animation: connectable-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes connectable-pulse {
+
+    0%,
+    100% {
+        box-shadow: 0 0 0 0 rgba(96, 165, 250, 0);
+    }
+
+    50% {
+        box-shadow: 0 0 0 4px rgba(96, 165, 250, .18);
+    }
 }
 
 .lifeline-node.connectable:hover {
     outline: 2px solid #60a5fa;
     box-shadow: 0 0 14px rgba(59, 130, 246, .4);
+    animation: none;
 }
 
 /* Kind-specific borders */
@@ -796,25 +1002,16 @@
         max-height: none;
         flex-direction: row;
         flex-wrap: wrap;
-        overflow: visible;
-    }
-
-    .palette-header {
-        width: 100%;
-    }
-
-    .palette-scroll {
-        display: flex;
-        flex-wrap: wrap;
-        flex: unset;
-        overflow: visible;
-        width: 100%;
     }
 
     .palette-group {
-        flex: 1 1 200px;
+        flex: 1 1 48%;
         border-bottom: none;
         border-right: 1px solid rgba(148, 163, 184, .08);
+    }
+
+    .stage-wrapper {
+        height: 520px;
     }
 }
 
@@ -831,13 +1028,8 @@
         flex: 1;
     }
 
-    .canvas-stage {
-        min-height: 400px;
-    }
-
-    .palette-group {
-        flex: 1 1 100%;
-        border-right: none;
+    .stage-wrapper {
+        height: 420px;
     }
 
     .lifeline-node {
@@ -846,5 +1038,14 @@
 
     .lnode-name {
         max-width: 90px;
+    }
+
+    .palette-group {
+        flex: 1 1 100%;
+        border-right: none;
+    }
+
+    .zoom-hint {
+        display: none;
     }
 }
