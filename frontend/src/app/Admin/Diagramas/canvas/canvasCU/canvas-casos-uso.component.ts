@@ -33,6 +33,11 @@ const RELATION_KINDS = new Set(['asociacion', 'include', 'extend', 'generalizaci
 const NODE_DEFAULT_W = 180;
 const NODE_DEFAULT_H = 80;
 
+/* Tamaño SVG fijo del caso de uso (viewBox "0 0 120 50", escala al contenedor) */
+const CASO_ELLIPSE_RX_RATIO = 58 / 120; // rx relativo al ancho del nodo
+const CASO_ELLIPSE_RY = 22;             // ry fijo en px del SVG interno (50px alto)
+const CASO_SVG_H = 50;                  // alto del SVG interno
+
 /* Límites de zoom */
 const ZOOM_MIN = 0.2;
 const ZOOM_MAX = 3;
@@ -94,14 +99,10 @@ export class CanvasCasosUsoComponent implements OnInit, OnChanges, OnDestroy, Af
     //  ZOOM & PAN — estado
     // ══════════════════════════════════════════
 
-    /** Escala actual del canvas (1 = 100%). */
     zoom = 1;
-
-    /** Traslación acumulada en píxeles del viewport. */
     panX = 0;
     panY = 0;
 
-    /** Estado interno del pan con ratón/teclado. */
     private _isPanning = false;
     private _panStartX = 0;
     private _panStartY = 0;
@@ -109,12 +110,10 @@ export class CanvasCasosUsoComponent implements OnInit, OnChanges, OnDestroy, Af
     private _panOriginY = 0;
     private _spaceDown = false;
 
-    /** String CSS aplicado al canvas-stage via [style.transform]. */
     get stageTransform(): string {
         return `translate(${this.panX}px, ${this.panY}px) scale(${this.zoom})`;
     }
 
-    /** Porcentaje redondeado para mostrar en el badge. */
     get zoomPercent(): number {
         return Math.round(this.zoom * 100);
     }
@@ -150,14 +149,10 @@ export class CanvasCasosUsoComponent implements OnInit, OnChanges, OnDestroy, Af
 
     constructor(private diagramaApiService: DiagramaApiService) { }
 
-    ngOnInit(): void {
-        this.loadFromDiagram();
-    }
+    ngOnInit(): void { this.loadFromDiagram(); }
 
     ngOnChanges(changes: SimpleChanges): void {
-        if (changes['diagram'] && this.diagram) {
-            this.loadFromDiagram();
-        }
+        if (changes['diagram'] && this.diagram) this.loadFromDiagram();
     }
 
     ngAfterViewChecked(): void {
@@ -224,7 +219,6 @@ export class CanvasCasosUsoComponent implements OnInit, OnChanges, OnDestroy, Af
         const label = event.dataTransfer?.getData('application/x-uml-label');
         if (!kind || !label) return;
 
-        /* Relaciones → modo conexión */
         if (RELATION_KINDS.has(kind)) {
             this.pendingRelation = { kind };
             return;
@@ -233,7 +227,6 @@ export class CanvasCasosUsoComponent implements OnInit, OnChanges, OnDestroy, Af
         const wrapper = this.stageWrapperRef?.nativeElement;
         if (!wrapper) return;
 
-        /* Convertir coordenadas del viewport al espacio del canvas (zoom + pan) */
         const pos = this.viewportToCanvas(event.clientX, event.clientY);
         const x = Math.max(12, pos.x - 60);
         const y = Math.max(12, pos.y - 30);
@@ -317,7 +310,6 @@ export class CanvasCasosUsoComponent implements OnInit, OnChanges, OnDestroy, Af
         this.persistAll();
     }
 
-    /* ── Clic en el punto medio de una relación ── */
     onRelMidpointClick(relId: string, event: MouseEvent): void {
         event.stopPropagation();
         if (!this.pendingRelation) return;
@@ -339,7 +331,6 @@ export class CanvasCasosUsoComponent implements OnInit, OnChanges, OnDestroy, Af
         }
     }
 
-    /* ── Eliminar relación ── */
     removeRelation(relId: string, event: MouseEvent): void {
         event.stopPropagation();
         this.relations = this.relations.filter(
@@ -373,7 +364,10 @@ export class CanvasCasosUsoComponent implements OnInit, OnChanges, OnDestroy, Af
         this.persistAll();
     }
 
-    /* ── SVG line helpers ── */
+    /* ─────────────────────────────────────────────────────────────────
+       SVG LINE HELPERS
+       ──────────────────────────────────────────────────────────────── */
+
     getRelLine(rel: CuRelation): RelLine | null {
         const srcPt = this.resolveEndpoint(rel.sourceId, rel.targetId);
         const tgtPt = this.resolveEndpoint(rel.targetId, rel.sourceId);
@@ -473,7 +467,6 @@ export class CanvasCasosUsoComponent implements OnInit, OnChanges, OnDestroy, Af
         }
     }
 
-    /* ── Botones +  /  −  /  reset ── */
     zoomIn(): void {
         const w = this.stageWrapperRef?.nativeElement;
         if (!w) return;
@@ -567,7 +560,9 @@ export class CanvasCasosUsoComponent implements OnInit, OnChanges, OnDestroy, Af
         };
     }
 
-    /* ─────────────────────────── PRIVATE ─────────────────────────── */
+    /* ─────────────────────────────────────────────────────────────────
+       PRIVATE — GEOMETRÍA DE NODOS
+       ──────────────────────────────────────────────────────────────── */
 
     private loadFromDiagram(): void {
         if (!this.diagram) return;
@@ -613,17 +608,12 @@ export class CanvasCasosUsoComponent implements OnInit, OnChanges, OnDestroy, Af
     }
 
     onConfirmModal(): void {
-        if (this.pendingAction === 'save') {
-            this.persistAll();
-        } else if (this.pendingAction === 'clear') {
-            this.clearCanvasInternal();
-        }
+        if (this.pendingAction === 'save') this.persistAll();
+        else if (this.pendingAction === 'clear') this.clearCanvasInternal();
         this.closeConfirm();
     }
 
-    onCancelModal(): void {
-        this.closeConfirm();
-    }
+    onCancelModal(): void { this.closeConfirm(); }
 
     private closeConfirm(): void {
         this.showConfirmModal = false;
@@ -658,21 +648,37 @@ export class CanvasCasosUsoComponent implements OnInit, OnChanges, OnDestroy, Af
         if (this.hasPendingNodeMove) { this.persistAll(); this.hasPendingNodeMove = false; }
     };
 
+    /**
+     * Centro visual de un nodo. Para 'caso' (elipse) devuelve el centro
+     * geométrico real de la elipse, no el centro del bounding-box del div.
+     */
     private nodeCenter(node: CuCanvasNode): { x: number; y: number } {
-        const el = this.canvasStageRef?.nativeElement
-            ?.querySelector(`[data-node-id="${node.id}"]`) as HTMLElement | null;
+        if (node.kind === 'caso') {
+            const dims = this.casoEllipseDims(node);
+            return { x: node.x + dims.cx, y: node.y + dims.cy };
+        }
+        const el = this.getNodeEl(node.id);
         const w = (el && el.offsetWidth > 0) ? el.offsetWidth : NODE_DEFAULT_W;
         const h = (el && el.offsetHeight > 0) ? el.offsetHeight : NODE_DEFAULT_H;
         return { x: node.x + w / 2, y: node.y + h / 2 };
     }
 
+    /**
+     * Punto en el borde del nodo más cercano hacia `to`.
+     * Para 'caso' usa intersección de línea con la elipse real.
+     * Para el resto usa intersección de línea con el rectángulo.
+     */
     private nodeBorderPoint(
         node: CuCanvasNode,
         from: { x: number; y: number },
         to: { x: number; y: number }
     ): { x: number; y: number } {
-        const el = this.canvasStageRef?.nativeElement
-            ?.querySelector(`[data-node-id="${node.id}"]`) as HTMLElement | null;
+
+        if (node.kind === 'caso') {
+            return this.ellipseBorderPoint(node, to);
+        }
+
+        const el = this.getNodeEl(node.id);
         const w = (el && el.offsetWidth > 0) ? el.offsetWidth : NODE_DEFAULT_W;
         const h = (el && el.offsetHeight > 0) ? el.offsetHeight : NODE_DEFAULT_H;
 
@@ -699,6 +705,65 @@ export class CanvasCasosUsoComponent implements OnInit, OnChanges, OnDestroy, Af
 
         const t = candidates.length ? Math.min(...candidates) : 0;
         return { x: cx + t * dx, y: cy + t * dy };
+    }
+
+    /**
+     * Calcula la intersección de la línea desde el centro de la elipse
+     * hacia `target` con el perímetro de la elipse.
+     *
+     * Ecuación: (dx·t / rx)² + (dy·t / ry)² = 1
+     *   → t² (dx²/rx² + dy²/ry²) = 1
+     *   → t = 1 / sqrt(...)
+     */
+    private ellipseBorderPoint(
+        node: CuCanvasNode,
+        target: { x: number; y: number }
+    ): { x: number; y: number } {
+        const dims = this.casoEllipseDims(node);
+        const cx = node.x + dims.cx;
+        const cy = node.y + dims.cy;
+        const rx = dims.rx;
+        const ry = dims.ry;
+
+        const dx = target.x - cx;
+        const dy = target.y - cy;
+        if (dx === 0 && dy === 0) return { x: cx, y: cy };
+
+        // t tal que el punto (cx + dx·t, cy + dy·t) está en la elipse
+        const t = 1 / Math.sqrt((dx * dx) / (rx * rx) + (dy * dy) / (ry * ry));
+        return { x: cx + dx * t, y: cy + dy * t };
+    }
+
+    /**
+     * Devuelve el centro y semiejes de la elipse de un nodo 'caso'
+     * en coordenadas del canvas (relativas a node.x / node.y).
+     *
+     * El HTML del nodo 'caso' tiene:
+     *   .caso-ellipse > svg[viewBox="0 0 120 50"] height="50px"
+     * La elipse SVG es: cx=60 cy=25 rx=58 ry=22
+     * El div del nodo tiene el ancho real del elemento DOM.
+     */
+    private casoEllipseDims(node: CuCanvasNode): { cx: number; cy: number; rx: number; ry: number } {
+        const el = this.getNodeEl(node.id);
+        const nodeW = (el && el.offsetWidth > 0) ? el.offsetWidth : 160;
+        const nodeH = (el && el.offsetHeight > 0) ? el.offsetHeight : 50;
+
+        // El SVG interno escala al 100% del ancho del contenedor.
+        // viewBox "0 0 120 50" → escala = nodeW / 120
+        const scale = nodeW / 120;
+        const rx = 58 * scale;          // semeje horizontal escalado
+        const ry = 22 * scale;          // semeje vertical escalado
+        // El SVG ocupa todo el alto del nodo (height="50px" en CSS, pero
+        // en la práctica el nodo mide ~50px). Centramos en el div.
+        const cx = nodeW / 2;
+        const cy = nodeH / 2;
+
+        return { cx, cy, rx, ry };
+    }
+
+    private getNodeEl(nodeId: string): HTMLElement | null {
+        return (this.canvasStageRef?.nativeElement
+            ?.querySelector(`[data-node-id="${nodeId}"]`) as HTMLElement | null) ?? null;
     }
 
     private updateStageSize(): void {
@@ -739,10 +804,6 @@ export class CanvasCasosUsoComponent implements OnInit, OnChanges, OnDestroy, Af
             next: updated => this.diagramUpdated.emit(updated),
             error: (err: unknown) => console.error('Error al guardar canvas:', err),
         });
-    }
-
-    private clamp(v: number, min: number, max: number): number {
-        return max <= min ? min : Math.min(Math.max(v, min), max);
     }
 
     private buildId(): string {

@@ -34,9 +34,9 @@ export class SeguimientoComponent implements OnInit {
 
     // Campos del formulario
     titulo = '';
-    nombreProceso = '';
+    // nombreProceso se deriva automáticamente del proceso seleccionado
     procesoVinculadoId = ''; // ID del proceso seleccionado
-    subprocesoId = ''; // ID del subproceso seleccionado
+    subprocesoId = '';       // ID del subproceso seleccionado
     pasos: Paso[] = [{ nombre: '', duracion: '', responsable: '' }];
     problemas: string[] = [''];
     metricas: Metrica[] = [{ nombre: '', valor: '' }];
@@ -78,15 +78,12 @@ export class SeguimientoComponent implements OnInit {
         const idProyecto = parseInt(this.proyecto.id, 10);
         if (!idProyecto) return;
         this.procesoApiService.getProcesosByProyecto(idProyecto).subscribe({
-            next: (data) => {
-                this.procesosDisponibles = data;
-            },
+            next: (data) => { this.procesosDisponibles = data; },
             error: (error) => console.error('Error al cargar procesos:', error)
         });
     }
 
     onProcesoChange(): void {
-        // Cuando se selecciona un proceso, cargar sus subprocesos
         this.subprocesoId = '';
         if (!this.procesoVinculadoId) {
             this.subprocesosDisponibles = [];
@@ -102,9 +99,7 @@ export class SeguimientoComponent implements OnInit {
         const idProyecto = parseInt(this.proyecto.id, 10);
         if (!idProyecto) return;
         this.seguimientoApiService.getByProyecto(idProyecto).subscribe({
-            next: (data) => {
-                this.seguimientos = data;
-            },
+            next: (data) => { this.seguimientos = data; },
             error: (error) => console.error('Error al cargar seguimientos:', error)
         });
     }
@@ -118,14 +113,17 @@ export class SeguimientoComponent implements OnInit {
         return c ? c.gradient : this.COLORES_PROYECTO[0].gradient;
     }
 
+    // -------------------------------------------------------
+    // FIX: La validación solo requiere el título.
+    // nombreProceso se obtiene automáticamente del proceso
+    // seleccionado (o se deja vacío si no se elige ninguno).
+    // -------------------------------------------------------
     isFormValid(): boolean {
-        return !!(this.titulo && this.titulo.trim().length > 0 &&
-            this.nombreProceso && this.nombreProceso.trim().length > 0);
+        return !!(this.titulo && this.titulo.trim().length > 0);
     }
 
     resetForm() {
         this.titulo = '';
-        this.nombreProceso = '';
         this.procesoVinculadoId = '';
         this.subprocesoId = '';
         this.pasos = [{ nombre: '', duracion: '', responsable: '' }];
@@ -135,9 +133,7 @@ export class SeguimientoComponent implements OnInit {
     }
 
     handleSubmit() {
-        if (!this.isFormValid()) {
-            return;
-        }
+        if (!this.isFormValid()) return;
 
         // Limpiar datos vacíos
         const pasosLimpios = this.pasos.filter(p => p.nombre.trim() !== '');
@@ -148,12 +144,18 @@ export class SeguimientoComponent implements OnInit {
         const procesoSeleccionado = this.procesosDisponibles.find(p => p.id === this.procesoVinculadoId);
         const subprocesoSeleccionado = this.subprocesosDisponibles.find(s => s.id === this.subprocesoId);
 
+        // nombreProceso = nombre del proceso vinculado (o el título si no hay proceso)
+        const nombreProceso = procesoSeleccionado?.nombre || this.titulo.trim();
+
         const dto = {
             id_proyecto: parseInt(this.proyecto.id, 10),
-            id_proceso: this.procesoVinculadoId ? parseInt(this.procesoVinculadoId, 10) : undefined,
-            id_subproceso: this.subprocesoId ? parseInt(this.subprocesoId, 10) : undefined,
+            // La BD tiene NOT NULL en id_proceso / id_subproceso;
+            // si no se seleccionó, enviamos 0 para que el backend lo maneje
+            // (ajusta a null si tu backend lo acepta y la BD lo permite)
+            id_proceso: this.procesoVinculadoId ? parseInt(this.procesoVinculadoId, 10) : 0,
+            id_subproceso: this.subprocesoId ? parseInt(this.subprocesoId, 10) : 0,
             titulo: this.titulo.trim(),
-            nombreProceso: this.nombreProceso.trim(),
+            nombreProceso: nombreProceso,
             procesoVinculado: procesoSeleccionado?.nombre || '',
             subproceso: subprocesoSeleccionado?.nombre || '',
             pasos: pasosLimpios,
@@ -182,74 +184,36 @@ export class SeguimientoComponent implements OnInit {
         }
     }
 
-    agregarPaso() {
-        this.pasos.push({ nombre: '', duracion: '', responsable: '' });
-    }
+    agregarPaso() { this.pasos.push({ nombre: '', duracion: '', responsable: '' }); }
+    eliminarPaso(index: number) { if (this.pasos.length > 1) this.pasos.splice(index, 1); }
 
-    eliminarPaso(index: number) {
-        if (this.pasos.length > 1) {
-            this.pasos.splice(index, 1);
-        }
-    }
+    agregarProblema() { this.problemas.push(''); }
+    eliminarProblema(index: number) { if (this.problemas.length > 1) this.problemas.splice(index, 1); }
 
-    agregarProblema() {
-        this.problemas.push('');
-    }
-
-    eliminarProblema(index: number) {
-        if (this.problemas.length > 1) {
-            this.problemas.splice(index, 1);
-        }
-    }
-
-    agregarMetrica() {
-        this.metricas.push({ nombre: '', valor: '' });
-    }
-
-    eliminarMetrica(index: number) {
-        if (this.metricas.length > 1) {
-            this.metricas.splice(index, 1);
-        }
-    }
+    agregarMetrica() { this.metricas.push({ nombre: '', valor: '' }); }
+    eliminarMetrica(index: number) { if (this.metricas.length > 1) this.metricas.splice(index, 1); }
 
     calcularTiempoTotal(seguimiento: SeguimientoResponse): string {
         let totalMinutos = 0;
         for (const paso of seguimiento.pasos) {
-            const duracion = this.parseDuracion(paso.duracion);
-            totalMinutos += duracion;
+            totalMinutos += this.parseDuracion(paso.duracion);
         }
         const horas = Math.floor(totalMinutos / 60);
         const minutos = totalMinutos % 60;
-        if (horas > 0 && minutos > 0) {
-            return `${horas} h ${minutos} min`;
-        } else if (horas > 0) {
-            return `${horas} h`;
-        } else {
-            return `${minutos} min`;
-        }
+        if (horas > 0 && minutos > 0) return `${horas} h ${minutos} min`;
+        if (horas > 0) return `${horas} h`;
+        return `${minutos} min`;
     }
 
     private parseDuracion(duracion: string): number {
-        // Parse "5 min", "2h", "1h 30min", etc.
         let totalMinutos = 0;
         const horasMatch = duracion.match(/(\d+)\s*h/i);
         const minutosMatch = duracion.match(/(\d+)\s*min/i);
-
-        if (horasMatch) {
-            totalMinutos += parseInt(horasMatch[1]) * 60;
-        }
-        if (minutosMatch) {
-            totalMinutos += parseInt(minutosMatch[1]);
-        }
-
+        if (horasMatch) totalMinutos += parseInt(horasMatch[1]) * 60;
+        if (minutosMatch) totalMinutos += parseInt(minutosMatch[1]);
         return totalMinutos;
     }
 
-    trackByIndex(index: number): number {
-        return index;
-    }
-
-    trackBySeguimiento(index: number, item: SeguimientoResponse): string {
-        return item.id;
-    }
+    trackByIndex(_index: number): number { return _index; }
+    trackBySeguimiento(_i: number, item: SeguimientoResponse): string { return item.id; }
 }

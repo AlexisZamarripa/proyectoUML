@@ -60,10 +60,11 @@
           </svg>
           El ID de transacción se generará automáticamente (formato: TXN-[año]-[número])
         </p>
+
         <form (ngSubmit)="handleSubmit()">
 
           <!-- Título -->
-          <div class="form-group full-width">
+          <div class="form-group full-width" style="margin-bottom: 1rem;">
             <label class="form-label">Título del Seguimiento *</label>
             <input class="form-input" type="text" [(ngModel)]="titulo" name="titulo"
               placeholder="Ej: Seguimiento de Orden #12345" required />
@@ -76,7 +77,9 @@
               <select class="form-input" [(ngModel)]="procesoVinculadoId" name="procesoVinculado"
                 (change)="onProcesoChange()">
                 <option value="">-- Seleccionar proceso --</option>
-                <option *ngFor="let proceso of procesosDisponibles" [value]="proceso.id">{{ proceso.nombre }}</option>
+                <option *ngFor="let proceso of procesosDisponibles" [value]="proceso.id">
+                  {{ proceso.nombre }}
+                </option>
               </select>
             </div>
             <div class="form-group">
@@ -84,8 +87,9 @@
               <select class="form-input" [(ngModel)]="subprocesoId" name="subproceso"
                 [disabled]="!procesoVinculadoId || subprocesosDisponibles.length === 0">
                 <option value="">-- Seleccionar subproceso --</option>
-                <option *ngFor="let subproceso of subprocesosDisponibles" [value]="subproceso.id">{{ subproceso.nombre
-                  }}</option>
+                <option *ngFor="let subproceso of subprocesosDisponibles" [value]="subproceso.id">
+                  {{ subproceso.nombre }}
+                </option>
               </select>
             </div>
           </div>
@@ -93,7 +97,7 @@
           <!-- Pasos del Proceso -->
           <div class="pasos-box">
             <div class="pasos-header">
-              <label class="pasos-label">Pasos del Proceso *</label>
+              <label class="pasos-label">Pasos del Proceso</label>
               <button type="button" class="btn-add" (click)="agregarPaso()">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -115,9 +119,9 @@
                   </button>
                 </div>
                 <div class="paso-fields">
-                  <input class="form-input" type="text" [(ngModel)]="paso.nombre" [name]="'paso_nombre_' + i"
+                  <input class="form-input" type="text" [(ngModel)]="paso.nombre" [name]="'paso_nombre_'      + i"
                     placeholder="Nombre del paso" />
-                  <input class="form-input" type="text" [(ngModel)]="paso.duracion" [name]="'paso_duracion_' + i"
+                  <input class="form-input" type="text" [(ngModel)]="paso.duracion" [name]="'paso_duracion_'    + i"
                     placeholder="Duración (ej: 2min, 1h)" />
                   <input class="form-input" type="text" [(ngModel)]="paso.responsable" [name]="'paso_responsable_' + i"
                     placeholder="Responsable (opcional)" />
@@ -142,7 +146,7 @@
             <div class="problemas-inputs">
               <div class="problema-input-item" *ngFor="let problema of problemas; let i = index; trackBy: trackByIndex">
                 <input class="form-input" type="text" [(ngModel)]="problemas[i]" [name]="'problema_' + i"
-                  placeholder="Problema 1" />
+                  placeholder="Describe el problema..." />
                 <button type="button" class="btn-remove" (click)="eliminarProblema(i)" *ngIf="problemas.length > 1">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -170,7 +174,7 @@
               <div class="metrica-item" *ngFor="let metrica of metricas; let i = index; trackBy: trackByIndex">
                 <input class="form-input" type="text" [(ngModel)]="metrica.nombre" [name]="'metrica_nombre_' + i"
                   placeholder="Nombre de la métrica" />
-                <input class="form-input" type="text" [(ngModel)]="metrica.valor" [name]="'metrica_valor_' + i"
+                <input class="form-input" type="text" [(ngModel)]="metrica.valor" [name]="'metrica_valor_'  + i"
                   placeholder="Valor" />
                 <button type="button" class="btn-remove" (click)="eliminarMetrica(i)" *ngIf="metricas.length > 1">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -184,9 +188,11 @@
 
           <!-- Submit -->
           <div class="form-actions">
-            <button type="submit" class="btn-submit-red" [disabled]="!isFormValid()">Crear Seguimiento
-              Transaccional</button>
+            <button type="submit" class="btn-submit-red" [disabled]="!isFormValid()">
+              Crear Seguimiento Transaccional
+            </button>
           </div>
+
         </form>
       </div>
 
@@ -215,7 +221,7 @@
           <!-- Header -->
           <div class="seguimiento-header">
             <div class="seguimiento-header-left">
-              <h3 class="seguimiento-titulo">Seguimiento: {{ item.titulo }}</h3>
+              <h3 class="seguimiento-titulo">{{ item.titulo }}</h3>
               <span class="seguimiento-fecha">{{ item.fecha }} • ID: {{ item.idTransaccion }}</span>
             </div>
             <div class="seguimiento-header-right">
@@ -243,6 +249,7 @@
           <div class="seguimiento-proceso" *ngIf="item.procesoVinculado || item.subproceso">
             <p class="proceso-info">
               <strong>Proceso:</strong> {{ item.procesoVinculado || 'N/A' }}
+              <span *ngIf="item.subproceso"> &rsaquo; {{ item.subproceso }}</span>
             </p>
           </div>
 
@@ -259,16 +266,14 @@
                 <span class="paso-duracion" *ngIf="paso.duracion">{{ paso.duracion }}</span>
               </li>
             </ul>
-            <span class="pasos-more" *ngIf="item.pasos.length > 5">
-              +{{ item.pasos.length - 5 }} pasos más...
-            </span>
+            <span class="pasos-more" *ngIf="item.pasos.length > 5">+{{ item.pasos.length - 5 }} pasos más...</span>
           </div>
 
           <!-- Métricas -->
           <div class="seguimiento-metricas" *ngIf="item.metricas && item.metricas.length > 0">
             <p class="metricas-titulo">Métricas:</p>
             <div class="metricas-grid">
-              <div class="metrica-item" *ngFor="let metrica of item.metricas">
+              <div class="metrica-card" *ngFor="let metrica of item.metricas">
                 <span class="metrica-label">{{ metrica.nombre }}</span>
                 <span class="metrica-valor">{{ metrica.valor }}</span>
               </div>
@@ -286,8 +291,6 @@
         </div>
       </div>
 
-    </div>
-
-  </div>
-
-</div>
+    </div><!-- /content-area -->
+  </div><!-- /main-layout -->
+</div><!-- /seguimiento-page -->
