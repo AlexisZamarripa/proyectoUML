@@ -85,8 +85,8 @@
     cursor: not-allowed;
 }
 
-.btn-icon {
-    font-size: .82rem;
+.btn-secondary svg {
+    flex-shrink: 0;
 }
 
 /* ── Mode banner ── */

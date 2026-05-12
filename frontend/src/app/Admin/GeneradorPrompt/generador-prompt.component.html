@@ -29,7 +29,7 @@
       <div class="content-header">
         <div class="content-header-text">
           <h2 class="content-title">Generador de Prompt</h2>
-          <p class="content-subtitle">Genera un prompt estructurado con toda la información del proyecto para crear el software con IA</p>
+          <p class="content-subtitle">Genera prompts estructurados con toda la información del proyecto para construir el software con IA</p>
         </div>
       </div>
 
@@ -47,7 +47,25 @@
             <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
             <circle cx="12" cy="12" r="3"></circle>
           </svg>
-          Preview del Prompt
+          Prompt Código
+        </button>
+        <button class="view-tab" [class.active]="viewMode === 'design'" (click)="setViewMode('design')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="13.5" cy="6.5" r="1" fill="currentColor" stroke="none"></circle>
+            <circle cx="17.5" cy="10.5" r="1" fill="currentColor" stroke="none"></circle>
+            <circle cx="8.5" cy="7.5" r="1" fill="currentColor" stroke="none"></circle>
+            <circle cx="6.5" cy="12.5" r="1" fill="currentColor" stroke="none"></circle>
+            <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"></path>
+          </svg>
+          Prompt Diseño
+        </button>
+        <button class="view-tab" [class.active]="viewMode === 'database'" (click)="setViewMode('database')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
+            <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path>
+            <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
+          </svg>
+          Prompt BD
         </button>
       </div>
 
@@ -63,9 +81,12 @@
         <!-- Secciones a incluir -->
         <section class="config-card">
           <div class="config-card-header">
-            <div>
-              <h3 class="config-card-title">Secciones a incluir</h3>
-              <p class="config-card-desc">Selecciona qué información del proyecto incluir en el prompt</p>
+            <div class="config-card-title-group">
+              <span class="card-step">1</span>
+              <div>
+                <h3 class="config-card-title">Secciones a incluir</h3>
+                <p class="config-card-desc">Selecciona qué información del proyecto incluir en el prompt</p>
+              </div>
             </div>
             <div class="toggle-all-btns">
               <button class="btn-toggle" (click)="toggleAllSections(true)">Todas</button>
@@ -105,8 +126,13 @@
 
         <!-- Stack Tecnológico -->
         <section class="config-card">
-          <h3 class="config-card-title">Stack Tecnológico</h3>
-          <p class="config-card-desc">Configura las tecnologías que el agente de IA debe usar para generar el código</p>
+          <div class="config-card-title-group">
+            <span class="card-step">2</span>
+            <div>
+              <h3 class="config-card-title">Stack Tecnológico</h3>
+              <p class="config-card-desc">Configura las tecnologías que el agente de IA debe usar para generar el código</p>
+            </div>
+          </div>
 
           <div class="stack-grid">
             <div class="form-group">
@@ -213,30 +239,137 @@
 
             <div class="form-group form-group-full">
               <label class="form-label">Alcance del entregable</label>
+              <select
+                class="form-input form-select"
+                [(ngModel)]="alcanceSelection"
+                (ngModelChange)="onAlcanceChange($event)"
+              >
+                <option value="" disabled>Selecciona un alcance predefinido...</option>
+                <option *ngFor="let opt of ALCANCES_PREDEFINIDOS" [value]="opt.value">{{ opt.label }}</option>
+                <option value="__custom__">Personalizado...</option>
+              </select>
               <textarea
-                class="form-input form-textarea"
+                *ngIf="alcanceSelection === '__custom__'"
+                class="form-input form-textarea form-input-compact"
                 [(ngModel)]="config.alcance"
-                rows="2"
+                rows="3"
                 placeholder="Describe qué esperas que el agente genere..."
               ></textarea>
             </div>
           </div>
         </section>
 
+        <!-- Diseño de la Aplicación -->
+        <section class="config-card">
+          <div class="config-card-header">
+            <div class="config-card-title-group">
+              <span class="card-step">3</span>
+              <div>
+                <h3 class="config-card-title">Diseño de la Aplicación</h3>
+                <p class="config-card-desc">Configura el estilo visual — se generará un prompt de diseño UI/UX independiente</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="stack-grid">
+            <div class="form-group">
+              <label class="form-label">Framework de UI</label>
+              <select class="form-input form-select" [(ngModel)]="config.design.uiFramework">
+                <option value="" disabled>Selecciona...</option>
+                <option *ngFor="let opt of UI_FRAMEWORKS" [value]="opt">{{ opt }}</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Estilo Visual</label>
+              <select class="form-input form-select" [(ngModel)]="config.design.designStyle">
+                <option value="" disabled>Selecciona...</option>
+                <option *ngFor="let opt of DESIGN_STYLES" [value]="opt">{{ opt }}</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Tipo de Layout</label>
+              <select class="form-input form-select" [(ngModel)]="config.design.layoutType">
+                <option value="" disabled>Selecciona...</option>
+                <option *ngFor="let opt of LAYOUT_TYPES" [value]="opt">{{ opt }}</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Color Principal</label>
+              <div class="color-palette-picker">
+                <button
+                  *ngFor="let p of COLOR_PALETTES"
+                  class="color-swatch"
+                  [class.selected]="config.design.colorPrimary === p.label"
+                  [style.background]="p.hex"
+                  [title]="p.label"
+                  (click)="config.design.colorPrimary = p.label"
+                  type="button"
+                >
+                  <svg *ngIf="config.design.colorPrimary === p.label" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                  </svg>
+                </button>
+              </div>
+              <div class="color-selected-label" *ngIf="config.design.colorPrimary">
+                <span class="color-dot" [style.background]="selectedColorHex"></span>
+                {{ config.design.colorPrimary }}
+              </div>
+            </div>
+
+            <div class="form-group form-group-full">
+              <label class="form-label">Modo</label>
+              <div class="stack-options">
+                <button
+                  class="stack-option"
+                  [class.active]="!config.design.darkMode"
+                  (click)="config.design.darkMode = false"
+                >Light Mode</button>
+                <button
+                  class="stack-option"
+                  [class.active]="config.design.darkMode"
+                  (click)="config.design.darkMode = true"
+                >Dark Mode</button>
+              </div>
+            </div>
+
+            <div class="form-group form-group-full">
+              <label class="form-label">Notas de diseño (opcional)</label>
+              <textarea
+                class="form-input form-textarea"
+                [(ngModel)]="config.design.notasDiseno"
+                rows="2"
+                placeholder="Ej: Aplicación para uso interno, tablet-friendly, alta densidad de información..."
+              ></textarea>
+            </div>
+          </div>
+        </section>
+
         <!-- Botón generar -->
-        <div class="generate-action">
-          <button
-            class="btn-generate"
-            [disabled]="!dataLoaded || enabledCount === 0"
-            (click)="setViewMode('preview')"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
-            </svg>
-            Generar Prompt
-          </button>
-          <p class="generate-hint" *ngIf="!dataLoaded">Esperando carga de datos...</p>
-          <p class="generate-hint" *ngIf="dataLoaded && enabledCount === 0">Selecciona al menos una sección</p>
+        <div class="generate-card">
+          <div class="generate-card-body">
+            <div class="generate-card-text">
+              <span class="card-step card-step-go">4</span>
+              <div>
+                <h4 class="generate-card-title">¡Listo para generar!</h4>
+                <p class="generate-card-desc" *ngIf="dataLoaded && enabledCount > 0">Se crearán 3 prompts independientes: código fuente, diseño UI/UX y base de datos</p>
+                <p class="generate-card-desc warn" *ngIf="dataLoaded && enabledCount === 0">Selecciona al menos una sección antes de continuar</p>
+                <p class="generate-card-desc" *ngIf="!dataLoaded">Cargando datos del proyecto...</p>
+              </div>
+            </div>
+            <button
+              class="btn-generate"
+              [disabled]="!dataLoaded || enabledCount === 0"
+              (click)="setViewMode('preview')"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
+              </svg>
+              Generar Prompts
+            </button>
+          </div>
         </div>
 
       </ng-container>
@@ -244,46 +377,53 @@
       <!-- ========== PREVIEW ========== -->
       <ng-container *ngIf="!loading && viewMode === 'preview'">
 
-        <!-- Estadísticas del prompt -->
-        <div class="prompt-stats" *ngIf="promptOutput && !generating">
-          <div class="prompt-stat">
-            <span class="prompt-stat-value">{{ promptCharCount | number }}</span>
-            <span class="prompt-stat-label">caracteres</span>
+        <!-- Toolbar: estadísticas + acciones -->
+        <div class="prompt-toolbar" *ngIf="promptOutput && !generating">
+          <div class="toolbar-stats">
+            <div class="toolbar-stat">
+              <span class="toolbar-stat-value">{{ promptCharCount | number }}</span>
+              <span class="toolbar-stat-label">caracteres</span>
+            </div>
+            <div class="toolbar-stat">
+              <span class="toolbar-stat-value">{{ promptWordCount | number }}</span>
+              <span class="toolbar-stat-label">palabras</span>
+            </div>
+            <div class="toolbar-stat">
+              <span class="toolbar-stat-value">{{ promptLineCount | number }}</span>
+              <span class="toolbar-stat-label">líneas</span>
+            </div>
+            <div class="toolbar-stat">
+              <span class="toolbar-stat-value">{{ enabledCount }}</span>
+              <span class="toolbar-stat-label">secciones</span>
+            </div>
           </div>
-          <div class="prompt-stat">
-            <span class="prompt-stat-value">{{ promptWordCount | number }}</span>
-            <span class="prompt-stat-label">palabras</span>
+          <div class="toolbar-actions">
+            <button class="btn-export btn-copy" (click)="copyToClipboard()">
+              <svg *ngIf="!copied" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+              <svg *ngIf="copied" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+              {{ copied ? '¡Copiado!' : 'Copiar' }}
+            </button>
+            <button class="btn-export btn-download" (click)="downloadAsMarkdown()">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              Descargar .md
+            </button>
+            <button class="btn-export btn-download" (click)="regenerate()">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="1 4 1 10 7 10"></polyline>
+                <path d="M3.51 15a9 9 0 1 0 .49-3.36"></path>
+              </svg>
+              Regenerar
+            </button>
           </div>
-          <div class="prompt-stat">
-            <span class="prompt-stat-value">{{ promptLineCount | number }}</span>
-            <span class="prompt-stat-label">líneas</span>
-          </div>
-          <div class="prompt-stat">
-            <span class="prompt-stat-value">{{ enabledCount }}</span>
-            <span class="prompt-stat-label">secciones</span>
-          </div>
-        </div>
-
-        <!-- Acciones de exportar -->
-        <div class="export-bar" *ngIf="promptOutput && !generating">
-          <button class="btn-export btn-copy" (click)="copyToClipboard()">
-            <svg *ngIf="!copied" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-            </svg>
-            <svg *ngIf="copied" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-              <polyline points="20 6 9 17 4 12"></polyline>
-            </svg>
-            {{ copied ? '¡Copiado!' : 'Copiar al portapapeles' }}
-          </button>
-          <button class="btn-export btn-download" (click)="downloadAsMarkdown()">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-              <polyline points="7 10 12 15 17 10"></polyline>
-              <line x1="12" y1="15" x2="12" y2="3"></line>
-            </svg>
-            Descargar .md
-          </button>
         </div>
 
         <!-- Generating animation -->
@@ -305,6 +445,162 @@
           </div>
           <h3 class="empty-title">El prompt se mostrará aquí</h3>
           <p class="empty-desc">Configura las opciones y genera el prompt para verlo.</p>
+        </div>
+
+      </ng-container>
+
+      <!-- ========== PROMPT DE DISEÑO ========== -->
+      <ng-container *ngIf="!loading && viewMode === 'design'">
+
+        <!-- Toolbar: estadísticas + acciones -->
+        <div class="prompt-toolbar" *ngIf="designPromptOutput && !generating">
+          <div class="toolbar-stats">
+            <div class="toolbar-stat">
+              <span class="toolbar-stat-value">{{ designPromptCharCount | number }}</span>
+              <span class="toolbar-stat-label">caracteres</span>
+            </div>
+            <div class="toolbar-stat">
+              <span class="toolbar-stat-value">{{ designPromptWordCount | number }}</span>
+              <span class="toolbar-stat-label">palabras</span>
+            </div>
+            <div class="toolbar-stat">
+              <span class="toolbar-stat-value">{{ designPromptLineCount | number }}</span>
+              <span class="toolbar-stat-label">líneas</span>
+            </div>
+            <div class="toolbar-stat">
+              <span class="toolbar-stat-value">{{ config.design.uiFramework || '—' }}</span>
+              <span class="toolbar-stat-label">framework UI</span>
+            </div>
+          </div>
+          <div class="toolbar-actions">
+            <button class="btn-export btn-copy" (click)="copyDesignToClipboard()">
+              <svg *ngIf="!copiedDesign" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+              <svg *ngIf="copiedDesign" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+              {{ copiedDesign ? '¡Copiado!' : 'Copiar' }}
+            </button>
+            <button class="btn-export btn-download" (click)="downloadDesignAsMarkdown()">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              Descargar .md
+            </button>
+            <button class="btn-export btn-download" (click)="regenerate()">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="1 4 1 10 7 10"></polyline>
+                <path d="M3.51 15a9 9 0 1 0 .49-3.36"></path>
+              </svg>
+              Regenerar
+            </button>
+          </div>
+        </div>
+
+        <!-- Generating animation -->
+        <div class="generating-card" *ngIf="generating">
+          <div class="loading-spinner"></div>
+          <p class="loading-text">Generando prompt de diseño...</p>
+        </div>
+
+        <!-- Output del prompt de diseño -->
+        <section class="prompt-output-card" *ngIf="designPromptOutput && !generating">
+          <pre class="prompt-output">{{ designPromptOutput }}</pre>
+        </section>
+
+        <div class="prompt-empty" *ngIf="!designPromptOutput && !generating">
+          <div class="empty-icon">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <circle cx="13.5" cy="6.5" r="1" fill="currentColor" stroke="none"></circle>
+              <circle cx="17.5" cy="10.5" r="1" fill="currentColor" stroke="none"></circle>
+              <circle cx="8.5" cy="7.5" r="1" fill="currentColor" stroke="none"></circle>
+              <circle cx="6.5" cy="12.5" r="1" fill="currentColor" stroke="none"></circle>
+              <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"></path>
+            </svg>
+          </div>
+          <h3 class="empty-title">El prompt de diseño se mostrará aquí</h3>
+          <p class="empty-desc">Configura el diseño en la pestaña de Configuración y genera los prompts.</p>
+        </div>
+
+      </ng-container>
+
+      <!-- ========== PROMPT DE BASE DE DATOS ========== -->
+      <ng-container *ngIf="!loading && viewMode === 'database'">
+
+        <!-- Toolbar: estadísticas + acciones -->
+        <div class="prompt-toolbar" *ngIf="dbPromptOutput && !generating">
+          <div class="toolbar-stats">
+            <div class="toolbar-stat">
+              <span class="toolbar-stat-value">{{ dbPromptCharCount | number }}</span>
+              <span class="toolbar-stat-label">caracteres</span>
+            </div>
+            <div class="toolbar-stat">
+              <span class="toolbar-stat-value">{{ dbPromptWordCount | number }}</span>
+              <span class="toolbar-stat-label">palabras</span>
+            </div>
+            <div class="toolbar-stat">
+              <span class="toolbar-stat-value">{{ dbPromptLineCount | number }}</span>
+              <span class="toolbar-stat-label">líneas</span>
+            </div>
+            <div class="toolbar-stat">
+              <span class="toolbar-stat-value">{{ config.stackDatabase || '—' }}</span>
+              <span class="toolbar-stat-label">motor BD</span>
+            </div>
+          </div>
+          <div class="toolbar-actions">
+            <button class="btn-export btn-copy" (click)="copyDbToClipboard()">
+              <svg *ngIf="!copiedDb" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+              <svg *ngIf="copiedDb" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+              {{ copiedDb ? '¡Copiado!' : 'Copiar' }}
+            </button>
+            <button class="btn-export btn-download" (click)="downloadDbAsMarkdown()">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              Descargar .md
+            </button>
+            <button class="btn-export btn-download" (click)="regenerate()">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="1 4 1 10 7 10"></polyline>
+                <path d="M3.51 15a9 9 0 1 0 .49-3.36"></path>
+              </svg>
+              Regenerar
+            </button>
+          </div>
+        </div>
+
+        <!-- Generating animation -->
+        <div class="generating-card" *ngIf="generating">
+          <div class="loading-spinner"></div>
+          <p class="loading-text">Generando prompt de base de datos...</p>
+        </div>
+
+        <!-- Output -->
+        <section class="prompt-output-card" *ngIf="dbPromptOutput && !generating">
+          <pre class="prompt-output">{{ dbPromptOutput }}</pre>
+        </section>
+
+        <div class="prompt-empty" *ngIf="!dbPromptOutput && !generating">
+          <div class="empty-icon">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
+              <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path>
+              <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
+            </svg>
+          </div>
+          <h3 class="empty-title">El prompt de base de datos se mostrará aquí</h3>
+          <p class="empty-desc">Selecciona el motor de base de datos y genera los prompts.</p>
         </div>
 
       </ng-container>

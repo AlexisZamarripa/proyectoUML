@@ -11,7 +11,7 @@ import {
   PromptSection,
 } from '../../services/prompt-generator.service';
 
-type ViewMode = 'config' | 'preview';
+type ViewMode = 'config' | 'preview' | 'design' | 'database';
 type StackKind = 'frontend' | 'backend' | 'database' | 'arquitectura';
 
 @Component({
@@ -29,9 +29,13 @@ export class GeneradorPromptComponent implements OnInit {
   config!: PromptConfig;
   projectData: ProjectData | null = null;
   promptOutput = '';
+  designPromptOutput = '';
+  dbPromptOutput = '';
   loading = false;
   dataLoaded = false;
   copied = false;
+  copiedDesign = false;
+  copiedDb = false;
   generating = false;
 
   /** Contadores de datos cargados */
@@ -47,27 +51,88 @@ export class GeneradorPromptComponent implements OnInit {
   ];
 
   readonly STACKS_FRONTEND = [
-    'Angular', 'React', 'Vue.js', 'Next.js', 'Nuxt.js', 'Svelte', 'SvelteKit',
-    'Astro', 'SolidJS', 'Qwik', 'Ionic', 'HTML/CSS/JS vanilla',
+    'Angular', 'React', 'Vue.js', 'Next.js', 'Svelte', 'HTML/CSS/JS vanilla',
   ];
   readonly STACKS_BACKEND = [
-    'NestJS (Node.js)', 'Express (Node.js)', 'Fastify (Node.js)', 'Koa (Node.js)',
-    'Hapi (Node.js)', 'Spring Boot (Java)', 'Quarkus (Java)', 'Micronaut (Java)',
-    'Django (Python)', 'Flask (Python)', 'FastAPI (Python)', 'Laravel (PHP)',
-    'Symfony (PHP)', 'ASP.NET Core (C#)', 'Ruby on Rails', 'Gin (Go)', 'Fiber (Go)',
-    'Phoenix (Elixir)',
+    'NestJS (Node.js)', 'Express (Node.js)', 'Spring Boot (Java)',
+    'Django (Python)', 'FastAPI (Python)', 'Laravel (PHP)', 'ASP.NET Core (C#)',
   ];
   readonly STACKS_DATABASE = [
-    'MySQL', 'PostgreSQL', 'MariaDB', 'MongoDB', 'SQLite', 'SQL Server', 'Oracle',
-    'Redis', 'Cassandra', 'CouchDB', 'Neo4j', 'DynamoDB', 'Firestore', 'Supabase',
-    'CockroachDB', 'TimescaleDB', 'Firebase',
+    'PostgreSQL', 'MySQL', 'MongoDB', 'SQLite', 'SQL Server', 'Firebase / Firestore',
   ];
   readonly ARQUITECTURAS = [
-    'Monolito modular', 'Microservicios', 'Serverless', 'MVC tradicional',
-    'Hexagonal / Ports & Adapters', 'Clean Architecture', 'DDD (Domain-Driven Design)',
-    'Layered (N-tier)', 'Event-driven', 'CQRS + Event Sourcing', 'BFF', 'SOA',
-    'Microfrontend',
+    'Monolito modular', 'Microservicios', 'MVC tradicional',
+    'Clean Architecture', 'Layered (N-tier)',
   ];
+
+  readonly ALCANCES_PREDEFINIDOS = [
+    {
+      label: 'Código fuente completo (frontend + backend + BD)',
+      value: 'Genera el código fuente completo del sistema incluyendo frontend, backend y scripts de base de datos. Incluye estructura de carpetas, módulos, componentes, servicios, controladores, entidades, migraciones y configuración del entorno. El código debe ser funcional y listo para ejecutarse en desarrollo.',
+    },
+    {
+      label: 'Solo frontend (UI + lógica de vistas)',
+      value: 'Genera únicamente el frontend de la aplicación: componentes de interfaz, rutas, servicios HTTP para consumir la API, manejo de estado y estilos. No generes backend ni base de datos.',
+    },
+    {
+      label: 'Solo backend (API REST + lógica de negocio)',
+      value: 'Genera únicamente el backend de la aplicación: módulos, controladores, servicios, DTOs, entidades y configuración de la API REST. No generes frontend ni scripts de base de datos.',
+    },
+    {
+      label: 'Solo base de datos (esquema + migraciones)',
+      value: 'Genera únicamente el esquema de base de datos: tablas/colecciones, relaciones, índices, restricciones, migraciones y datos semilla (seeds). No generes frontend ni backend.',
+    },
+    {
+      label: 'Arquitectura y estructura del proyecto',
+      value: 'Genera la estructura completa del proyecto con carpetas, archivos base, configuración de dependencias, variables de entorno y guía de arquitectura. No es necesario implementar lógica de negocio, solo la estructura base lista para desarrollar.',
+    },
+    {
+      label: 'Prototipo funcional (MVP)',
+      value: 'Genera un prototipo funcional (MVP) con las funcionalidades más importantes del sistema. Prioriza las historias de usuario de mayor impacto. El código debe ser funcional pero puede omitir optimizaciones y casos borde.',
+    },
+    {
+      label: 'Módulo de autenticación y autorización',
+      value: 'Genera el módulo completo de autenticación y autorización: registro, login, JWT/sesiones, roles y permisos, guards/middleware de protección de rutas, y recuperación de contraseña.',
+    },
+    {
+      label: 'CRUD completo por cada entidad del sistema',
+      value: 'Genera el CRUD completo para cada entidad identificada en el análisis: formularios de creación/edición, listados con filtros y paginación, confirmación de eliminación, y endpoints correspondientes en el backend.',
+    },
+  ];
+
+  alcanceSelection = '';
+
+  readonly UI_FRAMEWORKS = [
+    'Tailwind CSS', 'Angular Material', 'PrimeNG', 'Bootstrap 5',
+    'Chakra UI', 'shadcn/ui', 'Vuetify', 'DaisyUI',
+  ];
+  readonly DESIGN_STYLES = [
+    'Minimal & Clean', 'Corporate / Enterprise', 'Dashboard / Admin Panel',
+    'Material Design', 'Dark Mode First', 'Glassmorphism',
+  ];
+  readonly LAYOUT_TYPES = [
+    'Sidebar + Contenido Principal', 'Header + Contenido (Horizontal Nav)',
+    'Dashboard con Widgets', 'Landing Page / Marketing',
+  ];
+  readonly COLOR_PALETTES = [
+    { label: 'Rojo Empresarial (#ef4444)',   hex: '#ef4444' },
+    { label: 'Rosa (#ec4899)',               hex: '#ec4899' },
+    { label: 'Naranja Energ\u00e9tico (#f97316)', hex: '#f97316' },
+    { label: '\u00c1mbar (#f59e0b)',               hex: '#f59e0b' },
+    { label: 'Lima (#84cc16)',               hex: '#84cc16' },
+    { label: 'Verde Esmeralda (#10b981)',    hex: '#10b981' },
+    { label: 'Cian (#06b6d4)',               hex: '#06b6d4' },
+    { label: 'Azul Cielo (#0ea5e9)',         hex: '#0ea5e9' },
+    { label: 'Azul Corporativo (#3b82f6)',   hex: '#3b82f6' },
+    { label: '\u00cdndigo (#6366f1)',             hex: '#6366f1' },
+    { label: 'Violeta Premium (#8b5cf6)',    hex: '#8b5cf6' },
+    { label: 'Gris / Neutro (#64748b)',      hex: '#64748b' },
+  ];
+
+  get selectedColorHex(): string {
+    const found = this.COLOR_PALETTES.find(p => p.label === this.config.design.colorPrimary);
+    return found ? found.hex : '#3b82f6';
+  }
 
   readonly CUSTOM_OPTION = '__custom__';
   stackFrontendSelection = '';
@@ -130,8 +195,8 @@ export class GeneradorPromptComponent implements OnInit {
 
   setViewMode(mode: ViewMode): void {
     this.viewMode = mode;
-    if (mode === 'preview' && this.projectData) {
-      this.generatePrompt();
+    if ((mode === 'preview' || mode === 'design' || mode === 'database') && this.projectData && !this.promptOutput) {
+      this.generateAll();
     }
   }
 
@@ -141,6 +206,12 @@ export class GeneradorPromptComponent implements OnInit {
 
   toggleAllSections(enabled: boolean): void {
     this.config.sections.forEach(s => s.enabled = enabled);
+  }
+
+  onAlcanceChange(value: string): void {
+    if (value !== '__custom__') {
+      this.config.alcance = value;
+    }
   }
 
   onStackSelectionChange(kind: StackKind, value: string): void {
@@ -156,13 +227,20 @@ export class GeneradorPromptComponent implements OnInit {
     return this.config.sections.filter(s => s.enabled).length;
   }
 
-  generatePrompt(): void {
+  regenerate(): void {
+    this.promptOutput = '';
+    this.designPromptOutput = '';
+    this.dbPromptOutput = '';
+    this.generateAll();
+  }
+
+  generateAll(): void {
     if (!this.projectData) return;
     this.generating = true;
-
-    // Pequeño timeout para mostrar animación
     setTimeout(() => {
       this.promptOutput = this.promptService.generatePrompt(this.projectData!, this.config);
+      this.designPromptOutput = this.promptService.generateDesignPrompt(this.projectData!, this.config);
+      this.dbPromptOutput = this.promptService.generateDatabasePrompt(this.projectData!, this.config);
       this.generating = false;
     }, 400);
   }
@@ -175,14 +253,51 @@ export class GeneradorPromptComponent implements OnInit {
     });
   }
 
+  copyDesignToClipboard(): void {
+    if (!this.designPromptOutput) return;
+    navigator.clipboard.writeText(this.designPromptOutput).then(() => {
+      this.copiedDesign = true;
+      setTimeout(() => this.copiedDesign = false, 2500);
+    });
+  }
+
+  copyDbToClipboard(): void {
+    if (!this.dbPromptOutput) return;
+    navigator.clipboard.writeText(this.dbPromptOutput).then(() => {
+      this.copiedDb = true;
+      setTimeout(() => this.copiedDb = false, 2500);
+    });
+  }
+
   downloadAsMarkdown(): void {
     if (!this.promptOutput) return;
-
     const blob = new Blob([this.promptOutput], { type: 'text/markdown;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
     a.download = `prompt-${this.proyecto.nombre.replace(/\s+/g, '-').toLowerCase()}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  downloadDesignAsMarkdown(): void {
+    if (!this.designPromptOutput) return;
+    const blob = new Blob([this.designPromptOutput], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `prompt-diseno-${this.proyecto.nombre.replace(/\s+/g, '-').toLowerCase()}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  downloadDbAsMarkdown(): void {
+    if (!this.dbPromptOutput) return;
+    const blob = new Blob([this.dbPromptOutput], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `prompt-bd-${this.proyecto.nombre.replace(/\s+/g, '-').toLowerCase()}.md`;
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -197,6 +312,30 @@ export class GeneradorPromptComponent implements OnInit {
 
   get promptWordCount(): number {
     return this.promptOutput ? this.promptOutput.split(/\s+/).filter(w => w.length > 0).length : 0;
+  }
+
+  get designPromptLineCount(): number {
+    return this.designPromptOutput ? this.designPromptOutput.split('\n').length : 0;
+  }
+
+  get designPromptCharCount(): number {
+    return this.designPromptOutput ? this.designPromptOutput.length : 0;
+  }
+
+  get designPromptWordCount(): number {
+    return this.designPromptOutput ? this.designPromptOutput.split(/\s+/).filter(w => w.length > 0).length : 0;
+  }
+
+  get dbPromptLineCount(): number {
+    return this.dbPromptOutput ? this.dbPromptOutput.split('\n').length : 0;
+  }
+
+  get dbPromptCharCount(): number {
+    return this.dbPromptOutput ? this.dbPromptOutput.length : 0;
+  }
+
+  get dbPromptWordCount(): number {
+    return this.dbPromptOutput ? this.dbPromptOutput.split(/\s+/).filter(w => w.length > 0).length : 0;
   }
 
   trackBySection(_i: number, s: PromptSection): string {

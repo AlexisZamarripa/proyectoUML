@@ -6,7 +6,7 @@ import { ProyectoApiService, Proyecto } from './proyecto-api.service';
 import { StakeholderApiService, Stakeholder } from './stakeholder-api.service';
 import { ProcesoApiService, Proceso } from './proceso-api.service';
 import { EntrevistaApiService, Entrevista } from './Entrevista-api.service';
-import { EncuestaApiService, Encuesta } from './encuesta-api.service';
+import { EncuestaApiService, Encuesta } from './Encuesta-api.service';
 import { ObservacionApiService, Observacion } from './Observacion-api.service';
 import { FocusGroupApiService, FocusGroup } from './FocusGroup.service';
 import { HistoriaUsuarioApiService, HistoriaUsuario } from './HistoriasUsuario-api.service';
@@ -21,6 +21,15 @@ export interface PromptSection {
   icon: string;
 }
 
+export interface DesignConfig {
+  uiFramework: string;
+  designStyle: string;
+  colorPrimary: string;
+  layoutType: string;
+  darkMode: boolean;
+  notasDiseno: string;
+}
+
 export interface PromptConfig {
   sections: PromptSection[];
   stackFrontend: string;
@@ -29,6 +38,7 @@ export interface PromptConfig {
   stackExtra: string;
   arquitectura: string;
   alcance: string;
+  design: DesignConfig;
 }
 
 export interface ProjectData {
@@ -79,10 +89,18 @@ export class PromptGeneratorService {
       ],
       stackFrontend: 'Angular',
       stackBackend: 'NestJS (Node.js)',
-      stackDatabase: 'MySQL',
+      stackDatabase: 'PostgreSQL',
       stackExtra: '',
       arquitectura: 'Monolito modular',
       alcance: 'Aplicación completa (frontend + backend + base de datos)',
+      design: {
+        uiFramework: 'Tailwind CSS',
+        designStyle: 'Minimal & Clean',
+        colorPrimary: 'Azul Corporativo (#3b82f6)',
+        layoutType: 'Sidebar + Contenido Principal',
+        darkMode: false,
+        notasDiseno: '',
+      },
     };
   }
 
@@ -108,20 +126,32 @@ export class PromptGeneratorService {
     const parts: string[] = [];
     const enabled = (id: string) => config.sections.find(s => s.id === id)?.enabled ?? true;
 
+    const date = new Date().toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
     parts.push('# Solicitud de Desarrollo de Software\n');
-    parts.push('A continuación se presenta toda la información recopilada durante el análisis de requerimientos de un proyecto de software. Utiliza esta información para generar el código fuente completo del sistema.\n');
+    parts.push(`> **Generado el:** ${date}  `);
+    parts.push(`> **Proyecto:** ${data.proyecto.nombre}  `);
+    parts.push(`> **Stack:** ${[config.stackFrontend, config.stackBackend, config.stackDatabase].filter(Boolean).join(' · ')}\n`);
+    parts.push('---\n');
+    parts.push('## Contexto General\n');
+    parts.push(
+      'Este documento contiene el análisis completo de requerimientos del proyecto. ' +
+      'Tu misión es generar el **código fuente completo, funcional y listo para producción** ' +
+      'siguiendo las instrucciones técnicas y los estándares de calidad definidos al final de este documento.\n'
+    );
+    parts.push('> **Importante:** Lee todo el documento antes de generar código. ' +
+      'Cada sección aporta contexto esencial para tomar decisiones de diseño correctas.\n');
 
     if (enabled('proyecto')) parts.push(this.buildProyectoSection(data.proyecto));
-    if (enabled('stakeholders') && data.stakeholders.length > 0) parts.push(this.buildStakeholdersSection(data.stakeholders));
-    if (enabled('procesos') && data.procesos.length > 0) parts.push(this.buildProcesosSection(data.procesos));
-    if (enabled('entrevistas') && data.entrevistas.length > 0) parts.push(this.buildEntrevistasSection(data.entrevistas));
-    if (enabled('encuestas') && data.encuestas.length > 0) parts.push(this.buildEncuestasSection(data.encuestas));
-    if (enabled('observaciones') && data.observaciones.length > 0) parts.push(this.buildObservacionesSection(data.observaciones));
-    if (enabled('focusGroups') && data.focusGroups.length > 0) parts.push(this.buildFocusGroupsSection(data.focusGroups));
-    if (enabled('historias') && data.historias.length > 0) parts.push(this.buildHistoriasSection(data.historias));
-    if (enabled('documentos') && data.documentos.length > 0) parts.push(this.buildDocumentosSection(data.documentos));
-    if (enabled('seguimientos') && data.seguimientos.length > 0) parts.push(this.buildSeguimientoSection(data.seguimientos));
-    if (enabled('diagramas') && data.diagramas.length > 0) parts.push(this.buildDiagramasSection(data.diagramas));
+    if (enabled('stakeholders') && data.stakeholders.length > 0) parts.push('---\n', this.buildStakeholdersSection(data.stakeholders));
+    if (enabled('procesos') && data.procesos.length > 0) parts.push('---\n', this.buildProcesosSection(data.procesos));
+    if (enabled('entrevistas') && data.entrevistas.length > 0) parts.push('---\n', this.buildEntrevistasSection(data.entrevistas));
+    if (enabled('encuestas') && data.encuestas.length > 0) parts.push('---\n', this.buildEncuestasSection(data.encuestas));
+    if (enabled('observaciones') && data.observaciones.length > 0) parts.push('---\n', this.buildObservacionesSection(data.observaciones));
+    if (enabled('focusGroups') && data.focusGroups.length > 0) parts.push('---\n', this.buildFocusGroupsSection(data.focusGroups));
+    if (enabled('historias') && data.historias.length > 0) parts.push('---\n', this.buildHistoriasSection(data.historias));
+    if (enabled('documentos') && data.documentos.length > 0) parts.push('---\n', this.buildDocumentosSection(data.documentos));
+    if (enabled('seguimientos') && data.seguimientos.length > 0) parts.push('---\n', this.buildSeguimientoSection(data.seguimientos));
+    if (enabled('diagramas') && data.diagramas.length > 0) parts.push('---\n', this.buildDiagramasSection(data.diagramas));
 
     parts.push(this.buildInstruccionesSection(config));
 
@@ -135,10 +165,12 @@ export class PromptGeneratorService {
   private buildProyectoSection(p: Proyecto): string {
     return [
       '## 1. Información del Proyecto\n',
-      `- **Nombre:** ${p.nombre}`,
-      `- **Descripción:** ${p.descripcion}`,
-      `- **Estado:** ${p.estado}`,
-      `- **Fecha de inicio:** ${p.fechaInicio}`,
+      `| Campo | Detalle |`,
+      `|-------|---------|`,
+      `| **Nombre** | ${p.nombre} |`,
+      `| **Descripción** | ${p.descripcion} |`,
+      `| **Estado** | ${p.estado} |`,
+      `| **Fecha de inicio** | ${p.fechaInicio} |`,
       '',
     ].join('\n');
   }
@@ -249,13 +281,19 @@ export class PromptGeneratorService {
   private buildHistoriasSection(list: HistoriaUsuario[]): string {
     const items: string[] = [];
     list.forEach((h, i) => {
-      items.push(`### Historia ${i + 1}: ${h.titulo_historia || 'Sin título'}\n`);
+      items.push(`### HU-${String(i + 1).padStart(3, '0')}: ${h.titulo_historia || 'Sin título'}\n`);
       if (h.rol && h.quiero && h.para_que) {
-        items.push(`> Como **${h.rol}**, quiero **${h.quiero}**, para **${h.para_que}**.\n`);
+        items.push(`> **Historia:** Como **${h.rol}**, quiero **${h.quiero}**, para **${h.para_que}**.\n`);
       }
-      if (h.prioridad) items.push(`- **Prioridad:** ${h.prioridad}`);
-      if (h.estimacion) items.push(`- **Estimación:** ${h.estimacion}`);
-      if (h.criterios_aceptacion) items.push(`- **Criterios de aceptación:** ${h.criterios_aceptacion}`);
+      const meta: string[] = [];
+      if (h.prioridad) meta.push(`**Prioridad:** ${h.prioridad}`);
+      if (h.estimacion) meta.push(`**Estimación:** ${h.estimacion}`);
+      if (meta.length) items.push(meta.join(' · '));
+      if (h.criterios_aceptacion) {
+        items.push('\n**Criterios de aceptación:**\n');
+        const criterios = h.criterios_aceptacion.split(/[;\n]/).map(c => c.trim()).filter(Boolean);
+        criterios.forEach(c => items.push(`- [ ] ${c}`));
+      }
       items.push('');
     });
     return ['## 8. Historias de Usuario\n', ...items].join('\n');
@@ -391,28 +429,860 @@ export class PromptGeneratorService {
     if (config.stackFrontend) stack.push(`- **Frontend:** ${config.stackFrontend}`);
     if (config.stackBackend) stack.push(`- **Backend:** ${config.stackBackend}`);
     if (config.stackDatabase) stack.push(`- **Base de datos:** ${config.stackDatabase}`);
-    if (config.stackExtra) stack.push(`- **Adicional:** ${config.stackExtra}`);
+    if (config.stackExtra) stack.push(`- **Tecnologías adicionales:** ${config.stackExtra}`);
+
+    const specificInstructions = this.getStackSpecificInstructions(config);
 
     return [
       '---\n',
       '## Instrucciones de Generación\n',
-      'Con base en toda la información anterior, genera el código fuente del sistema solicitado.\n',
-      '### Stack Tecnológico\n',
+      'Con base en toda la información anterior, genera el código fuente **completo y funcional** del sistema. ' +
+      'Sigue estrictamente cada directriz de esta sección.\n',
+
+      '### 1. Stack Tecnológico\n',
       ...stack,
       '',
-      `### Arquitectura\n`,
+
+      '### 2. Arquitectura\n',
       `- **Tipo:** ${config.arquitectura || 'Sin definir'}`,
+      '- Organiza el código respetando la separación de capas que implica esta arquitectura.',
+      '- Cada capa debe tener una responsabilidad única y clara.',
       '',
-      `### Alcance del Entregable\n`,
-      `- ${config.alcance}`,
+
+      '### 3. Alcance del Entregable\n',
+      `- ${config.alcance || 'Aplicación completa (frontend + backend + base de datos)'}`,
+      '- Incluye estructura de carpetas, archivos de configuración y todas las dependencias.',
+      '- El código debe poder ejecutarse localmente siguiendo las instrucciones que proveas.',
       '',
-      '### Convenciones\n',
-      '- Código limpio y bien documentado',
-      '- Nombres de variables y funciones descriptivos',
-      '- Separación de responsabilidades (controladores, servicios, modelos)',
-      '- Manejo adecuado de errores',
-      '- Validación de datos de entrada',
+
+      '### 4. Instrucciones Específicas por Tecnología\n',
+      ...specificInstructions,
+
+      '### 5. Buenas Prácticas de Programación\n',
+      'Aplica **obligatoriamente** los siguientes estándares:\n',
+
+      '#### 5.1 Principios SOLID\n',
+      '- **S** — Single Responsibility: cada clase/módulo tiene una única razón para cambiar.',
+      '- **O** — Open/Closed: abierto para extensión, cerrado para modificación.',
+      '- **L** — Liskov Substitution: las subclases pueden sustituir a sus clases base.',
+      '- **I** — Interface Segregation: interfaces específicas mejor que una general.',
+      '- **D** — Dependency Inversion: depende de abstracciones, no de implementaciones concretas.',
       '',
+
+      '#### 5.2 Código Limpio (Clean Code)\n',
+      '- Nombres **descriptivos** en el idioma del proyecto (variables, funciones, clases).',
+      '- Funciones con **una sola responsabilidad** (máx. ~20 líneas).',
+      '- Sin código muerto ni comentado. Sin números mágicos (usa constantes nombradas).',
+      '- Evita anidaciones > 3 niveles; aplica early returns para reducir profundidad.',
+      '',
+
+      '#### 5.3 DRY — Don\'t Repeat Yourself\n',
+      '- Extrae lógica repetida en funciones, servicios o helpers reutilizables.',
+      '- Usa composición, herencia o mixins cuando sea apropiado.',
+      '',
+
+      '#### 5.4 Manejo de Errores\n',
+      '- Manejo explícito en **todas** las operaciones asíncronas.',
+      '- Códigos HTTP correctos: 400 (validación), 401 (no autenticado), 403 (no autorizado), 404 (no encontrado), 422 (entidad no procesable), 500 (error interno).',
+      '- Mensajes de error claros para el cliente; detalles técnicos solo en logs del servidor.',
+      '- No expongas stack traces ni información interna al cliente.',
+      '',
+
+      '#### 5.5 Seguridad (OWASP Top 10)\n',
+      '- **Validación de entrada** en backend con DTOs y class-validator (o equivalente).',
+      '- **Sanitización** de datos antes de persistir o renderizar.',
+      '- **Auth/Authz** con JWT y guards/middleware en todos los endpoints protegidos.',
+      '- **Evita SQL Injection**: usa ORM o query builder con parámetros enlazados.',
+      '- **Secrets en variables de entorno** (`.env`); nunca hardcodeados.',
+      '- **Cabeceras de seguridad**: Helmet (Node) o equivalente.',
+      '',
+
+      '#### 5.6 Calidad y Mantenibilidad\n',
+      '- Pruebas unitarias para toda la lógica de negocio crítica.',
+      '- Documenta la API con Swagger/OpenAPI (`@nestjs/swagger` o equivalente).',
+      '- Versiona la API: `/api/v1/`.',
+      '- Usa ESLint + Prettier (o equivalente) con las reglas del proyecto.',
+      '',
+
+      '#### 5.7 Rendimiento\n',
+      '- Paginación en todos los endpoints de listas.',
+      '- Índices en columnas usadas en WHERE, JOIN y ORDER BY.',
+      '- Evita N+1 queries; usa eager loading o joins apropiados.',
+      '- Lazy loading de módulos/rutas en el frontend.',
+      '',
+
+      '### 6. Entregables — Orden de Generación\n',
+      '1. **Estructura del proyecto** — árbol de carpetas con comentarios.',
+      '2. **Configuración** — `.env.example`, `package.json`, archivos de configuración.',
+      '3. **Base de datos** — migraciones, esquema SQL o entidades ORM.',
+      '4. **Backend** — módulos, servicios, controladores, guards, DTOs, pipes.',
+      '5. **Frontend** — componentes, servicios, rutas, guards, modelos.',
+      '6. **Instrucciones de ejecución** — pasos para instalar y correr el proyecto.',
+      '',
+
+      '---\n',
+      '> Genera el código **archivo por archivo**, indicando la ruta completa antes de cada bloque. ' +
+      '**Prioriza calidad sobre velocidad.**\n',
     ].join('\n');
+  }
+
+  private getStackSpecificInstructions(config: PromptConfig): string[] {
+    const lines: string[] = [];
+
+    // ── Frontend ──────────────────────────────────────────────────────────
+    if (config.stackFrontend.includes('Angular')) {
+      lines.push(
+        '#### Frontend — Angular\n',
+        '- Usa **standalone components** (`standalone: true`); evita NgModules salvo para librerías externas.',
+        '- Estado reactivo con **signals** (`signal()`, `computed()`, `effect()`); usa RxJS solo para streams de datos asíncronos.',
+        '- Desuscríbete con `takeUntilDestroyed()` en lugar de ngOnDestroy manual.',
+        '- **Lazy loading** obligatorio en todas las rutas: `loadComponent()` en `app.routes.ts`.',
+        '- Formularios complejos con **Reactive Forms** (`FormBuilder`); template-driven solo para formularios simples.',
+        '- **HttpClient** con interceptors para inyección del token JWT y manejo global de errores.',
+        '- Servicios con `providedIn: \'root\'` a menos que el scope sea local al componente.',
+        '',
+      );
+    } else if (config.stackFrontend.includes('React')) {
+      lines.push(
+        '#### Frontend — React\n',
+        '- Solo componentes **funcionales** con hooks; nunca class components.',
+        '- Estado global con **Zustand** (proyectos medianos) o **Redux Toolkit** (proyectos grandes).',
+        '- Server state con **TanStack Query (React Query)**; nunca uses `useEffect` para fetching.',
+        '- Rutas con **React Router v6**: rutas anidadas, loaders y `createBrowserRouter`.',
+        '- `useMemo`, `useCallback` y `React.memo` solo donde medir un problema real de rendimiento.',
+        '- **TypeScript** estricto: interfaces para todos los props, estados y respuestas de API.',
+        '',
+      );
+    } else if (config.stackFrontend.includes('Vue')) {
+      lines.push(
+        '#### Frontend — Vue.js\n',
+        '- Usa la **Composition API** con `<script setup lang="ts">` en todos los componentes.',
+        '- Estado global con **Pinia**; nunca uses Vuex.',
+        '- Rutas con **Vue Router 4**; lazy imports y navigation guards.',
+        '- `ref()` para primitivos, `reactive()` para objetos; `computed()` para derivados.',
+        '- `defineProps`, `defineEmits` y `defineExpose` siempre tipados con TypeScript.',
+        '',
+      );
+    } else if (config.stackFrontend.includes('Next')) {
+      lines.push(
+        '#### Frontend — Next.js\n',
+        '- Usa el **App Router** (`app/`); no uses el Pages Router.',
+        '- **Server Components** por defecto; `"use client"` solo cuando necesitas interactividad o browser APIs.',
+        '- Data fetching con `fetch()` nativo en Server Components y opciones de revalidación (`next: { revalidate }`). ',
+        '- **Server Actions** para mutaciones; nunca expongas endpoints API innecesariamente.',
+        '- Usa `<Suspense>` y `loading.tsx` para estados de carga por segmento de ruta.',
+        '- Optimiza imágenes con `<Image>` de `next/image` y fuentes con `next/font`.',
+        '',
+      );
+    }
+
+    // ── Backend ───────────────────────────────────────────────────────────
+    if (config.stackBackend.includes('NestJS')) {
+      lines.push(
+        '#### Backend — NestJS\n',
+        '- Un **módulo de feature** (`@Module`) por dominio; importa solo lo que necesita.',
+        '- **DTOs** con `class-validator` decorators en toda entrada (`@IsString`, `@IsEmail`, `@IsNotEmpty`).',
+        '- `ValidationPipe` global con `{ whitelist: true, forbidNonWhitelisted: true, transform: true }`.',
+        '- **Guards** JWT (`@UseGuards(JwtAuthGuard)`) y de roles en cada endpoint protegido.',
+        '- **Interceptors** para transformación de respuesta y logging; **Filters** para excepciones.',
+        '- ORM con **TypeORM** o **Prisma**; nunca raw queries sin parámetros enlazados.',
+        '- **Swagger** con `@nestjs/swagger`: `@ApiOperation`, `@ApiResponse`, `@ApiTags` en cada controller.',
+        '- Config con `@nestjs/config` + validación de variables de entorno con **Joi**.',
+        '',
+      );
+    } else if (config.stackBackend.includes('Express')) {
+      lines.push(
+        '#### Backend — Express.js\n',
+        '- Estructura en capas: `routes/` → `controllers/` → `services/` → `repositories/` → `models/`.',
+        '- Validación con **Zod** o **Joi** en middleware antes de llegar al controller.',
+        '- Auth con **passport-jwt** o middleware manual de verificación de JWT.',
+        '- Monta todas las rutas bajo `/api/v1/` con `express.Router()` por recurso.',
+        '- Error handler centralizado `(err, req, res, next)` como **último middleware**.',
+        '- Aplica **helmet**, **cors**, **compression** y **express-rate-limit** de forma global.',
+        '',
+      );
+    } else if (config.stackBackend.includes('Spring Boot')) {
+      lines.push(
+        '#### Backend — Spring Boot\n',
+        '- Arquitectura en capas: `@RestController` → `@Service` → `@Repository` (Spring Data JPA).',
+        '- Validación con **Bean Validation** en los DTOs: `@Valid`, `@NotNull`, `@Size`, `@Email`.',
+        '- **Spring Security** con JWT: configura `SecurityFilterChain` con `stateless` session.',
+        '- Nunca expongas entidades JPA directamente; usa **DTOs** mapeados con MapStruct.',
+        '- Documenta con **SpringDoc OpenAPI** (`springdoc-openapi-starter-webmvc-ui`).',
+        '- Externaliza toda la config en `application.yml`; usa perfiles `dev` y `prod`.',
+        '',
+      );
+    } else if (config.stackBackend.includes('FastAPI')) {
+      lines.push(
+        '#### Backend — FastAPI\n',
+        '- **Pydantic v2** para todos los schemas de request/response; valida tipos en tiempo de ejecución.',
+        '- Rutas con **APIRouter**; monta cada router con `prefix` y `tags`.',
+        '- **Dependency Injection** de FastAPI para sesiones de BD, servicios y el usuario autenticado.',
+        '- `async def` en todos los endpoints; usa `asyncpg` o `databases` para consultas async.',
+        '- ORM con **SQLAlchemy 2.0** (async) o **Tortoise ORM**.',
+        '- La documentación `/docs` (Swagger UI) debe estar completa y actualizada.',
+        '',
+      );
+    } else if (config.stackBackend.includes('Django')) {
+      lines.push(
+        '#### Backend — Django REST Framework\n',
+        '- Usa **ViewSets** con **Routers** para reducir boilerplate de URLs.',
+        '- **ModelSerializer** para CRUD estándar; serializers custom para lógica compleja.',
+        '- Auth con **djangorestframework-simplejwt**; protege vistas con `IsAuthenticated`.',
+        '- **Django ORM** con `select_related` y `prefetch_related` para evitar N+1.',
+        '- Paginación global con `PageNumberPagination` en `REST_FRAMEWORK` settings.',
+        '- Separa settings por entorno: `settings/base.py`, `settings/dev.py`, `settings/prod.py`.',
+        '',
+      );
+    } else if (config.stackBackend.includes('Laravel')) {
+      lines.push(
+        '#### Backend — Laravel\n',
+        '- **Form Requests** para toda validación; nunca valides directamente en el controlador.',
+        '- **Eloquent** con relaciones bien definidas; usa `with()` para eager loading.',
+        '- **Policies** para autorización a nivel de modelo; **Gates** para acciones globales.',
+        '- **API Resources** para transformar respuestas; nunca devuelvas modelos directamente.',
+        '- Auth con **Laravel Sanctum** (SPA/mobile) o **Passport** (OAuth2).',
+        '- Tareas pesadas en **queued jobs**; tareas programadas con `artisan schedule`.',
+        '',
+      );
+    }
+
+    // ── Database ──────────────────────────────────────────────────────────
+    if (['MySQL', 'PostgreSQL', 'MariaDB'].some(db => config.stackDatabase.includes(db))) {
+      lines.push(
+        `#### Base de Datos — ${config.stackDatabase}\n`,
+        '- **Migraciones** versionadas para todo cambio de esquema (nunca modifiques la BD manual en producción).',
+        '- **Índices** en todas las columnas usadas en WHERE, JOIN y ORDER BY.',
+        '- **Foreign keys** con políticas de CASCADE / RESTRICT / SET NULL según la lógica de negocio.',
+        '- **Transacciones** para operaciones que afectan múltiples tablas.',
+        '- Contraseñas con **bcrypt** (costo ≥ 12); nunca MD5 ni SHA1.',
+        ...(config.stackDatabase.includes('PostgreSQL')
+          ? ['- Aprovecha tipos nativos de PostgreSQL: `uuid`, `jsonb`, `array`, `enum`, `timestamptz`.']
+          : []),
+        '',
+      );
+    } else if (config.stackDatabase.includes('MongoDB')) {
+      lines.push(
+        '#### Base de Datos — MongoDB\n',
+        '- Define **schemas** con Mongoose: `required`, `index`, `unique`, `trim` en cada campo.',
+        '- Usa **aggregation pipeline** para consultas complejas; evita `$where` (seguridad).',
+        '- **Índices compuestos** para consultas frecuentes; **índices TTL** para expiración.',
+        '- Transacciones multi-documento para operaciones atómicas.',
+        '- Embebe subdocumentos cuando se acceden juntos; referencia cuando se acceden por separado.',
+        '',
+      );
+    } else if (config.stackDatabase.includes('Firebase') || config.stackDatabase.includes('Firestore')) {
+      lines.push(
+        '#### Base de Datos — Firestore\n',
+        '- Estructura colecciones orientada a las **consultas**, no al modelo relacional.',
+        '- **Reglas de seguridad** de Firestore para proteger cada colección por rol de usuario.',
+        '- **Batched writes** y **transactions** para operaciones atómicas.',
+        '- Evita lecturas en bucle; usa `collectionGroup` y consultas compuestas con índices.',
+        '',
+      );
+    }
+
+    // ── Architecture ──────────────────────────────────────────────────────
+    if (config.arquitectura === 'Clean Architecture') {
+      lines.push(
+        '#### Arquitectura — Clean Architecture\n',
+        '- Capas obligatorias: `Domain` → `Application` → `Infrastructure` → `Presentation`.',
+        '- `Domain`: entidades y reglas de negocio puras, **sin dependencias externas**.',
+        '- `Application`: casos de uso (Use Cases), interfaces de repositorios e interfaces de servicios.',
+        '- `Infrastructure`: implementaciones concretas (ORM, APIs externas, email, storage).',
+        '- `Presentation`: controllers/resolvers que solo delegan a los casos de uso.',
+        '- La dependencia siempre apunta **hacia adentro**; aplica inversión de dependencias.',
+        '',
+      );
+    } else if (config.arquitectura === 'Microservicios') {
+      lines.push(
+        '#### Arquitectura — Microservicios\n',
+        '- Cada servicio tiene su propia base de datos (**Database per Service**).',
+        '- Comunicación síncrona via REST/gRPC; asíncrona via **RabbitMQ** o **Kafka**.',
+        '- **API Gateway** como único punto de entrada: maneja auth, routing y rate limiting.',
+        '- Health checks en cada servicio: `/health` (liveness) y `/ready` (readiness).',
+        '- Correlation IDs en los headers para **distributed tracing**.',
+        '- Cada servicio en su propio **Dockerfile**; orquesta con `docker-compose` en dev.',
+        '',
+      );
+    } else if (config.arquitectura === 'Monolito modular') {
+      lines.push(
+        '#### Arquitectura — Monolito Modular\n',
+        '- Un directorio por módulo de feature: `users/`, `products/`, `orders/`, etc.',
+        '- Los módulos solo se comunican a través de sus **interfaces públicas** (index/barrel files).',
+        '- `shared/` para utilidades, guards, interceptors y componentes transversales.',
+        '- Respeta los límites de módulo: no importes archivos internos de otro módulo directamente.',
+        '',
+      );
+    }
+
+    return lines;
+  }
+
+  // ─────────────────────────────────────────────
+  //  Generador de Prompt de Base de Datos
+  // ─────────────────────────────────────────────
+
+  generateDatabasePrompt(data: ProjectData, config: PromptConfig): string {
+    const date = new Date().toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
+    const db = config.stackDatabase;
+    const backend = config.stackBackend;
+    const parts: string[] = [];
+
+    const isRelational = ['PostgreSQL', 'MySQL', 'MariaDB', 'SQLite', 'SQL Server'].some(d => db.includes(d));
+    const isMongo = db.includes('MongoDB');
+    const isFirebase = db.includes('Firebase') || db.includes('Firestore');
+
+    parts.push('# Prompt de Base de Datos\n');
+    parts.push(`> **Generado el:** ${date}  `);
+    parts.push(`> **Proyecto:** ${data.proyecto.nombre}  `);
+    parts.push(`> **Motor:** ${db || 'No definido'}  `);
+    parts.push(`> **Backend:** ${backend || 'No definido'}\n`);
+    parts.push('---\n');
+
+    // ── Rol ──────────────────────────────────────────────────────────────
+    parts.push('## Rol y Objetivo\n');
+    if (isRelational) {
+      parts.push(
+        `Eres un experto en diseño de bases de datos relacionales con **${db}**. ` +
+        `Tu tarea es diseñar e implementar el esquema de base de datos **completo, normalizado (3NF) y listo para producción** ` +
+        `del proyecto **${data.proyecto.nombre}**. ` +
+        `Incluye todas las tablas, columnas tipadas, restricciones, índices, relaciones con foreign keys, ` +
+        `migraciones versionadas, seeds de datos iniciales y las entidades ORM para **${backend}**.\n`
+      );
+    } else if (isMongo) {
+      parts.push(
+        `Eres un experto en diseño de bases de datos con **MongoDB**. ` +
+        `Tu tarea es diseñar los **schemas de Mongoose** completos del proyecto **${data.proyecto.nombre}**, ` +
+        `con validaciones, índices, relaciones (embed vs. reference), agregaciones frecuentes y seeds de datos iniciales.\n`
+      );
+    } else if (isFirebase) {
+      parts.push(
+        `Eres un experto en **Cloud Firestore**. ` +
+        `Tu tarea es diseñar la **estructura de colecciones** del proyecto **${data.proyecto.nombre}**, ` +
+        `con reglas de seguridad, índices compuestos, estrategia de subcollecciones vs. colecciones raíz, ` +
+        `y funciones Cloud Functions para lógica transaccional.\n`
+      );
+    } else {
+      parts.push(
+        `Eres un experto en diseño de bases de datos con **${db}**. ` +
+        `Tu tarea es diseñar el esquema de base de datos completo del proyecto **${data.proyecto.nombre}**.\n`
+      );
+    }
+
+    // ── Descripción del proyecto ──────────────────────────────────────────
+    parts.push('## Descripción del Proyecto\n');
+    parts.push(`${data.proyecto.descripcion}\n`);
+
+    // ── Usuarios del sistema ──────────────────────────────────────────────
+    if (data.stakeholders.length > 0) {
+      parts.push('---\n');
+      parts.push('## Roles de Usuario del Sistema\n');
+      parts.push('Estos roles deben existir en la tabla/colección de usuarios con sus permisos diferenciados:\n');
+      data.stakeholders.forEach(s => {
+        parts.push(`- **${s.rol}** (${s.area || 'General'})${s.notas ? ` — ${s.notas}` : ''}`);
+      });
+      parts.push('');
+    }
+
+    // ── Procesos → entidades ──────────────────────────────────────────────
+    if (data.procesos.length > 0) {
+      parts.push('---\n');
+      parts.push('## Procesos de Negocio → Entidades Inferidas\n');
+      parts.push('Cada proceso implica entidades y operaciones CRUD que deben estar soportadas en la BD:\n');
+      data.procesos.forEach((p, i) => {
+        parts.push(`### ${i + 1}. ${p.nombre}\n`);
+        parts.push(`- **Descripción:** ${p.descripcion}`);
+        if (p.departamentos?.length) {
+          parts.push(`- **Áreas involucradas:** ${p.departamentos.join(', ')}`);
+        }
+        if (p.pasos_clave?.length) {
+          parts.push(`- **Flujo de datos:** ${p.pasos_clave.join(' → ')}`);
+        }
+        if (p.subprocesos?.length) {
+          const entidades = p.subprocesos.map(sp => sp.nombre).join(', ');
+          parts.push(`- **Posibles entidades:** ${entidades}`);
+        }
+        parts.push('');
+      });
+    }
+
+    // ── Historias de usuario → campos y operaciones ───────────────────────
+    if (data.historias.length > 0) {
+      parts.push('---\n');
+      parts.push('## Historias de Usuario → Operaciones de BD\n');
+      parts.push('Cada historia define operaciones concretas (CREATE, READ, UPDATE, DELETE) que la BD debe soportar eficientemente:\n');
+      data.historias.forEach((h, i) => {
+        parts.push(`**HU-${String(i + 1).padStart(3, '0')}:** ${h.titulo_historia || 'Sin título'}`);
+        if (h.rol && h.quiero) {
+          parts.push(`> Como **${h.rol}** quiero **${h.quiero}**${h.para_que ? ` para **${h.para_que}**` : ''}.`);
+        }
+        if (h.criterios_aceptacion) {
+          const criterios = h.criterios_aceptacion.split(/[;\n]/).map(c => c.trim()).filter(Boolean);
+          criterios.forEach(c => parts.push(`- [ ] ${c}`));
+        }
+        parts.push('');
+      });
+    }
+
+    // ── Diagramas de clases → entidades exactas ───────────────────────────
+    const classDiagrams = data.diagramas.filter(d => d.tipo === 'clases');
+    if (classDiagrams.length > 0) {
+      parts.push('---\n');
+      parts.push('## Diagramas de Clases → Estructura de Entidades\n');
+      parts.push('Usa estos diagramas como la fuente de verdad para nombres de entidades, atributos y relaciones:\n');
+      classDiagrams.forEach(d => {
+        parts.push(`### ${d.nombre}${d.descripcion ? ` — ${d.descripcion}` : ''}\n`);
+        if (d.nodes?.length) {
+          d.nodes.forEach(n => {
+            parts.push(`#### Entidad: \`${n.label}\`${n.stereotype ? ` «${n.stereotype}»` : ''}\n`);
+            if (n.attributes?.length) {
+              parts.push('**Atributos:**\n');
+              n.attributes.forEach(a => parts.push(`- \`${a.text}\` (${a.visibility})`));
+            }
+            if (n.methods?.length) {
+              parts.push('\n**Métodos (lógica relacionada con persistencia):**\n');
+              n.methods.forEach(m => parts.push(`- \`${m.text}\``));
+            }
+            parts.push('');
+          });
+        }
+        if (d.relations?.length) {
+          parts.push('**Relaciones entre entidades:**\n');
+          d.relations.forEach(r => {
+            const src = d.nodes?.find(n => n.id === r.sourceId)?.label ?? r.sourceId;
+            const tgt = d.nodes?.find(n => n.id === r.targetId)?.label ?? r.targetId;
+            const lbl = r.label ? ` — "${r.label}"` : '';
+            parts.push(`- \`${src}\` --[**${r.kind}**]--> \`${tgt}\`${lbl}`);
+          });
+          parts.push('');
+        }
+      });
+    }
+
+    // ── Hallazgos de documentos ───────────────────────────────────────────
+    if (data.documentos.length > 0) {
+      parts.push('---\n');
+      parts.push('## Hallazgos de Documentos Relevantes para la BD\n');
+      data.documentos.forEach((d, i) => {
+        if (!d.hallazgos?.length && !d.recomendaciones) return;
+        parts.push(`### ${d.titulo} (${d.tipoDocumento})\n`);
+        if (d.hallazgos?.length) {
+          d.hallazgos.forEach(h => parts.push(`- ${h}`));
+        }
+        if (d.recomendaciones) {
+          parts.push(`\n> **Recomendaciones:** ${d.recomendaciones}`);
+        }
+        parts.push('');
+      });
+    }
+
+    // ── Instrucciones técnicas ────────────────────────────────────────────
+    parts.push('---\n');
+    parts.push('## Instrucciones Técnicas\n');
+
+    const dbInstructions = this.getDatabaseInstructions(db, backend, config.arquitectura);
+    dbInstructions.forEach(line => parts.push(line));
+
+    // ── Entregables ───────────────────────────────────────────────────────
+    parts.push('---\n');
+    parts.push('## Entregables — Orden de Generación\n');
+
+    if (isRelational) {
+      parts.push('Genera los entregables en este orden:\n');
+      parts.push('1. **Diagrama ER** — descripción textual de todas las entidades y sus relaciones.');
+      parts.push('2. **Esquema SQL completo** — `CREATE TABLE` con tipos, `NOT NULL`, `DEFAULT`, `CHECK`, `UNIQUE`.');
+      parts.push('3. **Foreign keys y constraints** — `ALTER TABLE ... ADD CONSTRAINT ...`.');
+      parts.push('4. **Índices** — `CREATE INDEX` para todas las columnas de búsqueda frecuente.');
+      parts.push('5. **Entidades ORM** — clases con decoradores para ' + backend + '.');
+      parts.push('6. **Migraciones** — archivos de migración versionados y su rollback.');
+      parts.push('7. **Seeds** — datos iniciales para roles, usuarios admin y catálogos del sistema.');
+      parts.push('8. **Queries frecuentes** — las 5–10 consultas más usadas por la aplicación.');
+    } else if (isMongo) {
+      parts.push('Genera los entregables en este orden:\n');
+      parts.push('1. **Mapa de colecciones** — todas las colecciones y su estrategia embed/reference.');
+      parts.push('2. **Schemas de Mongoose** — con tipos, validaciones, virtuals y métodos.');
+      parts.push('3. **Índices** — `schema.index()` para todos los campos de búsqueda.');
+      parts.push('4. **Aggregation pipelines** — para las consultas complejas del sistema.');
+      parts.push('5. **Seeds** — datos iniciales para desarrollo y testing.');
+      parts.push('6. **Queries frecuentes** — ejemplos de las operaciones más comunes.');
+    } else if (isFirebase) {
+      parts.push('Genera los entregables en este orden:\n');
+      parts.push('1. **Mapa de colecciones** — estructura de colecciones y subcollecciones.');
+      parts.push('2. **Interfaces TypeScript** — tipos para cada documento.');
+      parts.push('3. **Reglas de seguridad** — `firestore.rules` completo por rol de usuario.');
+      parts.push('4. **Índices compuestos** — `firestore.indexes.json`.');
+      parts.push('5. **Cloud Functions** — para operaciones atómicas y triggers.');
+      parts.push('6. **Seeds** — script de carga inicial de datos.');
+    }
+    parts.push('');
+
+    parts.push('---\n');
+    parts.push(
+      '> **Importante:** Genera primero el diagrama ER y espera confirmación antes de continuar. ' +
+      'Cada tabla/colección debe incluir: campo de **auditoría** (`created_at`, `updated_at`, `deleted_at` para soft delete), ' +
+      '**UUID o ID auto-incremental** según la arquitectura, y **versionado** si aplica. ' +
+      '**Prioriza la integridad referencial y el rendimiento en consultas de lectura.**\n'
+    );
+
+    return parts.join('\n');
+  }
+
+  private getDatabaseInstructions(db: string, backend: string, arquitectura: string): string[] {
+    const lines: string[] = [];
+
+    // ── Instrucciones específicas por motor ───────────────────────────────
+    if (db.includes('PostgreSQL')) {
+      lines.push(
+        '### Motor — PostgreSQL\n',
+        '- Usa tipos nativos apropiados: `UUID` (PK), `VARCHAR(n)`, `TEXT`, `INTEGER`, `BIGINT`, `DECIMAL(p,s)`, `BOOLEAN`, `TIMESTAMPTZ`, `JSONB`, `ARRAY`.',
+        '- **UUID v4** como PK con `DEFAULT gen_random_uuid()` (extensión `pgcrypto`).',
+        '- **Soft delete** con columna `deleted_at TIMESTAMPTZ DEFAULT NULL` y vistas filtradas.',
+        '- **Auditoría** con `created_at TIMESTAMPTZ DEFAULT NOW()` y `updated_at` actualizado por trigger.',
+        '- Usa **enums** de PostgreSQL para estados finitos (p. ej. `CREATE TYPE estado_enum AS ENUM (...)`).',
+        '- `JSONB` para datos semiestructurados; indexa con `GIN` si se busca dentro del JSON.',
+        '- Usa `GENERATED ALWAYS AS IDENTITY` para IDs numéricos alternativos.',
+        '- Activa las extensiones necesarias: `CREATE EXTENSION IF NOT EXISTS "pgcrypto";`.',
+        '',
+      );
+    } else if (db.includes('MySQL') || db.includes('MariaDB')) {
+      lines.push(
+        `### Motor — ${db}\n`,
+        '- Motor de tablas: **InnoDB** (obligatorio para foreign keys y transacciones).',
+        '- Charset global: `utf8mb4`, collation `utf8mb4_unicode_ci`.',
+        '- **UUID** como PK: almacena en `CHAR(36)` o `BINARY(16)` para eficiencia.',
+        '- Columnas de auditoría: `created_at DATETIME DEFAULT CURRENT_TIMESTAMP`, `updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`.',
+        '- **Soft delete** con `deleted_at DATETIME DEFAULT NULL`.',
+        '- Usa `ENUM` para estados con valores fijos y pocos posibles valores.',
+        '- Índice compuesto para las búsquedas más frecuentes; evita `SELECT *` en producción.',
+        '',
+      );
+    } else if (db.includes('SQL Server')) {
+      lines.push(
+        '### Motor — SQL Server\n',
+        '- PKs con `UNIQUEIDENTIFIER DEFAULT NEWSEQUENTIALID()` (mejor rendimiento que `NEWID()`).',
+        '- Columnas de auditoría: `CreatedAt DATETIME2 DEFAULT GETUTCDATE()`, `UpdatedAt DATETIME2`.',
+        '- **Soft delete** con `DeletedAt DATETIME2 NULL`.',
+        '- Usa `NVARCHAR(MAX)` para texto largo; `NVARCHAR(n)` para campos acotados.',
+        '- Habilita **Row-Level Security** para control de acceso a filas por rol.',
+        '- Índices **columnstore** para tablas de reporte/analítica.',
+        '',
+      );
+    } else if (db.includes('SQLite')) {
+      lines.push(
+        '### Motor — SQLite\n',
+        '- Usa tipos de afinidad: `INTEGER`, `REAL`, `TEXT`, `BLOB`.',
+        '- PKs: `INTEGER PRIMARY KEY AUTOINCREMENT` o `TEXT` para UUID.',
+        '- Activa foreign keys: `PRAGMA foreign_keys = ON;` al inicio de cada conexión.',
+        '- Columnas de auditoría con `DATETIME DEFAULT (datetime(\'now\',\'utc\'))`.',
+        '- Apropiado para desarrollo local; considera migrar a PostgreSQL/MySQL en producción.',
+        '',
+      );
+    } else if (db.includes('MongoDB')) {
+      lines.push(
+        '### Motor — MongoDB con Mongoose\n',
+        '- Usa `mongoose.Schema` con `{ timestamps: true }` para `createdAt`/`updatedAt` automáticos.',
+        '- PKs: `_id` de Mongoose (ObjectId) — no re-crees uno propio salvo necesidad específica.',
+        '- **Soft delete**: campo `deletedAt: { type: Date, default: null }` + middleware de query.',
+        '- `ref` para referencias entre colecciones; embed para subdocumentos que no se consultan solos.',
+        '- Define todos los tipos explícitamente; evita `Schema.Types.Mixed` salvo para datos realmente dinámicos.',
+        '- Versiona documentos con `__v` (Mongoose lo gestiona) o con campo `version` propio para concurrencia optimista.',
+        '',
+      );
+    } else if (db.includes('Firebase') || db.includes('Firestore')) {
+      lines.push(
+        '### Motor — Cloud Firestore\n',
+        '- Diseña colecciones orientadas a las **consultas**, no al modelo relacional.',
+        '- Subcollecciones para datos que siempre se leen con el documento padre.',
+        '- Colecciones raíz para entidades que se consultan de forma independiente.',
+        '- Desnormalización controlada: duplica campos que se leen frecuentemente para evitar joins.',
+        '- **Batch writes** para operaciones que afectan múltiples documentos atomicamente.',
+        '- Reglas de seguridad granulares: nunca uses `allow read, write: if true;` en producción.',
+        '- Todos los documentos con campos de auditoría: `createdAt: serverTimestamp()`, `updatedAt: serverTimestamp()`.',
+        '',
+      );
+    }
+
+    // ── ORM específico por backend ────────────────────────────────────────
+    if (backend.includes('NestJS') || backend.includes('Express')) {
+      if (db.includes('MongoDB')) {
+        lines.push(
+          '### ORM — Mongoose + NestJS\n',
+          '- Usa `@nestjs/mongoose` con decoradores: `@Schema()`, `@Prop()`, `@InjectModel()`.',
+          '- Define `SchemaFactory.createForClass(Entity)` en el módulo.',
+          '- Usa `HydratedDocument<Entity>` como tipo de retorno en los servicios.',
+          '- Registra el modelo en el módulo con `MongooseModule.forFeature([{ name: Entity.name, schema: EntitySchema }])`.',
+          '',
+        );
+      } else {
+        lines.push(
+          '### ORM — TypeORM + NestJS\n',
+          '- Entidades con `@Entity()`, `@Column()`, `@PrimaryGeneratedColumn(\'uuid\')`, `@CreateDateColumn()`, `@UpdateDateColumn()`, `@DeleteDateColumn()`.',
+          '- Relaciones: `@OneToMany()`, `@ManyToOne()`, `@ManyToMany()` con `@JoinColumn()` / `@JoinTable()`.',
+          '- `@Index()` en columnas de búsqueda frecuente directamente en la entidad.',
+          '- Repositorios inyectados con `@InjectRepository(Entity)`.',
+          '- Migraciones con `TypeORM CLI`: `npm run migration:generate` y `migration:run`.',
+          '- Configura `synchronize: false` en producción; usa solo migraciones.',
+          '',
+        );
+      }
+    } else if (backend.includes('Spring Boot')) {
+      lines.push(
+        '### ORM — Spring Data JPA\n',
+        '- Entidades con `@Entity`, `@Table(name = "...")`, `@Id`, `@GeneratedValue(strategy = GenerationType.UUID)`.',
+        '- Auditoría con `@CreatedDate`, `@LastModifiedDate` y `@EntityListeners(AuditingEntityListener.class)`.',
+        '- Activa auditoría con `@EnableJpaAuditing` en la clase de configuración.',
+        '- Relaciones: `@OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)`, `@ManyToOne(fetch = FetchType.LAZY)`.',
+        '- `@Column(nullable = false, length = 255)` en todos los campos obligatorios.',
+        '- Usa **Flyway** o **Liquibase** para migraciones versionadas.',
+        '',
+      );
+    } else if (backend.includes('Django')) {
+      lines.push(
+        '### ORM — Django ORM\n',
+        '- Modelos con campos tipados: `CharField`, `TextField`, `IntegerField`, `DecimalField`, `DateTimeField`, `BooleanField`, `UUIDField`.',
+        '- Usa `auto_now_add=True` para `created_at` y `auto_now=True` para `updated_at`.',
+        '- **Soft delete**: override de `QuerySet` con `Manager` personalizado y campo `deleted_at`.',
+        '- Relaciones: `ForeignKey(..., on_delete=models.CASCADE)`, `ManyToManyField`, `OneToOneField`.',
+        '- `class Meta: indexes = [models.Index(fields=[...])]` para índices.',
+        '- Migraciones con `python manage.py makemigrations && migrate`.',
+        '',
+      );
+    } else if (backend.includes('Laravel')) {
+      lines.push(
+        '### ORM — Eloquent (Laravel)\n',
+        '- Usa `$fillable` o `$guarded` en todos los modelos; nunca dejes `$guarded = []` en producción.',
+        '- Timestamps automáticos con `$timestamps = true` (default); `SoftDeletes` trait para soft delete.',
+        '- Relaciones: `hasMany`, `belongsTo`, `belongsToMany`, `hasOne` con método nombrado.',
+        '- Migraciones en `database/migrations/` con `up()` y `down()` para rollback.',
+        '- Seeders en `database/seeders/` con `DatabaseSeeder` como punto de entrada.',
+        '- Usa `$casts` para tipos: `\'uuid\' => \'string\'`, `\'metadata\' => \'array\'`, `\'is_active\' => \'boolean\'`.',
+        '',
+      );
+    } else if (backend.includes('FastAPI')) {
+      lines.push(
+        '### ORM — SQLAlchemy 2.0 (FastAPI)\n',
+        '- Usa la API declarativa con `DeclarativeBase` y `Mapped[T]` con `mapped_column()`.',
+        '- PKs: `Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)`.',
+        '- Auditoría: `created_at: Mapped[datetime] = mapped_column(default=func.now())`, `updated_at` con `onupdate=func.now()`.',
+        '- Relaciones: `relationship()` con `back_populates` y `lazy="selectin"` para async.',
+        '- Migraciones con **Alembic**: `alembic revision --autogenerate` y `alembic upgrade head`.',
+        '- Sesiones async con `AsyncSession` e inyectadas via `Depends(get_db)`.',
+        '',
+      );
+    }
+
+    // ── Buenas prácticas de BD ────────────────────────────────────────────
+    lines.push(
+      '### Buenas Prácticas de Base de Datos\n',
+      '- **Normalización (3NF)** en bases relacionales: elimina redundancia y anomalías de actualización.',
+      '- **Índices:** crea índices en todas las FKs, columnas de búsqueda y columnas de ordenamiento frecuente.',
+      '- **Transacciones:** usa transacciones para operaciones que afectan múltiples tablas/colecciones.',
+      '- **Passwords:** almacena solo el hash (bcrypt, costo ≥ 12); nunca texto plano ni MD5/SHA1.',
+      '- **Datos sensibles:** cifra con AES-256 campos PII (número de documento, teléfono, etc.).',
+      '- **Soft delete** en lugar de `DELETE` físico para mantener historial e integridad referencial.',
+      '- **Paginación en BD:** usa `LIMIT/OFFSET` (o `FETCH NEXT`) con índice en columna de orden.',
+      '- **Evita SELECT \\*:** selecciona solo las columnas necesarias en queries de producción.',
+      '- **Variables de entorno:** credenciales de BD en `.env`; nunca hardcodeadas.',
+      '- **Backups:** documenta la estrategia de backup y punto de recuperación (RTO/RPO).',
+      '',
+    );
+
+    // ── Consideraciones por arquitectura ─────────────────────────────────
+    if (arquitectura === 'Microservicios') {
+      lines.push(
+        '### Consideraciones — Arquitectura de Microservicios\n',
+        '- **Database per Service:** cada microservicio tiene su propia BD; nunca comparten esquema.',
+        '- **Sagas** (coreografía o orquestación) para transacciones distribuidas entre servicios.',
+        '- **Eventos de dominio** publicados a la BD de eventos (o message broker) tras cada cambio de estado.',
+        '- Evita JOINs entre bases de datos; desnormaliza o usa vistas materializadas.',
+        '',
+      );
+    }
+
+    return lines;
+  }
+
+  // ─────────────────────────────────────────────
+  //  Generador de Prompt de Diseño
+  // ─────────────────────────────────────────────
+
+  generateDesignPrompt(data: ProjectData, config: PromptConfig): string {
+    const d = config.design;
+    const date = new Date().toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
+    const parts: string[] = [];
+
+    parts.push('# Prompt de Diseño UI/UX\n');
+    parts.push(`> **Generado el:** ${date}  `);
+    parts.push(`> **Proyecto:** ${data.proyecto.nombre}  `);
+    parts.push(`> **Framework UI:** ${d.uiFramework || 'No definido'}  `);
+    parts.push(`> **Estilo:** ${d.designStyle || 'No definido'}\n`);
+    parts.push('---\n');
+
+    parts.push('## Rol y Objetivo\n');
+    parts.push(
+      `Eres un experto en diseño de interfaces de usuario (UI/UX). ` +
+      `Tu tarea es diseñar e implementar la interfaz completa de **${data.proyecto.nombre}** ` +
+      `usando **${d.uiFramework || 'el framework indicado'}** sobre **${config.stackFrontend}**. ` +
+      `El resultado debe ser código funcional, estético y con excelente experiencia de usuario.\n`
+    );
+
+    parts.push('## Descripción del Proyecto\n');
+    parts.push(`${data.proyecto.descripcion}\n`);
+
+    if (data.stakeholders.length > 0) {
+      parts.push('## Usuarios de la Aplicación\n');
+      data.stakeholders.forEach(s => {
+        parts.push(`- **${s.nombre}** — Rol: ${s.rol}, Área: ${s.area}`);
+      });
+      parts.push('');
+    }
+
+    if (data.historias.length > 0) {
+      parts.push('---\n');
+      parts.push('## Vistas / Pantallas Requeridas\n');
+      parts.push('Diseña una vista por cada historia de usuario. Cada vista debe ser funcional, responsive y coherente con el sistema de diseño.\n');
+      data.historias.forEach((h, i) => {
+        parts.push(`### Vista ${String(i + 1).padStart(2, '0')}: ${h.titulo_historia || 'Sin título'}`);
+        if (h.rol && h.quiero) {
+          parts.push(`> Como **${h.rol}**, quiero **${h.quiero}**.`);
+        }
+        if (h.criterios_aceptacion) {
+          const criterios = h.criterios_aceptacion.split(/[;\n]/).map(c => c.trim()).filter(Boolean);
+          criterios.forEach(c => parts.push(`- [ ] ${c}`));
+        }
+        parts.push('');
+      });
+    }
+
+    parts.push('---\n');
+    parts.push('## Especificaciones de Diseño\n');
+
+    parts.push('### Sistema Visual\n');
+    parts.push(`| Propiedad | Valor |`);
+    parts.push(`|-----------|-------|`);
+    parts.push(`| Framework UI | ${d.uiFramework || '—'} |`);
+    parts.push(`| Estilo visual | ${d.designStyle || '—'} |`);
+    parts.push(`| Color principal | ${d.colorPrimary || '—'} |`);
+    parts.push(`| Modo | ${d.darkMode ? 'Dark Mode' : 'Light Mode'} |`);
+    parts.push(`| Layout | ${d.layoutType || '—'} |`);
+    parts.push('');
+
+    parts.push('### Layout y Navegación\n');
+    parts.push(`- Implementa el layout: **${d.layoutType || 'Sidebar + Contenido Principal'}**.`);
+    parts.push('- Navegación con indicador visual de sección activa.');
+    parts.push('- Breadcrumbs en vistas con navegación profunda.');
+    parts.push('- Diseño completamente **responsivo** (mobile-first: sm 640px, md 768px, lg 1024px, xl 1280px).');
+    parts.push('');
+
+    const fwInstructions = this.getFrameworkDesignInstructions(d.uiFramework, config.stackFrontend);
+    if (fwInstructions.length > 0) {
+      parts.push('### Instrucciones del Framework UI\n');
+      fwInstructions.forEach(line => parts.push(line));
+      parts.push('');
+    }
+
+    parts.push('### Principios de Diseño Obligatorios\n');
+    parts.push('- **Consistencia:** sistema de diseño unificado (spacing, paleta, tipografía).');
+    parts.push('- **Accesibilidad (WCAG 2.1 AA):** contraste ≥ 4.5:1, soporte de teclado, `aria-*` labels.');
+    parts.push('- **Feedback visual:** loaders, estados vacíos (empty state), mensajes de error y éxito.');
+    parts.push('- **Tipografía:** máx. 2 familias; escala clara (h1→h6, body, caption, label).');
+    parts.push('- **Micro-interacciones:** transiciones de 0.15–0.25s ease en hover, focus y navegación.');
+    parts.push('');
+
+    parts.push('### Componentes Reutilizables Requeridos\n');
+    parts.push('- **Navbar / Sidebar:** logo, menú de navegación, perfil de usuario, logout.');
+    parts.push('- **Tablas de datos:** paginación, búsqueda, ordenamiento y acciones por fila.');
+    parts.push('- **Formularios:** validación en tiempo real, mensajes de error inline, estados de carga.');
+    parts.push('- **Cards:** para mostrar resúmenes con acciones (ver, editar, eliminar).');
+    parts.push('- **Modales / Dialogs:** para confirmar acciones destructivas y formularios secundarios.');
+    parts.push('- **Badges de estado:** activo, inactivo, pendiente, completado.');
+    parts.push('- **Toast / Snackbar:** para confirmar operaciones CRUD.');
+    parts.push('- **Dashboard / Overview:** KPI cards con métricas clave del proyecto.');
+    parts.push('');
+
+    if (d.notasDiseno) {
+      parts.push('### Notas Adicionales\n');
+      parts.push(d.notasDiseno);
+      parts.push('');
+    }
+
+    parts.push('---\n');
+    parts.push('## Orden de Entregables\n');
+    parts.push('1. **Tokens de diseño** — variables CSS / tokens del framework (colores, spacing, tipografía, sombras).');
+    parts.push('2. **Layout principal** — estructura de navegación y contenedor de páginas.');
+    parts.push('3. **Componentes compartidos** — navbar/sidebar, footer, loaders, empty states, toasts.');
+    parts.push('4. **Vista por vista** — una por cada historia de usuario listada arriba.');
+    parts.push('5. **Formularios** — con validación y feedback visual completo.');
+    parts.push('6. **Guía de estilos** — decisiones de diseño documentadas (colores, tipografía, espaciado).');
+    parts.push('');
+    parts.push('> **Recuerda:** Diseña primero en **mobile**, luego adapta a tablet y desktop. ' +
+      'Prioriza la **usabilidad** sobre el impacto visual. Cada componente debe ser accesible por teclado.\n');
+
+    return parts.join('\n');
+  }
+
+  private getFrameworkDesignInstructions(uiFramework: string, frontend: string): string[] {
+    const lines: string[] = [];
+
+    if (uiFramework.includes('Tailwind')) {
+      lines.push(
+        '- Usa **utility classes de Tailwind** directamente en los templates.',
+        '- Define `tailwind.config.js` con los colores, fuentes y breakpoints del proyecto.',
+        '- Usa `@apply` en CSS solo para componentes muy repetidos.',
+        '- Instala **tailwind-merge** (`twMerge` / `cn()`) para combinar clases dinámicamente.',
+        `- ${frontend.includes('React') || frontend.includes('Next') ? 'Considera **shadcn/ui** como capa de componentes sobre Tailwind.' : frontend.includes('Angular') ? 'Considera **DaisyUI** o construye los componentes manualmente.' : 'Considera **DaisyUI** como capa de componentes sobre Tailwind.'}`,
+      );
+    } else if (uiFramework.includes('Angular Material')) {
+      lines.push(
+        '- Define un **custom theme** con `mat.define-theme()` en `styles.scss`.',
+        '- Usa `MatToolbarModule`, `MatSidenavModule`, `MatTableModule`, `MatFormFieldModule`, `MatButtonModule`.',
+        '- Implementa el **CDK** para drag-and-drop, virtual scroll y portals.',
+        '- `MatSnackBarModule` para notificaciones; `MatDialogModule` para confirmaciones.',
+        '- Aprovecha `MatPaginatorModule` y `MatSortModule` en todas las tablas.',
+      );
+    } else if (uiFramework.includes('PrimeNG')) {
+      lines.push(
+        '- Configura el preset de tema (e.g., `Aura`) en `app.config.ts` con `providePrimeNG`.',
+        '- Usa `p-table` con `lazy` para tablas con paginación server-side.',
+        '- `p-toast` + `MessageService` para notificaciones globales.',
+        '- `p-confirmDialog` + `ConfirmationService` para acciones destructivas.',
+        '- Define los tokens de color en el objeto `theme.preset` para consistencia.',
+      );
+    } else if (uiFramework.includes('Bootstrap')) {
+      lines.push(
+        '- Sobreescribe las variables SCSS de Bootstrap en `_variables.scss` antes del import.',
+        '- Usa el **grid system** (`row`/`col-*`) y utilidades de spacing (`m-*`, `p-*`, `gap-*`).',
+        '- Usa los componentes nativos Bootstrap 5: `modal`, `offcanvas`, `toast`, `dropdown`.',
+        '- Evita jQuery; usa la **API JS de Bootstrap 5** o `ng-bootstrap` para Angular.',
+        '- Importa solo los módulos SCSS que necesitas (tree-shaking).',
+      );
+    } else if (uiFramework.includes('Chakra')) {
+      lines.push(
+        '- Envuelve la app con `<ChakraProvider theme={theme}>` en el root.',
+        '- Personaliza con `extendTheme({ colors, fonts, components })`.',
+        '- Usa los tokens de layout: `<Box>`, `<Flex>`, `<Grid>`, `<Stack>`, `<VStack>`, `<HStack>`.',
+        '- Modo claro/oscuro con `useColorMode` y `useColorModeValue`.',
+        '- `useToast` para notificaciones; `useDisclosure` para modales.',
+      );
+    } else if (uiFramework.includes('shadcn')) {
+      lines.push(
+        '- Instala componentes individualmente: `npx shadcn@latest add [component]`.',
+        '- Los componentes viven en `components/ui/`; modifícalos libremente.',
+        '- Usa `cn()` de `lib/utils` (combina `clsx` + `tailwind-merge`) para clases dinámicas.',
+        '- Integra **Lucide React** para iconografía consistente.',
+        '- Usa `<Toaster>` de `sonner` para notificaciones.',
+      );
+    } else if (uiFramework.includes('Vuetify')) {
+      lines.push(
+        '- Configura el plugin en `main.ts`: `createVuetify({ theme: { themes: { light: {...} } } })`.',
+        '- Usa el grid de Vuetify: `v-container`, `v-row`, `v-col`.',
+        '- `v-data-table` con `server-items-length` para tablas con paginación server-side.',
+        '- `v-snackbar` para notificaciones; `v-dialog` para confirmaciones.',
+        '- Usa los **Vuetify composables** (`useDisplay`, `useTheme`) para breakpoints y temas.',
+      );
+    }
+
+    return lines;
   }
 }
