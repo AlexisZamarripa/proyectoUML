@@ -127,20 +127,34 @@ export class PromptGeneratorService {
     const enabled = (id: string) => config.sections.find(s => s.id === id)?.enabled ?? true;
 
     const date = new Date().toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
+
+    // ── Rol / System Prompt ────────────────────────────────────────────────
+    parts.push(this.buildRolSection(data, config));
+
     parts.push('# Solicitud de Desarrollo de Software\n');
     parts.push(`> **Generado el:** ${date}  `);
     parts.push(`> **Proyecto:** ${data.proyecto.nombre}  `);
-    parts.push(`> **Stack:** ${[config.stackFrontend, config.stackBackend, config.stackDatabase].filter(Boolean).join(' · ')}\n`);
+    parts.push(`> **Stack:** ${[config.stackFrontend, config.stackBackend, config.stackDatabase].filter(Boolean).join(' · ')}  `);
+    parts.push(`> **Arquitectura:** ${config.arquitectura || 'No definida'}\n`);
     parts.push('---\n');
+
+    // ── Advertencias de datos faltantes ────────────────────────────────────
+    const advertencias = this.buildAdvertenciasSection(data, config);
+    if (advertencias) parts.push(advertencias);
+
     parts.push('## Contexto General\n');
     parts.push(
-      'Este documento contiene el análisis completo de requerimientos del proyecto. ' +
-      'Tu misión es generar el **código fuente completo, funcional y listo para producción** ' +
+      'Este documento contiene el análisis completo de requerimientos del proyecto **' + data.proyecto.nombre + '**. ' +
+      'Tu misión es generar el **código fuente completo, funcional y listo para ejecución local** ' +
       'siguiendo las instrucciones técnicas y los estándares de calidad definidos al final de este documento.\n'
     );
-    parts.push('> **Importante:** Lee todo el documento antes de generar código. ' +
-      'Cada sección aporta contexto esencial para tomar decisiones de diseño correctas.\n');
+    parts.push('> **⚠️ Importante:** Lee **TODO** el documento antes de generar código. ' +
+      'Cada sección aporta contexto esencial para tomar decisiones de diseño correctas. ' +
+      'Si tienes dudas sobre un requerimiento, prioriza la interpretación más segura y documentada.\n');
+    parts.push('> **📌 Nota:** Este prompt tiene prompts complementarios para **Diseño UI/UX** y **Base de Datos** ' +
+      'que se generaron a partir de los mismos datos. Si los recibes, úsalos como referencia cruzada.\n');
 
+    // ── Datos del proyecto ─────────────────────────────────────────────────
     if (enabled('proyecto')) parts.push(this.buildProyectoSection(data.proyecto));
     if (enabled('stakeholders') && data.stakeholders.length > 0) parts.push('---\n', this.buildStakeholdersSection(data.stakeholders));
     if (enabled('procesos') && data.procesos.length > 0) parts.push('---\n', this.buildProcesosSection(data.procesos));
@@ -153,6 +167,20 @@ export class PromptGeneratorService {
     if (enabled('seguimientos') && data.seguimientos.length > 0) parts.push('---\n', this.buildSeguimientoSection(data.seguimientos));
     if (enabled('diagramas') && data.diagramas.length > 0) parts.push('---\n', this.buildDiagramasSection(data.diagramas));
 
+    // ── Secciones sintetizadas (derivadas automáticamente) ─────────────────
+    const glosario = this.buildGlosarioSection(data);
+    if (glosario) parts.push('---\n', glosario);
+
+    const reglas = this.buildReglasNegocioSection(data);
+    if (reglas) parts.push('---\n', reglas);
+
+    const validaciones = this.buildReglasValidacionSection(data);
+    if (validaciones) parts.push('---\n', validaciones);
+
+    const casosUso = this.buildCasosUsoUMLSection(data);
+    if (casosUso) parts.push('---\n', casosUso);
+
+    // ── Instrucciones técnicas ─────────────────────────────────────────────
     parts.push(this.buildInstruccionesSection(config));
 
     return parts.join('\n');
@@ -424,6 +452,373 @@ export class PromptGeneratorService {
     return ['## 11. Arquitectura — Diagramas UML\n', ...items].join('\n');
   }
 
+  // ─────────────────────────────────────────────
+  //  Secciones Sintetizadas (generadas automáticamente)
+  // ─────────────────────────────────────────────
+
+  private buildRolSection(data: ProjectData, config: PromptConfig): string {
+    const stack = [config.stackFrontend, config.stackBackend, config.stackDatabase].filter(Boolean).join(', ');
+    return [
+      '## 🧠 Rol del Agente\n',
+      `Eres un **ingeniero de software senior full-stack** con más de 15 años de experiencia en desarrollo de aplicaciones empresariales. ` +
+      `Dominas profundamente **${stack}** y la arquitectura **${config.arquitectura || 'modular'}**.\n`,
+      'Tu enfoque:\n',
+      '1. **Analiza** todo el documento de requerimientos antes de escribir una sola línea de código.',
+      '2. **Planifica** la arquitectura y la estructura de carpetas antes de implementar.',
+      '3. **Identifica** las entidades del dominio, sus relaciones y las reglas de negocio.',
+      '4. **Implementa** siguiendo las mejores prácticas del stack seleccionado.',
+      '5. **Valida** que cada componente cumple con los criterios de aceptación documentados.',
+      '',
+      '> **Instrucción de razonamiento:** Antes de generar código, piensa paso a paso:',
+      '> 1. ¿Qué entidades necesito crear?',
+      '> 2. ¿Qué relaciones existen entre ellas?',
+      '> 3. ¿Qué endpoints/servicios necesito?',
+      '> 4. ¿Qué validaciones debe tener cada campo?',
+      '> 5. ¿Qué flujos de usuario debo soportar?',
+      '',
+      '---\n',
+    ].join('\n');
+  }
+
+  private buildAdvertenciasSection(data: ProjectData, config: PromptConfig): string {
+    const warnings: string[] = [];
+    const enabled = (id: string) => config.sections.find(s => s.id === id)?.enabled ?? true;
+
+    if (data.historias.length === 0 && enabled('historias')) {
+      warnings.push('⚠️ **No hay Historias de Usuario definidas.** El agente deberá inferir los módulos y funcionalidades a partir de los procesos y entrevistas. Se recomienda agregar historias de usuario para obtener mejores resultados.');
+    }
+    if (data.diagramas.length === 0 && enabled('diagramas')) {
+      warnings.push('⚠️ **No hay Diagramas UML.** El agente deberá inferir la estructura de entidades y relaciones. Se recomienda crear al menos un diagrama de clases.');
+    }
+    if (data.procesos.length === 0 && enabled('procesos')) {
+      warnings.push('⚠️ **No hay Procesos de Negocio definidos.** El agente no tendrá contexto sobre los flujos de trabajo del sistema.');
+    }
+    if (data.stakeholders.length === 0 && enabled('stakeholders')) {
+      warnings.push('⚠️ **No hay Stakeholders definidos.** El agente no conocerá los roles de usuario del sistema.');
+    }
+    if (data.entrevistas.length === 0 && data.encuestas.length === 0 && data.observaciones.length === 0 && data.focusGroups.length === 0) {
+      warnings.push('⚠️ **No hay datos de investigación (entrevistas, encuestas, observaciones, focus groups).** Las reglas de negocio no podrán sintetizarse automáticamente.');
+    }
+
+    const classDiags = data.diagramas.filter(d => d.tipo === 'clases');
+    if (classDiags.length === 0 && data.diagramas.length > 0) {
+      warnings.push('ℹ️ **No hay diagrama de clases.** El agente deberá inferir las entidades. Se recomienda crear un diagrama de clases para definir la estructura de datos.');
+    }
+
+    if (warnings.length === 0) return '';
+
+    return [
+      '## ⚠️ Notas sobre los Datos del Proyecto\n',
+      ...warnings.map(w => `- ${w}`),
+      '',
+    ].join('\n');
+  }
+
+  private buildGlosarioSection(data: ProjectData): string {
+    const terms = new Map<string, string>();
+
+    // Extraer términos de procesos
+    data.procesos.forEach(p => {
+      terms.set(p.nombre, `Proceso de negocio: ${p.descripcion?.substring(0, 80) || 'sin descripción'}${p.descripcion && p.descripcion.length > 80 ? '...' : ''}`);
+      p.subprocesos?.forEach(sp => {
+        terms.set(sp.nombre, `Subproceso de "${p.nombre}": ${sp.descripcion?.substring(0, 60) || 'sin descripción'}${sp.descripcion && sp.descripcion.length > 60 ? '...' : ''}`);
+      });
+    });
+
+    // Extraer roles de stakeholders
+    const roles = new Set<string>();
+    data.stakeholders.forEach(s => {
+      if (s.rol) roles.add(s.rol);
+      if (s.area) terms.set(s.area, `Área organizacional donde operan stakeholders`);
+    });
+    roles.forEach(r => terms.set(r, 'Rol de usuario del sistema'));
+
+    // Extraer entidades de diagramas de clases
+    data.diagramas.filter(d => d.tipo === 'clases').forEach(d => {
+      d.nodes?.forEach(n => {
+        if (n.kind === 'class' || n.kind === 'interface' || n.kind === 'abstract') {
+          const attrs = n.attributes?.map(a => a.text).join(', ') || 'sin atributos';
+          terms.set(n.label, `Entidad del dominio (${n.kind})${n.stereotype ? ` «${n.stereotype}»` : ''} — atributos: ${attrs}`);
+        }
+      });
+    });
+
+    // Extraer roles de historias de usuario
+    data.historias.forEach(h => {
+      if (h.rol && !terms.has(h.rol)) {
+        terms.set(h.rol, 'Rol de usuario mencionado en historias de usuario');
+      }
+    });
+
+    if (terms.size === 0) return '';
+
+    const sorted = Array.from(terms.entries()).sort((a, b) => a[0].localeCompare(b[0], 'es'));
+    const items = sorted.map(([term, desc]) => `| **${term}** | ${desc} |`);
+
+    return [
+      '## 📖 Glosario del Dominio (Ubiquitous Language)\n',
+      'Usa estos nombres **exactamente** como se definen aquí en todo el código (variables, clases, endpoints, tablas de BD). ' +
+      'La consistencia en el vocabulario es fundamental para la mantenibilidad del sistema.\n',
+      '| Término | Definición |',
+      '|---------|-----------|',
+      ...items,
+      '',
+    ].join('\n');
+  }
+
+  private buildReglasNegocioSection(data: ProjectData): string {
+    const reglas: string[] = [];
+    let reglaNum = 1;
+
+    // Extraer reglas de entrevistas (de las respuestas)
+    data.entrevistas.forEach(e => {
+      e.preguntas?.forEach(q => {
+        if (q.respuesta && q.respuesta.length > 15) {
+          // Buscar patrones de reglas de negocio en respuestas
+          const resp = q.respuesta;
+          if (this.containsBusinessRulePattern(resp)) {
+            reglas.push(`**RN-${String(reglaNum++).padStart(3, '0')}** (Entrevista: "${e.titulo_entrevista || 'Sin título'}"): ${this.extractBusinessRule(resp)}`);
+          }
+        }
+      });
+    });
+
+    // Extraer reglas de observaciones (hallazgos)
+    data.observaciones.forEach(o => {
+      if (o.hallazgos_puntos_clave) {
+        const hallazgos = o.hallazgos_puntos_clave.split(/[;.\n]/).map(h => h.trim()).filter(h => h.length > 10);
+        hallazgos.forEach(h => {
+          reglas.push(`**RN-${String(reglaNum++).padStart(3, '0')}** (Observación: "${o.titulo}"): ${h}`);
+        });
+      }
+    });
+
+    // Extraer reglas de focus groups (conclusiones)
+    data.focusGroups.forEach(fg => {
+      if (fg.conclusiones) {
+        const conclusiones = fg.conclusiones.split(/[;.\n]/).map(c => c.trim()).filter(c => c.length > 10);
+        conclusiones.forEach(c => {
+          reglas.push(`**RN-${String(reglaNum++).padStart(3, '0')}** (Focus Group: "${fg.nombre_focus}"): ${c}`);
+        });
+      }
+    });
+
+    // Extraer reglas de documentos (hallazgos y recomendaciones)
+    data.documentos.forEach(d => {
+      d.hallazgos?.forEach(h => {
+        if (h.length > 10) {
+          reglas.push(`**RN-${String(reglaNum++).padStart(3, '0')}** (Documento: "${d.titulo}"): ${h}`);
+        }
+      });
+      if (d.recomendaciones && d.recomendaciones.length > 10) {
+        const recs = d.recomendaciones.split(/[;.\n]/).map(r => r.trim()).filter(r => r.length > 10);
+        recs.forEach(r => {
+          reglas.push(`**RN-${String(reglaNum++).padStart(3, '0')}** (Recomendación doc: "${d.titulo}"): ${r}`);
+        });
+      }
+    });
+
+    // Extraer reglas de seguimientos (problemas)
+    data.seguimientos.forEach(s => {
+      s.problemas?.forEach(p => {
+        if (p.length > 10) {
+          reglas.push(`**RN-${String(reglaNum++).padStart(3, '0')}** (Problema detectado: "${s.titulo}"): El sistema debe resolver: ${p}`);
+        }
+      });
+    });
+
+    if (reglas.length === 0) return '';
+
+    return [
+      '## 📋 Reglas de Negocio Sintetizadas\n',
+      'Las siguientes reglas fueron extraídas automáticamente de las entrevistas, observaciones, focus groups, documentos y seguimientos del proyecto. ' +
+      '**Cada regla debe ser implementada en la lógica de negocio del backend** y validada en el frontend cuando aplique.\n',
+      ...reglas.map(r => `- ${r}`),
+      '',
+      '> **Nota:** Si alguna regla es ambigua, implementa la interpretación más restrictiva y documenta la decisión en un comentario del código.\n',
+    ].join('\n');
+  }
+
+  private buildReglasValidacionSection(data: ProjectData): string {
+    const validaciones: { historia: string; criterios: string[] }[] = [];
+
+    data.historias.forEach((h, i) => {
+      if (!h.criterios_aceptacion) return;
+      const criterios = h.criterios_aceptacion.split(/[;\n]/).map(c => c.trim()).filter(c => c.length > 0);
+      if (criterios.length > 0) {
+        validaciones.push({
+          historia: `HU-${String(i + 1).padStart(3, '0')}: ${h.titulo_historia || 'Sin título'}`,
+          criterios,
+        });
+      }
+    });
+
+    if (validaciones.length === 0) return '';
+
+    const items: string[] = [];
+    validaciones.forEach(v => {
+      items.push(`### ${v.historia}\n`);
+      v.criterios.forEach((c, i) => {
+        items.push(`${i + 1}. ${c}`);
+      });
+      items.push('');
+    });
+
+    return [
+      '## ✅ Reglas de Validación (Criterios de Aceptación)\n',
+      'Cada criterio listado a continuación es una **condición verificable** que el código generado debe cumplir. ' +
+      'Úsalos como base para validaciones en el backend (DTOs, guards, middleware) y en el frontend (validadores de formulario, UX).\n',
+      ...items,
+    ].join('\n');
+  }
+
+  private buildCasosUsoUMLSection(data: ProjectData): string {
+    const casosUsoDiags = data.diagramas.filter(d => d.tipo === 'casos-uso');
+    if (casosUsoDiags.length === 0) return '';
+
+    const items: string[] = [];
+    casosUsoDiags.forEach(d => {
+      items.push(`### ${d.nombre}${d.descripcion ? ` — ${d.descripcion}` : ''}\n`);
+
+      // Separar actores de casos de uso
+      const actores = d.nodes?.filter(n => n.kind === 'actor') || [];
+      const casosUso = d.nodes?.filter(n => n.kind !== 'actor' && n.kind !== 'note') || [];
+      const notas = d.nodes?.filter(n => n.kind === 'note') || [];
+
+      if (actores.length > 0) {
+        items.push('**Actores del sistema:**\n');
+        actores.forEach(a => {
+          // Buscar qué casos de uso tiene conectados
+          const relaciones = d.relations?.filter(r => r.sourceId === a.id || r.targetId === a.id) || [];
+          const casosConectados = relaciones.map(r => {
+            const otherId = r.sourceId === a.id ? r.targetId : r.sourceId;
+            return d.nodes?.find(n => n.id === otherId)?.label || otherId;
+          });
+          items.push(`- **${a.label}**${casosConectados.length > 0 ? ` → Participa en: ${casosConectados.join(', ')}` : ''}`);
+        });
+        items.push('');
+      }
+
+      if (casosUso.length > 0) {
+        items.push('**Casos de uso:**\n');
+        casosUso.forEach(cu => {
+          items.push(`- **${cu.label}**${cu.stereotype ? ` «${cu.stereotype}»` : ''}${cu.noteText ? ` — Nota: ${cu.noteText}` : ''}`);
+
+          // Buscar relaciones de include/extend
+          const rels = d.relations?.filter(r => r.sourceId === cu.id || r.targetId === cu.id) || [];
+          rels.forEach(r => {
+            if (r.kind === 'include' || r.kind === 'extend' || r.label?.includes('include') || r.label?.includes('extend')) {
+              const otherId = r.sourceId === cu.id ? r.targetId : r.sourceId;
+              const other = d.nodes?.find(n => n.id === otherId)?.label || otherId;
+              items.push(`  - ${r.kind === 'include' || r.label?.includes('include') ? '«include»' : '«extend»'} → ${other}`);
+            }
+          });
+        });
+        items.push('');
+      }
+
+      if (notas.length > 0) {
+        items.push('**Notas:**\n');
+        notas.forEach(n => {
+          items.push(`- ${n.noteText || n.label}`);
+        });
+        items.push('');
+      }
+    });
+
+    return [
+      '## 🎭 Casos de Uso — Flujos de Interacción\n',
+      'Los siguientes diagramas de casos de uso definen las interacciones entre los actores y el sistema. ' +
+      'Cada caso de uso debe traducirse en **al menos un endpoint en el backend** y **una vista o acción en el frontend**.\n',
+      ...items,
+    ].join('\n');
+  }
+
+  /** Detecta si una cadena contiene patrones de regla de negocio */
+  private containsBusinessRulePattern(text: string): boolean {
+    const patterns = [
+      /debe[ns]?\s/i, /no\s+puede/i, /no\s+debe/i, /siempre\s/i, /nunca\s/i,
+      /obligatori/i, /requiere/i, /necesita/i, /máximo/i, /mínimo/i,
+      /solo\s+puede/i, /únicamente/i, /no\s+se\s+permite/i, /es\s+necesario/i,
+      /tiene\s+que/i, /hay\s+que/i, /se\s+requiere/i, /importante/i,
+      /validar/i, /verificar/i, /comprobar/i, /asegurar/i,
+      /restricci[oó]n/i, /limitaci[oó]n/i, /condici[oó]n/i,
+    ];
+    return patterns.some(p => p.test(text));
+  }
+
+  /** Extrae y limpia una regla de negocio de un texto */
+  private extractBusinessRule(text: string): string {
+    // Limitar a ~200 chars, cortar en punto o coma más cercano
+    let clean = text.trim();
+    if (clean.length > 200) {
+      const cutoff = clean.lastIndexOf('.', 200);
+      clean = cutoff > 50 ? clean.substring(0, cutoff + 1) : clean.substring(0, 200) + '...';
+    }
+    return clean;
+  }
+
+  private buildFlujosUsuarioSection(data: ProjectData): string {
+    const casosUsoDiags = data.diagramas.filter(d => d.tipo === 'casos-uso');
+    if (casosUsoDiags.length === 0 && data.historias.length === 0) return '';
+
+    const items: string[] = [];
+
+    // Flujos derivados de diagramas de casos de uso
+    casosUsoDiags.forEach(d => {
+      const actores = d.nodes?.filter(n => n.kind === 'actor') || [];
+
+      actores.forEach(actor => {
+        const relaciones = d.relations?.filter(r => r.sourceId === actor.id || r.targetId === actor.id) || [];
+        const casosConectados = relaciones.map(r => {
+          const otherId = r.sourceId === actor.id ? r.targetId : r.sourceId;
+          return d.nodes?.find(n => n.id === otherId)?.label || otherId;
+        }).filter(Boolean);
+
+        if (casosConectados.length > 0) {
+          items.push(`### Flujo: ${actor.label}\n`);
+          items.push(`El usuario con rol **${actor.label}** interactúa con el sistema a través de:\n`);
+          casosConectados.forEach((cu, i) => {
+            items.push(`${i + 1}. **${cu}** → Diseñar vista/modal correspondiente`);
+          });
+          items.push('');
+        }
+      });
+    });
+
+    // Flujos derivados de historias de usuario agrupadas por rol
+    if (data.historias.length > 0) {
+      const porRol = new Map<string, string[]>();
+      data.historias.forEach(h => {
+        const rol = h.rol || 'Usuario';
+        if (!porRol.has(rol)) porRol.set(rol, []);
+        porRol.get(rol)!.push(h.quiero || h.titulo_historia || 'Acción no definida');
+      });
+
+      porRol.forEach((acciones, rol) => {
+        // Solo agregar si no fue cubierto por los diagramas de casos de uso
+        const yaCubierto = items.some(item => item.includes(`Flujo: ${rol}`));
+        if (!yaCubierto) {
+          items.push(`### Flujo: ${rol}\n`);
+          items.push(`El usuario con rol **${rol}** necesita:\n`);
+          acciones.forEach((a, i) => {
+            items.push(`${i + 1}. ${a}`);
+          });
+          items.push('');
+        }
+      });
+    }
+
+    if (items.length === 0) return '';
+
+    return [
+      '## 🔄 Flujos de Usuario\n',
+      'Los siguientes flujos de navegación fueron derivados de los diagramas de casos de uso y las historias de usuario. ' +
+      'Cada flujo representa un recorrido que el usuario hace por la aplicación.\n',
+      ...items,
+    ].join('\n');
+  }
+
   private buildInstruccionesSection(config: PromptConfig): string {
     const stack: string[] = [];
     if (config.stackFrontend) stack.push(`- **Frontend:** ${config.stackFrontend}`);
@@ -511,18 +906,43 @@ export class PromptGeneratorService {
       '- Lazy loading de módulos/rutas en el frontend.',
       '',
 
-      '### 6. Entregables — Orden de Generación\n',
-      '1. **Estructura del proyecto** — árbol de carpetas con comentarios.',
-      '2. **Configuración** — `.env.example`, `package.json`, archivos de configuración.',
-      '3. **Base de datos** — migraciones, esquema SQL o entidades ORM.',
-      '4. **Backend** — módulos, servicios, controladores, guards, DTOs, pipes.',
-      '5. **Frontend** — componentes, servicios, rutas, guards, modelos.',
-      '6. **Instrucciones de ejecución** — pasos para instalar y correr el proyecto.',
+      '### 6. Proceso de Desarrollo — Chain of Thought\n',
+      'Antes de generar código, documenta tu razonamiento:\n',
+      '1. **Análisis de entidades:** Lista todas las entidades que identificas y sus relaciones.',
+      '2. **Mapa de endpoints:** Lista todos los endpoints REST que vas a crear (método, ruta, descripción).',
+      '3. **Plan de componentes:** Lista los componentes/vistas del frontend y qué datos consumen.',
+      '4. **Decisiones de diseño:** Documenta cualquier decisión que tomes ante ambigüedad en los requerimientos.',
+      '5. **Implementación:** Solo después de los pasos anteriores, genera el código.\n',
+      '',
+
+      '### 7. Entregables — Orden de Generación\n',
+      '1. **Análisis previo** — Resumen de tu interpretación de los requerimientos (entidades, relaciones, endpoints).',
+      '2. **Estructura del proyecto** — Árbol de carpetas completo con explicación de cada directorio.',
+      '3. **Configuración** — `.env.example`, `package.json` (frontend y backend), archivos de configuración.',
+      '4. **Base de datos** — Migraciones, esquema SQL o entidades ORM, seeds.',
+      '5. **Backend** — Módulos, servicios, controladores, guards, DTOs, pipes, interceptors.',
+      '6. **Frontend** — Componentes, servicios HTTP, rutas, guards, modelos/interfaces.',
+      '7. **Instrucciones de ejecución** — README.md con pasos para instalar, configurar y ejecutar el proyecto.',
+      '',
+
+      '### 8. Formato de Output\n',
+      'Genera el código **archivo por archivo** usando este formato exacto:\n',
+      '```',
+      '📁 ruta/completa/al/archivo.ext',
+      '```',
+      '```lenguaje',
+      '// contenido del archivo',
+      '```\n',
+      '- Usa **rutas relativas** desde la raíz del proyecto.',
+      '- Incluye **todos** los imports necesarios en cada archivo.',
+      '- No uses comentarios tipo `// ... rest of the code` — genera el archivo **completo**.',
+      '- Si un archivo es muy largo (>300 líneas), divídelo en módulos más pequeños.',
       '',
 
       '---\n',
-      '> Genera el código **archivo por archivo**, indicando la ruta completa antes de cada bloque. ' +
-      '**Prioriza calidad sobre velocidad.**\n',
+      '> 📌 **Recuerda:** Este prompt tiene prompts complementarios para **Diseño UI/UX** y **Base de Datos** generados a partir de los mismos datos del proyecto. ' +
+      'Si los recibes, úsalos como fuente de verdad para la interfaz y el esquema de BD.\n',
+      '> 🎯 **Prioriza calidad sobre velocidad.** El código debe ser funcional, tipado, documentado y listo para ejecutarse en un entorno de desarrollo local.\n',
     ].join('\n');
   }
 
@@ -877,6 +1297,73 @@ export class PromptGeneratorService {
       });
     }
 
+    // ── Reglas de integridad de criterios de aceptación ─────────────────────
+    if (data.historias.length > 0) {
+      const integrityRules: string[] = [];
+      data.historias.forEach((h, i) => {
+        if (!h.criterios_aceptacion) return;
+        const criterios = h.criterios_aceptacion.split(/[;\n]/).map(c => c.trim()).filter(c => c.length > 0);
+        const dbRelevant = criterios.filter(c => {
+          const lower = c.toLowerCase();
+          return lower.includes('único') || lower.includes('unico') || lower.includes('obligatori') ||
+            lower.includes('no puede') || lower.includes('no debe') || lower.includes('máximo') ||
+            lower.includes('mínimo') || lower.includes('formato') || lower.includes('válid') ||
+            lower.includes('requerid') || lower.includes('no nulo') || lower.includes('not null') ||
+            lower.includes('por defecto') || lower.includes('default') || lower.includes('cascad') ||
+            lower.includes('relación') || lower.includes('referencia') || lower.includes('depend');
+        });
+        if (dbRelevant.length > 0) {
+          integrityRules.push(`**HU-${String(i + 1).padStart(3, '0')}** (${h.titulo_historia || 'Sin título'}):`);
+          dbRelevant.forEach(r => integrityRules.push(`  - ${r}`));
+        }
+      });
+
+      if (integrityRules.length > 0) {
+        parts.push('---\n');
+        parts.push('## ✅ Reglas de Integridad de Datos\n');
+        parts.push('Las siguientes reglas fueron extraídas de los criterios de aceptación y deben implementarse como **constraints en la BD** ' +
+          '(CHECK, UNIQUE, NOT NULL, DEFAULT, triggers):\n');
+        integrityRules.forEach(r => parts.push(r));
+        parts.push('');
+      }
+    }
+
+    // ── Estimación de volúmenes ────────────────────────────────────────────
+    {
+      const volumeEstimates: string[] = [];
+      if (data.stakeholders.length > 0) {
+        const roles = new Set(data.stakeholders.map(s => s.rol));
+        volumeEstimates.push(`- **Roles de usuario:** ${roles.size} roles distintos (${Array.from(roles).join(', ')})`);
+        volumeEstimates.push(`- **Stakeholders registrados:** ${data.stakeholders.length}`);
+      }
+      if (data.procesos.length > 0) {
+        const totalSubprocesos = data.procesos.reduce((acc, p) => acc + (p.subprocesos?.length || 0), 0);
+        volumeEstimates.push(`- **Procesos de negocio:** ${data.procesos.length} procesos, ${totalSubprocesos} subprocesos`);
+      }
+      if (data.encuestas.length > 0) {
+        const totalParticipantes = data.encuestas.reduce((acc, e) => acc + (e.numero_participantes_esperados || 0), 0);
+        if (totalParticipantes > 0) {
+          volumeEstimates.push(`- **Participantes de encuestas:** ~${totalParticipantes} (referencia para dimensionar tablas de usuarios/respuestas)`);
+        }
+      }
+      if (data.historias.length > 0) {
+        volumeEstimates.push(`- **Historias de usuario:** ${data.historias.length} (referencia para módulos/tablas del sistema)`);
+      }
+      const classDiags = data.diagramas.filter(d2 => d2.tipo === 'clases');
+      if (classDiags.length > 0) {
+        const totalEntities = classDiags.reduce((acc, d2) => acc + (d2.nodes?.filter(n => n.kind === 'class' || n.kind === 'abstract').length || 0), 0);
+        volumeEstimates.push(`- **Entidades identificadas:** ${totalEntities} (del diagrama de clases)`);
+      }
+
+      if (volumeEstimates.length > 0) {
+        parts.push('---\n');
+        parts.push('## 📊 Estimación de Volúmenes\n');
+        parts.push('Usa estos datos como referencia para dimensionar índices, particiones y estrategias de paginación:\n');
+        volumeEstimates.forEach(v => parts.push(v));
+        parts.push('');
+      }
+    }
+
     // ── Instrucciones técnicas ────────────────────────────────────────────
     parts.push('---\n');
     parts.push('## Instrucciones Técnicas\n');
@@ -924,6 +1411,7 @@ export class PromptGeneratorService {
       '**UUID o ID auto-incremental** según la arquitectura, y **versionado** si aplica. ' +
       '**Prioriza la integridad referencial y el rendimiento en consultas de lectura.**\n'
     );
+    parts.push('> 📌 **Este prompt tiene prompts complementarios para Código Fuente y Diseño UI/UX** generados a partir de los mismos datos.\n');
 
     return parts.join('\n');
   }
@@ -1116,38 +1604,99 @@ export class PromptGeneratorService {
     parts.push(`> **Generado el:** ${date}  `);
     parts.push(`> **Proyecto:** ${data.proyecto.nombre}  `);
     parts.push(`> **Framework UI:** ${d.uiFramework || 'No definido'}  `);
-    parts.push(`> **Estilo:** ${d.designStyle || 'No definido'}\n`);
+    parts.push(`> **Estilo:** ${d.designStyle || 'No definido'}  `);
+    parts.push(`> **Frontend:** ${config.stackFrontend || 'No definido'}\n`);
     parts.push('---\n');
 
     parts.push('## Rol y Objetivo\n');
     parts.push(
-      `Eres un experto en diseño de interfaces de usuario (UI/UX). ` +
+      `Eres un **experto en diseño de interfaces de usuario (UI/UX)** con amplia experiencia en aplicaciones empresariales. ` +
       `Tu tarea es diseñar e implementar la interfaz completa de **${data.proyecto.nombre}** ` +
       `usando **${d.uiFramework || 'el framework indicado'}** sobre **${config.stackFrontend}**. ` +
-      `El resultado debe ser código funcional, estético y con excelente experiencia de usuario.\n`
+      `El resultado debe ser código funcional, estético, accesible y con excelente experiencia de usuario.\n`
     );
+    parts.push('> **📌 Nota:** Este prompt tiene prompts complementarios para **Código Fuente** y **Base de Datos** ' +
+      'generados a partir de los mismos datos. Si los recibes, úsalos como referencia cruzada para entidades y endpoints.\n');
 
     parts.push('## Descripción del Proyecto\n');
     parts.push(`${data.proyecto.descripcion}\n`);
 
     if (data.stakeholders.length > 0) {
       parts.push('## Usuarios de la Aplicación\n');
+      parts.push('Diseña la interfaz considerando los diferentes perfiles de usuario y sus necesidades:\n');
       data.stakeholders.forEach(s => {
-        parts.push(`- **${s.nombre}** — Rol: ${s.rol}, Área: ${s.area}`);
+        parts.push(`- **${s.nombre}** — Rol: ${s.rol}, Área: ${s.area}${s.notas ? ` (${s.notas})` : ''}`);
       });
       parts.push('');
     }
 
+    // ── Módulos de Navegación (derivados de procesos) ──────────────────────
+    if (data.procesos.length > 0) {
+      parts.push('---\n');
+      parts.push('## 🗂️ Módulos de Navegación\n');
+      parts.push('Cada proceso de negocio se traduce en un módulo o sección del menú de navegación:\n');
+      data.procesos.forEach((p, i) => {
+        parts.push(`### ${i + 1}. ${p.nombre}\n`);
+        parts.push(`- **Descripción:** ${p.descripcion}`);
+        if (p.subprocesos?.length) {
+          parts.push(`- **Submenús / Subvistas:**`);
+          p.subprocesos.forEach(sp => {
+            parts.push(`  - ${sp.nombre}: ${sp.descripcion || '—'}`);
+          });
+        }
+        parts.push('');
+      });
+    }
+
+    // ── Flujos de usuario (derivados de casos de uso) ──────────────────────
+    const flujos = this.buildFlujosUsuarioSection(data);
+    if (flujos) parts.push('---\n', flujos);
+
     if (data.historias.length > 0) {
       parts.push('---\n');
-      parts.push('## Vistas / Pantallas Requeridas\n');
+      parts.push('## 📱 Vistas / Pantallas Requeridas\n');
       parts.push('Diseña una vista por cada historia de usuario. Cada vista debe ser funcional, responsive y coherente con el sistema de diseño.\n');
       data.historias.forEach((h, i) => {
         parts.push(`### Vista ${String(i + 1).padStart(2, '0')}: ${h.titulo_historia || 'Sin título'}`);
         if (h.rol && h.quiero) {
-          parts.push(`> Como **${h.rol}**, quiero **${h.quiero}**.`);
+          parts.push(`> Como **${h.rol}**, quiero **${h.quiero}**${h.para_que ? `, para **${h.para_que}**` : ''}.`);
         }
+
+        // Generar wireframe textual
+        parts.push('\n**Wireframe sugerido:**\n');
+        if (h.quiero) {
+          const action = h.quiero.toLowerCase();
+          if (action.includes('ver') || action.includes('listar') || action.includes('consultar') || action.includes('buscar')) {
+            parts.push('- Barra de búsqueda/filtros en la parte superior');
+            parts.push('- Tabla de datos o grid de cards con los registros');
+            parts.push('- Paginación en la parte inferior');
+            parts.push('- Botón de acción principal (crear nuevo) en esquina superior derecha');
+          } else if (action.includes('crear') || action.includes('registrar') || action.includes('agregar') || action.includes('añadir')) {
+            parts.push('- Formulario con los campos necesarios agrupados por sección');
+            parts.push('- Validación en tiempo real con mensajes inline');
+            parts.push('- Botones: Guardar (primario) y Cancelar (secundario)');
+            parts.push('- Indicador de campos obligatorios (*)');
+          } else if (action.includes('editar') || action.includes('modificar') || action.includes('actualizar')) {
+            parts.push('- Formulario pre-poblado con los datos actuales');
+            parts.push('- Indicador visual de campos modificados');
+            parts.push('- Botones: Guardar cambios (primario) y Cancelar (secundario)');
+          } else if (action.includes('eliminar') || action.includes('borrar')) {
+            parts.push('- Modal de confirmación con mensaje descriptivo');
+            parts.push('- Indicador del elemento a eliminar');
+            parts.push('- Botones: Eliminar (destructivo/rojo) y Cancelar');
+          } else if (action.includes('reporte') || action.includes('dashboard') || action.includes('estadística') || action.includes('resumen')) {
+            parts.push('- KPI cards en la parte superior con métricas principales');
+            parts.push('- Gráficos/charts relevantes');
+            parts.push('- Filtros por fecha/período');
+            parts.push('- Opción de exportar/descargar');
+          } else {
+            parts.push('- Layout apropiado para la funcionalidad descrita');
+            parts.push('- Feedback visual para cada acción del usuario');
+          }
+        }
+
         if (h.criterios_aceptacion) {
+          parts.push('\n**Criterios de UX:**\n');
           const criterios = h.criterios_aceptacion.split(/[;\n]/).map(c => c.trim()).filter(Boolean);
           criterios.forEach(c => parts.push(`- [ ] ${c}`));
         }
@@ -1156,7 +1705,7 @@ export class PromptGeneratorService {
     }
 
     parts.push('---\n');
-    parts.push('## Especificaciones de Diseño\n');
+    parts.push('## 🎨 Especificaciones de Diseño\n');
 
     parts.push('### Sistema Visual\n');
     parts.push(`| Propiedad | Valor |`);
@@ -1166,6 +1715,7 @@ export class PromptGeneratorService {
     parts.push(`| Color principal | ${d.colorPrimary || '—'} |`);
     parts.push(`| Modo | ${d.darkMode ? 'Dark Mode' : 'Light Mode'} |`);
     parts.push(`| Layout | ${d.layoutType || '—'} |`);
+    parts.push(`| Frontend | ${config.stackFrontend || '—'} |`);
     parts.push('');
 
     parts.push('### Layout y Navegación\n');
@@ -1173,6 +1723,7 @@ export class PromptGeneratorService {
     parts.push('- Navegación con indicador visual de sección activa.');
     parts.push('- Breadcrumbs en vistas con navegación profunda.');
     parts.push('- Diseño completamente **responsivo** (mobile-first: sm 640px, md 768px, lg 1024px, xl 1280px).');
+    parts.push('- Transiciones suaves entre vistas (fade o slide).');
     parts.push('');
 
     const fwInstructions = this.getFrameworkDesignInstructions(d.uiFramework, config.stackFrontend);
@@ -1188,6 +1739,9 @@ export class PromptGeneratorService {
     parts.push('- **Feedback visual:** loaders, estados vacíos (empty state), mensajes de error y éxito.');
     parts.push('- **Tipografía:** máx. 2 familias; escala clara (h1→h6, body, caption, label).');
     parts.push('- **Micro-interacciones:** transiciones de 0.15–0.25s ease en hover, focus y navegación.');
+    parts.push('- **Estados de carga:** Skeleton loaders o spinners en todas las vistas que cargan datos.');
+    parts.push('- **Empty states:** Ilustración + mensaje + CTA cuando no hay datos.');
+    parts.push('- **Error states:** Mensajes claros con opción de reintentar.');
     parts.push('');
 
     parts.push('### Componentes Reutilizables Requeridos\n');
@@ -1199,6 +1753,7 @@ export class PromptGeneratorService {
     parts.push('- **Badges de estado:** activo, inactivo, pendiente, completado.');
     parts.push('- **Toast / Snackbar:** para confirmar operaciones CRUD.');
     parts.push('- **Dashboard / Overview:** KPI cards con métricas clave del proyecto.');
+    parts.push('- **Skeleton loaders:** para cada tipo de contenido (tabla, card, form).');
     parts.push('');
 
     if (d.notasDiseno) {
@@ -1218,6 +1773,7 @@ export class PromptGeneratorService {
     parts.push('');
     parts.push('> **Recuerda:** Diseña primero en **mobile**, luego adapta a tablet y desktop. ' +
       'Prioriza la **usabilidad** sobre el impacto visual. Cada componente debe ser accesible por teclado.\n');
+    parts.push('> 📌 **Este prompt tiene prompts complementarios para Código Fuente y Base de Datos** generados a partir de los mismos datos.\n');
 
     return parts.join('\n');
   }
